@@ -1,0 +1,4 @@
+/.lake
+*.toml
+lean-toolchain
+*.github
