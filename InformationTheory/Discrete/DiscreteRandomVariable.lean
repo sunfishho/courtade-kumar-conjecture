@@ -23,23 +23,10 @@ variable {Ω α : Type*}
   [Countable β] [MeasurableSingletonClass β]
   [IsProbabilityMeasure (volume : Measure Ω)]
 
--- The underlying measure on `Ω` is the canonical `volume`.
-noncomputable def μ (_ : DiscreteRandomVariable Ω α) : Measure Ω :=
-  (volume : Measure Ω)
-
--- The pushforward (law) of `μ` by `X`.
-noncomputable def law (rv : DiscreteRandomVariable Ω α) : Measure α :=
-  Measure.map rv.X (volume : Measure Ω)
-
--- The law as a `PMF α`. Requires that `volume` is a probability measure.
-noncomputable def PMF (rv : DiscreteRandomVariable Ω α)
+/-- Compute PMF -/
+noncomputable def PMF (drv : DiscreteRandomVariable Ω α)
     [IsProbabilityMeasure (volume : Measure Ω)] : PMF α := by
-  -- show the pushforward is also a probability measure
-  letI : IsProbabilityMeasure (law (Ω := Ω) (α := α) rv) := by
-    refine ⟨by
-      -- (map X volume) univ = volume (preimage univ) = volume univ = 1
-      simp [law, Measure.map_apply rv.measurable_X MeasurableSet.univ]⟩
-  exact (law rv).toPMF
+  exact (RandomVariable.law (Ω := Ω) (α := α) drv.toRandomVariable).toMeasure.toPMF
 
 -- Calculate P(Y|X)
 noncomputable def conditional_PMF (X : DiscreteRandomVariable Ω α)
@@ -57,5 +44,10 @@ noncomputable def discrete_joint_RV (X : DiscreteRandomVariable Ω α)
 DiscreteRandomVariable Ω (α × β) := by
   exact (DiscreteRandomVariable.mk (RandomVariable.mk (X := fun ω => (X.X ω, Y.X ω))
   (measurable_X := Measurable.prodMk X.measurable_X Y.measurable_X)))
+
+/-- Calculate the likelihood of a realization of a sequence of iid random variable. -/
+noncomputable def discrete_sequence_likelihood (X : DiscreteRandomVariable Ω α) {n : ℕ+}
+(realization : Fin n → α) : ENNReal :=
+  ∏ i, (X.PMF (realization i))
 
 end DiscreteRandomVariable
