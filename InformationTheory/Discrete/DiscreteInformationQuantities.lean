@@ -21,13 +21,13 @@ variable {Ω α β : Type*}
 -- H(X) := -∑_x P(x) log(P(x))
 noncomputable def discrete_entropy
     (rv : DiscreteRandomVariable Ω α) : ℝ :=
-  ∑' a : α, Real.negMulLog ((rv.PMF a).toReal)
+  ∑' a : α, Real.negMulLog ((rv.PMF a).toReal) * (Real.logb 2 (exp 0))
 
 -- H(Y|X) := ∑_x ∑_y P(y) P(x|y) log(P(x|y))
 noncomputable def discrete_conditional_entropy
 (X : DiscreteRandomVariable Ω α) (Y : DiscreteRandomVariable Ω β) [Nonempty β] : ℝ :=
   ∑' x : α, ∑' y : β,
-    -(Y.PMF y).toReal * Real.negMulLog ((X.conditional_PMF Y) x {y}).toReal
+    -(Y.PMF y).toReal * Real.negMulLog ((X.conditional_PMF Y) x {y}).toReal * (Real.logb 2 (exp 0))
 
 -- I(X; Y) := H(X) - H(X|Y)
 noncomputable def discrete_mutual_information [Nonempty β]
@@ -54,7 +54,7 @@ noncomputable def discrete_kl_divergence {S : Type*} [Countable S] (p q : PMF S)
           if hq : q s = 0 then 0
           else
               (p s).toReal
-              * Real.log ((p s).toReal / (q s).toReal))
+              * Real.logb 2 ((p s).toReal / (q s).toReal))
 
 
 end DiscreteInformationQuantities
