@@ -103,19 +103,22 @@ noncomputable def R_epsilon
     Filter.atTop
 
 noncomputable def shannon_capacity
-  (C : StationaryMemorylessChannel Ω₁ Ω₂) : WithTop ℝ :=
-  ⨅ (ε : {ε : ℝ // 0 < ε}), R_epsilon (Ω₁ := Ω₁) (Ω₂ := Ω₂) C ε.1
+  (C : StationaryMemorylessChannel Ω₁ Ω₂) : EReal :=
+  ⨅ (ε : {ε : ℝ // 0 < ε}),
+    (WithBot.some (R_epsilon (Ω₁ := Ω₁) (Ω₂ := Ω₂) C ε.1) : EReal)
 
 noncomputable def information_capacity
-  (C : StationaryMemorylessChannel Ω₁ Ω₂) : WithTop ℝ :=
+  (C : StationaryMemorylessChannel Ω₁ Ω₂) : EReal :=
 by
   classical
-  let joint_μ (μ : ProbabilityMeasure Ω₁) : Measure (Ω₁ × Ω₂) :=
-    (μ.toMeasure).compProd C.K
+  let joint_μ (μ : ProbabilityMeasure Ω₁) : ProbabilityMeasure (Ω₁ × Ω₂) :=
+    letI : IsProbabilityMeasure μ.toMeasure := μ.prop
+    letI : IsMarkovKernel C.K := C.isMarkov
+    ⟨μ.toMeasure.compProd C.K, inferInstance⟩
   let ENNReal_to_WithTopReal (d : ENNReal) : WithTop ℝ :=
     if d = ⊤ then ⊤ else (d.toReal : WithTop ℝ)
   exact sSup ((fun μ : ProbabilityMeasure Ω₁ =>
-    ENNReal_to_WithTopReal (mutual_information (joint_μ μ))) '' Set.univ)
+    (mutual_information (joint_μ μ))) '' Set.univ)
 
 theorem shannon_capacity_theorem
   (C : StationaryMemorylessChannel Ω₁ Ω₂) :
