@@ -16,7 +16,7 @@ structure DiscreteRandomVariable (Ω α : Type*)
 
 namespace DiscreteRandomVariable
 
-variable {Ω α : Type*}
+variable {Ω α β : Type*}
   [MeasureSpace Ω] [MeasurableSpace α]
   [Countable α] [MeasurableSingletonClass α]
   [MeasurableSpace β]

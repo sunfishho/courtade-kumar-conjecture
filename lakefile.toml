@@ -1,22 +1,16 @@
-name = "it-formalization"
-version = "0.1.0"
-keywords = ["math"]
-defaultTargets = ["ItFormalization"]
+name = "InformationTheory"
+defaultTargets = ["InformationTheory"]
 
 [leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+pp.unicode.fun = true
+pp.proofs.withType = false
+autoImplicit = false
 relaxedAutoImplicit = false
-weak.linter.mathlibStandardSet = true
-maxSynthPendingDepth = 3
 
-# [[require]]
-# name = "mathlib"
-# scope = "leanprover-community"
-# rev = "v4.27.0-rc1"
 [[require]]
 name = "mathlib"
-scope = "leanprover-community"
-rev = "f897ebcf72cd16f89ab4577d0c826cd14afaafc7"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.24.0"
 
 [[lean_lib]]
 name = "InformationTheory"

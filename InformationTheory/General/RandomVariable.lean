@@ -15,7 +15,7 @@ structure RandomVariable (Ω α : Type*)
 
 namespace RandomVariable
 
-variable {Ω α : Type*}
+variable {Ω α β : Type*}
   [MeasureSpace Ω] [MeasurableSpace α]
   [MeasurableSpace β]
   [IsProbabilityMeasure (volume : Measure Ω)]
