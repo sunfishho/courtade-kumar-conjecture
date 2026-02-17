@@ -1,7 +1,4 @@
-import Mathlib.MeasureTheory.Measure.MeasureSpaceDef
-import InformationTheory.General.RandomVariable
-import Mathlib.Probability.Kernel.Defs
-import Mathlib.Analysis.SpecialFunctions.Log.Base
+import Mathlib
 import InformationTheory.General.InformationQuantities
 
 /- Goals of this file:
@@ -120,10 +117,8 @@ by
   exact sSup ((fun μ : ProbabilityMeasure Ω₁ =>
     (mutual_information (joint_μ μ))) '' Set.univ)
 
-theorem shannon_capacity_theorem
-  (C : StationaryMemorylessChannel Ω₁ Ω₂) :
-  information_capacity (Ω₁ := Ω₁) (Ω₂ := Ω₂) C = shannon_capacity (Ω₁ := Ω₁) (Ω₂ := Ω₂) C :=
-by
+theorem shannon_capacity_theorem (C : StationaryMemorylessChannel Ω₁ Ω₂) :
+    information_capacity (Ω₁ := Ω₁) (Ω₂ := Ω₂) C = shannon_capacity (Ω₁ := Ω₁) (Ω₂ := Ω₂) C := by
   sorry
 
 end MemorylessChannel
