@@ -13,7 +13,7 @@ open DiscreteRandomVariable
 namespace AEP
 
 variable {Ω S : Type*} [MeasureSpace Ω] [MeasurableSpace S]
-[IsProbabilityMeasure (volume : Measure Ω)] [Countable S] [MeasurableSingletonClass S]
+[IsProbabilityMeasure (volume : Measure Ω)] [Countable S] [MeasurableSingletonClass S] [StandardBorelSpace Ω] [StandardBorelSpace S]
 (X : DiscreteRandomVariable Ω S)
 
 /-- Probability of a realization of iid draws from X being ε-typical. -/

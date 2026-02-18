@@ -17,6 +17,7 @@ variable {Ω α β : Type*}
     [MeasureSpace Ω] [IsProbabilityMeasure (volume : Measure Ω)]
     [MeasurableSpace α] [Countable α] [MeasurableSingletonClass α]
     [MeasurableSpace β] [Countable β] [MeasurableSingletonClass β]
+    [StandardBorelSpace Ω] [StandardBorelSpace α] [StandardBorelSpace β]
 
 -- H(X) := -∑_x P(x) log(P(x))
 noncomputable def discrete_entropy
@@ -36,8 +37,8 @@ noncomputable def discrete_mutual_information [Nonempty β]
 
 -- I(X; Y | Z) := H(X | Z) - H(X | Y, Z)
 noncomputable def discrete_conditional_mutual_information
-    {γ : Type*} [MeasurableSpace γ] [MeasurableSingletonClass γ]
-    [Countable γ] [Nonempty α] (X : DiscreteRandomVariable Ω α)
+    {γ : Type*} [MeasurableSpace γ] [StandardBorelSpace γ] [MeasurableSingletonClass γ]
+    [Countable γ] [Nonempty α] [StandardBorelSpace Ω] [StandardBorelSpace α] [StandardBorelSpace β] [StandardBorelSpace γ](X : DiscreteRandomVariable Ω α)
     (Y : DiscreteRandomVariable Ω α) (Z : DiscreteRandomVariable Ω α)
     (μ : Measure Ω) [IsProbabilityMeasure μ] : ℝ :=
   discrete_conditional_entropy X Z - discrete_conditional_entropy X (Y.discrete_joint_RV Z)

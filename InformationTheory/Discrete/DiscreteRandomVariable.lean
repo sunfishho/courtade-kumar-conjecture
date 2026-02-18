@@ -9,7 +9,8 @@ open MeasureTheory RandomVariable
 
 /-- A bundled random variable `X : Ω → α` on the canonical measure `volume`. -/
 structure DiscreteRandomVariable (Ω α : Type*)
-    [MeasureSpace Ω] [MeasurableSpace α] [IsProbabilityMeasure (volume : Measure Ω)]
+    [MeasureSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α]
+    [StandardBorelSpace α] [IsProbabilityMeasure (volume : Measure Ω)]
     [Countable α] [MeasurableSingletonClass α]
   extends RandomVariable Ω α
 
@@ -17,9 +18,9 @@ structure DiscreteRandomVariable (Ω α : Type*)
 namespace DiscreteRandomVariable
 
 variable {Ω α β : Type*}
-  [MeasureSpace Ω] [MeasurableSpace α]
+  [MeasureSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
   [Countable α] [MeasurableSingletonClass α]
-  [MeasurableSpace β]
+  [MeasurableSpace β] [StandardBorelSpace β]
   [Countable β] [MeasurableSingletonClass β]
   [IsProbabilityMeasure (volume : Measure Ω)]
 

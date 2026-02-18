@@ -1,23 +1,18 @@
-import Mathlib.MeasureTheory.Measure.Map
-import Mathlib.Probability.ProbabilityMassFunction.Basic
-import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
-import Mathlib.Probability.Kernel.CondDistrib
-import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
-
+import Mathlib
 
 open MeasureTheory
 
 /-- A bundled random variable `X : Ω → α` on the canonical measure `volume`. -/
 structure RandomVariable (Ω α : Type*)
-    [MeasureSpace Ω] [MeasurableSpace α] [IsProbabilityMeasure (volume : Measure Ω)] where
+    [MeasureSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α] [StandardBorelSpace α] [IsProbabilityMeasure (volume : Measure Ω)] where
   X : Ω → α
   measurable_X : Measurable X
 
 namespace RandomVariable
 
 variable {Ω α β : Type*}
-  [MeasureSpace Ω] [MeasurableSpace α]
-  [MeasurableSpace β]
+  [MeasureSpace Ω] [StandardBorelSpace Ω] [MeasurableSpace α] [StandardBorelSpace α]
+  [MeasurableSpace β] [StandardBorelSpace β]
   [IsProbabilityMeasure (volume : Measure Ω)]
 
 /-- Give ProbabilityMeasure on Ω -/

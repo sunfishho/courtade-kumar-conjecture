@@ -9,8 +9,8 @@ open DiscreteInformationQuantities
 
 namespace TypicalSequences
 
-variable {Ω S : Type*} [MeasureSpace Ω] [MeasurableSpace S]
-[IsProbabilityMeasure (volume : Measure Ω)]
+variable {Ω S : Type*} [MeasureSpace Ω] [MeasurableSpace S] [StandardBorelSpace Ω]
+[StandardBorelSpace S] [IsProbabilityMeasure (volume : Measure Ω)]
 [Countable S] [MeasurableSingletonClass S] (X : DiscreteRandomVariable Ω S)
 
 -- compute the iid likelihood of sequence S
