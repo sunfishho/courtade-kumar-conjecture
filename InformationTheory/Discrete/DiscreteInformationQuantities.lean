@@ -22,13 +22,18 @@ variable {Ω α β : Type*}
 -- H(X) := -∑_x P(x) log(P(x))
 noncomputable def discrete_entropy
     (rv : DiscreteRandomVariable Ω α) : ℝ :=
-  ∑' a : α, Real.negMulLog ((rv.PMF a).toReal) * (Real.logb 2 (exp 0))
+  ∑' a : α, Real.negMulLog ((rv.PMF a).toReal) * (Real.logb 2 (exp 1))
+
+-- H(X) := -∑_x P(x) log(P(x))
+noncomputable def discrete_entropy_given_PMF
+    (pmf : PMF α) : ℝ :=
+  ∑' a : α, Real.negMulLog ((pmf a).toReal) * (Real.logb 2 (exp 1))
 
 -- H(Y|X) := ∑_x ∑_y P(y) P(x|y) log(P(x|y))
 noncomputable def discrete_conditional_entropy
 (X : DiscreteRandomVariable Ω α) (Y : DiscreteRandomVariable Ω β) [Nonempty β] : ℝ :=
   ∑' x : α, ∑' y : β,
-    -(Y.PMF y).toReal * Real.negMulLog ((X.conditional_PMF Y) x {y}).toReal * (Real.logb 2 (exp 0))
+    -(Y.PMF y).toReal * Real.negMulLog ((X.conditional_PMF Y) x {y}).toReal * (Real.logb 2 (exp 1))
 
 -- I(X; Y) := H(X) - H(X|Y)
 noncomputable def discrete_mutual_information [Nonempty β]
