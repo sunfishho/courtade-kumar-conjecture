@@ -9,9 +9,9 @@ open DiscreteInformationQuantities
 
 namespace TypicalSequences
 
-variable {Ω S : Type*} [MeasureSpace Ω] [MeasurableSpace S] [StandardBorelSpace Ω]
-[StandardBorelSpace S] [IsProbabilityMeasure (volume : Measure Ω)]
-[Countable S] [MeasurableSingletonClass S] (X : DiscreteRandomVariable Ω S)
+variable {Ω S : Type*} [MeasurableSpace S]
+[StandardBorelSpace S]
+[Countable S] [MeasurableSingletonClass S] (x_pmf : PMF S)
 
 -- compute the iid likelihood of sequence S
 noncomputable def sequence_likelihood
@@ -24,9 +24,9 @@ noncomputable def eps_typical {n : ℕ+} (ε : ℝ)
 (realization : (Fin n → S)) : Prop :=
 0 < ε ∧
 Real.nnabs ((Real.logb 2
-(1/(sequence_likelihood X.PMF realization))) / (n : ℝ) - discrete_entropy X) < ε
+(1/(sequence_likelihood x_pmf realization))) / (n : ℝ) - discrete_entropy x_pmf) < ε
 
 noncomputable def eps_typical_set (ε : ℝ) {n : ℕ+} : Set (Fin n → S) :=
-  {x | eps_typical X ε x}
+  {x | eps_typical x_pmf ε x}
 
 end TypicalSequences
