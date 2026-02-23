@@ -1,6 +1,5 @@
 import Mathlib
 import InformationTheory.Discrete.DiscreteInformationQuantities
-import InformationTheory.Discrete.DiscreteRandomVariable
 
 -- Theorem 1.4 in Information Theory: From Coding to Learning
 
