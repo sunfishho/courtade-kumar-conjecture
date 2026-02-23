@@ -5,9 +5,9 @@ import InformationTheory.Discrete.DiscreteInformationQuantities
 
 open DiscreteInformationQuantities MeasureTheory ProbabilityTheory
 
-variable {Ω S T : Type*}
-  [MeasurableSpace S] [StandardBorelSpace S] [Countable S] [MeasurableSingletonClass S] [Nonempty S]
-  [MeasurableSpace T] [StandardBorelSpace T] [Countable T] [MeasurableSingletonClass T] [Nonempty T]
+variable {S T : Type*}
+  [MeasurableSpace S] [Countable S] [MeasurableSingletonClass S] [Nonempty S]
+  [MeasurableSpace T] [Countable T] [MeasurableSingletonClass T] [Nonempty T]
 
 /-- entropy is positive -/
 theorem entropy_positivity (x_pmf : PMF S) : discrete_entropy x_pmf ≥ 0 := by
