@@ -23,6 +23,7 @@ noncomputable def avg_entropy_k_subset_coords {n : ℕ+} (k : {k : ℕ // 0 < k 
   (Finset.sum ((Finset.univ : Finset (Fin n)).powersetCard (k : ℕ)) fun indices_subset =>
         indices_to_entropy joint_pmf indices_subset) /
     (Nat.choose (n : ℕ) (k : ℕ) : ℝ)
+
 def mkK {n : ℕ+} (k : ℕ) (hkpos : 0 < k) (hkle : k ≤ (n : ℕ)) : {k : ℕ // 0 < k ∧ k ≤ n} :=
   ⟨k, ⟨hkpos, hkle⟩⟩
 
