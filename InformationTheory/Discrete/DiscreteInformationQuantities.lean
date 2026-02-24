@@ -27,6 +27,17 @@ noncomputable def discrete_conditional_entropy
     (y_pmf y).toReal
       * (∑' x : α, Real.negMulLog ((pX_givenY y x).toReal) * (Real.logb 2 (exp 1)))
 
+/-- Dependent conditional entropy \(H(X|Y)\) from a joint PMF on a sigma type `Σ y, α y`. -/
+noncomputable def dependent_discrete_conditional_entropy
+    {β : Type*} {α : β → Type*} [Countable β] [∀ y : β, Countable (α y)]
+    (joint_pmf : PMF (Sigma α)) : ℝ :=
+  let y_pmf : PMF β := PMF.map (fun z : Sigma α => z.1) joint_pmf
+  let pX_givenY : (y : β) → α y → ℝ≥0∞ :=
+    fun y x => if y_pmf y = 0 then 0 else joint_pmf ⟨y, x⟩ / y_pmf y
+  ∑' y : β,
+    (y_pmf y).toReal
+      * (∑' x : α y, Real.negMulLog ((pX_givenY y x).toReal) * (Real.logb 2 (exp 1)))
+
 -- I(X;Y) := H(X) + H(Y) - H(X,Y)
 noncomputable def discrete_mutual_information
     {α β : Type*} [Countable α] [Countable β] (joint_pmf : PMF (α × β)) : ℝ :=

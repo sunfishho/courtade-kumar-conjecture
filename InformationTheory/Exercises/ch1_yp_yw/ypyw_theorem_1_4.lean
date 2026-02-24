@@ -62,8 +62,7 @@ noncomputable def chain_rule_entropy_sum :
             + discrete_conditional_entropy pair_pmf
 
 /-- Chain rule for any number of random variables, subadditivity, and equality implying independence of PMFs -/
-theorem chain_rule_entropy_full {n : ℕ+} (α : Fin n → Type*) [∀ i : Fin n, Countable (α i)]
-    (joint_pmf : PMF (∀ i : Fin n, α i)) :
+theorem chain_rule_entropy_full {n : ℕ+} (α : Fin n → Type*) [∀ i : Fin n, Countable (α i)] (joint_pmf : PMF (∀ i : Fin n, α i)) :
     discrete_entropy joint_pmf =
         chain_rule_entropy_sum (n := (n : ℕ)) α (fun i => (by infer_instance : Countable (α i)))
           joint_pmf ∧
