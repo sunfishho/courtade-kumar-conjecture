@@ -9,8 +9,8 @@ noncomputable def multinomial_coeff {k : ℕ} (n : Fin k → ℕ) : ℕ :=
   let N := ∑ i : Fin k, n i
   Nat.factorial N / ∏ i : Fin k, Nat.factorial (n i)
 
-  noncomputable def shannonEntropyNatLog {k : ℕ} (p : Fin k → ℝ) : ℝ :=
-    ∑ i : Fin k, Real.negMulLog (p i) * (Real.logb 2 (Real.exp 1))
+noncomputable def shannonEntropyNatLog {k : ℕ} (p : Fin k → ℝ) : ℝ :=
+  ∑ i : Fin k, Real.negMulLog (p i) * (Real.logb 2 (Real.exp 1))
 
 theorem method_of_types {k : ℕ} (n : Fin k → ℕ) :
     let N : ℕ := ∑ i : Fin k, n i

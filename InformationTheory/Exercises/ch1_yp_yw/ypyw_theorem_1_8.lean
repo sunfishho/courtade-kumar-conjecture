@@ -2,7 +2,6 @@ import Mathlib
 import InformationTheory.Discrete.DiscreteInformationQuantities
 
 -- Theorem 1.7 in Information Theory: From Coding to Learning (Han's inequality)
--- Cursor-aided
 
 open DiscreteInformationQuantities MeasureTheory ProbabilityTheory
 
