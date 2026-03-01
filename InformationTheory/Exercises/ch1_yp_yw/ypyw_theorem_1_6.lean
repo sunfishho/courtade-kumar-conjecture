@@ -1,6 +1,6 @@
 import Mathlib
 import InformationTheory.Discrete.DiscreteInformationQuantities
-import InformationTheory.Discrete.Utilities
+import InformationTheory.General.Utilities
 
 -- Theorem 1.6 in Information Theory: From Coding to Learning
 

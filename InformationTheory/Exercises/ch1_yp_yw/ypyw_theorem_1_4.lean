@@ -3,7 +3,7 @@ import InformationTheory.Discrete.DiscreteInformationQuantities
 
 -- Theorem 1.4 in Information Theory: From Coding to Learning
 
-open DiscreteInformationQuantities MeasureTheory ProbabilityTheory
+open DiscreteInformationQuantities MeasureTheory ProbabilityTheory ENNReal
 
 variable {S T : Type*}
   [MeasurableSpace S] [Countable S] [MeasurableSingletonClass S] [Nonempty S]
@@ -40,14 +40,15 @@ theorem chain_rule_entropy (joint_pmf : PMF (S × T)) :
   discrete_entropy joint_pmf = discrete_entropy (x_pmf) + discrete_conditional_entropy (joint_pmf.map Prod.swap) := by
   sorry
 
-/-- entropy can only decrease under deterministic transformations. Bijective case is equality -/
+-- note: statement in book was incorrect, we require a finiteness assumption on S. as a counterexample, consider a PMF that has infinite entropy over the natural numbers, and some not one-to-one function which takes this to another PMF with infinite entropy.
+/-- entropy can only decrease under deterministic transformations. One-to-one case is equality -/
 theorem entropy_under_det_transform (x_pmf : PMF S) [Fintype S] [Fintype T] (f: S → T) :
-  discrete_entropy x_pmf ≥ discrete_entropy (PMF.map f x_pmf) ∧ discrete_entropy x_pmf = discrete_entropy (PMF.map f x_pmf) ↔ Function.Injective f := by
+  discrete_entropy x_pmf ≥ discrete_entropy (PMF.map f x_pmf) ∧ (Finite S → (discrete_entropy x_pmf = discrete_entropy (PMF.map f x_pmf) ↔ Set.InjOn f (x_pmf.support : Set S))) := by
 sorry
 
 /-- A recursive “chain rule sum” built from conditional entropies by splitting off the last coordinate. -/
 noncomputable def chain_rule_entropy_sum :
-    ∀ n : ℕ, (α : Fin n → Type*) → (∀ i : Fin n, Countable (α i)) → PMF (∀ i : Fin n, α i) → ℝ
+    ∀ n : ℕ, (α : Fin n → Type*) → (∀ i : Fin n, Countable (α i)) → PMF (∀ i : Fin n, α i) → ℝ≥0∞
   | 0, _α, _hα, _joint_pmf => 0
   | Nat.succ n, α, hα, joint_pmf =>
       by

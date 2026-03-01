@@ -3,9 +3,7 @@ import InformationTheory.Discrete.DiscreteRandomVariable
 import InformationTheory.Discrete.DiscreteInformationQuantities
 import Mathlib.Probability.Kernel.Defs
 
-open ProbabilityTheory
-open MeasureTheory
-open DiscreteInformationQuantities
+open ProbabilityTheory MeasureTheory DiscreteInformationQuantities ENNReal
 
 namespace TypicalSequences
 
@@ -20,11 +18,13 @@ noncomputable def sequence_likelihood
 
 -- we restrict ε to be positive
 -- Set of all sequences satisfying |1/n * (log (1/P(x^n) - H(X)))| < ε
+-- We restrict the entropy to be finite.
 noncomputable def eps_typical {n : ℕ+} (ε : ℝ)
 (realization : (Fin n → S)) : Prop :=
 0 < ε ∧
-Real.nnabs ((Real.logb 2
-(1/(sequence_likelihood x_pmf realization))) / (n : ℝ) - discrete_entropy x_pmf) < ε
+(discrete_entropy x_pmf = ∞ → False) ∧
+Real.nnabs (((Real.logb 2
+(1/(sequence_likelihood x_pmf realization))) / (n : ℝ)) - (discrete_entropy x_pmf).toReal) < ε
 
 noncomputable def eps_typical_set (ε : ℝ) {n : ℕ+} : Set (Fin n → S) :=
   {x | eps_typical x_pmf ε x}

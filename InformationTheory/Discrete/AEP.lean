@@ -36,17 +36,18 @@ noncomputable def iid_sample_law (n : ℕ+) : Measure (Fin n → S) :=
 /-- AEP: under the i.i.d. law of `X^n`, the quantity `aep_term_realization` converges in probability
 to `discrete_entropy X` as `n → ∞`. -/
 theorem AEP_converges_in_probability :
-  ∀ ε : ℝ, 0 < ε →
+  ∀ ε : ℝ, (0 < ε ∧ (discrete_entropy x_pmf < ⊤)) →
     Filter.Tendsto
       (fun n : ℕ+ =>
         iid_sample_law (S := S) x_pmf n
-          {x | ε < Real.nnabs (aep_term_realization x_pmf n x - discrete_entropy x_pmf)})
+          {x | ε < Real.nnabs (aep_term_realization x_pmf n x - (discrete_entropy x_pmf).toReal)})
       Filter.atTop (nhds (0 : ENNReal)) :=
   sorry
 
 -- Cover and Thomas, Theorem 3.1.2: the probability of a realization of iid draws from `X`
 -- being ε-typical converges to 1 as `n → ∞`.
 lemma prob_typical_lem (ε : ℝ) (hε : 0 < ε) :
+  (discrete_entropy x_pmf < ⊤) →
   Filter.Tendsto (fun n : ℕ+ => prob_typical x_pmf ε n) Filter.atTop (nhds (1 : ENNReal)) :=
 by
   sorry

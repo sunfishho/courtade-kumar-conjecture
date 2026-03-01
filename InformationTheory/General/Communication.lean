@@ -10,13 +10,13 @@ import InformationTheory.General.InformationQuantities
 open ProbabilityTheory MeasureTheory InformationQuantities
 
 structure StationaryMemorylessChannel (Ω₁ Ω₂ : Type*)
-[MeasurableSpace Ω₁] [MeasurableSpace Ω₂] where
+[MeasurableSpace Ω₁] [StandardBorelSpace Ω₁] [MeasurableSpace Ω₂] [StandardBorelSpace Ω₂] where
   K : Kernel Ω₁ Ω₂
   isMarkov: IsMarkovKernel K
 
 namespace MemorylessChannel
 
-variable {Ω₁ Ω₂ : Type*} [MeasurableSpace Ω₁] [MeasurableSpace Ω₂] (N : ℕ+) (M : ℕ+)
+variable {Ω₁ Ω₂ : Type*} [MeasurableSpace Ω₁] [StandardBorelSpace Ω₁] [MeasurableSpace Ω₂] [StandardBorelSpace Ω₂] (N : ℕ+) (M : ℕ+)
 
 /-- Used for error probability calculation. -/
 noncomputable def uniform_input_measure (M : ℕ+) : ProbabilityMeasure (Fin M) :=
