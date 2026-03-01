@@ -23,5 +23,10 @@ noncomputable def Log (a : ℝ≥0∞) (b : ℝ≥0∞) : EReal :=
   if a = 0 ∧ b = 0 then 0 else
   (ENNReal.log (a / b)) * (logb 2 (exp 1))
 
+/-- EReal-valued expectation, defined as the difference of the positive and negative parts. This should handle the infities correctly.-/
+noncomputable def ereal_expect {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] (P : Measure Ω) (f : Ω → EReal) : EReal :=
+  (ENNReal.toEReal (∫⁻ ω, (f ω).toENNReal ∂P))
+    - (ENNReal.toEReal (∫⁻ ω, (-f ω).toENNReal ∂P))
+
 
 end Utilities
