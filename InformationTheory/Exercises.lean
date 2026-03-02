@@ -7,3 +7,4 @@ import InformationTheory.Exercises.ch2_yp_yw.ypyw_corollary_2_4
 import InformationTheory.Exercises.ch2_yp_yw.ypyw_lemma_2_5
 import InformationTheory.Exercises.ch2_yp_yw.ypyw_theorem_2_2
 import InformationTheory.Exercises.ch2_yp_yw.ypyw_theorem_2_3
+import InformationTheory.Exercises.ch2_yp_yw.ypyw_theorem_2_13

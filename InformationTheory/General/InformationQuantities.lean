@@ -26,9 +26,7 @@ noncomputable def mutual_information (PQ : ProbabilityMeasure (Ω₁ × Ω₂)) 
   let Q := PQ.toMeasure.snd
   klDivBase2 PQ.toMeasure (P.prod Q)
 
-noncomputable def differential_entropy {n : ℕ} (S : Set (EuclideanSpace ℝ (Fin n)))
-    [MeasurableSpace S] [StandardBorelSpace S] (P : Measure S) : EReal :=
-      -generalklDivBase2 (P.map (Subtype.val : S → EuclideanSpace ℝ (Fin n)))
-        ((volume : Measure (EuclideanSpace ℝ (Fin n))).restrict S)
+noncomputable def differential_entropy {n : ℕ} (S : Set (EuclideanSpace ℝ (Fin n))) (P : Measure S) [IsProbabilityMeasure P] : EReal :=
+  -generalklDivBase2 (P.map (Subtype.val : S → EuclideanSpace ℝ (Fin n))) ((volume : Measure (EuclideanSpace ℝ (Fin n))).restrict S)
 
 end InformationQuantities
