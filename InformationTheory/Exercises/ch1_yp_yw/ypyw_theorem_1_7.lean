@@ -10,11 +10,11 @@ variable {S : Type*} [Countable S]
 
 noncomputable def indices_to_entropy {n : ℕ+} (joint_pmf : PMF (Fin n → S))
     (indices_subset : Finset (Fin n)) : ℝ :=
-  discrete_entropy <|
+  (discrete_entropy <|
     PMF.map
       (fun x : Fin n → S =>
         (fun i : (↑indices_subset) => x i.1))
-      joint_pmf
+      joint_pmf).toReal
 
 -- note that 1 ≤ k ≤ n
 noncomputable def avg_entropy_k_subset_coords {n : ℕ+} (k : ℕ) (joint_pmf : PMF (Fin n → S)):

@@ -5,3 +5,5 @@ import InformationTheory.Discrete.TypicalSequences
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
+import InformationTheory.General.Utilities
+import InformationTheory.Exercises

@@ -7,20 +7,12 @@ open DiscreteInformationQuantities MeasureTheory ProbabilityTheory
 
 variable {S : Type*} [Finite S] [Nonempty S]
 
-noncomputable def indices_to_entropy {n : ℕ+} (joint_pmf : PMF (Fin n → S))
-    (indices_subset : Finset (Fin n)) : ℝ :=
-  discrete_entropy <|
-    PMF.map
-      (fun x : Fin n → S =>
-        (fun i : (↑indices_subset) => x i.1))
-      joint_pmf
-
 /-- Shearer's lemma -/
 theorem shearers_lemma {n : ℕ+} (joint_pmf : PMF ((Fin n → S) × Finset (Fin n))):
   let xn_pmf : PMF (Fin n → S) := PMF.map Prod.fst joint_pmf
   let s_pmf : PMF (Finset (Fin n)) := PMF.map Prod.snd joint_pmf
-  let min_s_pmf : ℝ := Finset.min'
-    ((Finset.univ : Finset (Finset (Fin n))).image (fun s => (s_pmf s).toReal))
+  let min_s_pmf : ENNReal := Finset.min'
+    ((Finset.univ : Finset (Finset (Fin n))).image (fun s => s_pmf s))
     (by simp)
   let xs_s_pmf : PMF (Σ s : Finset (Fin n), s → S) :=
   PMF.map
