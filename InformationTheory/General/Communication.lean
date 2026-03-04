@@ -115,7 +115,7 @@ by
   let ENNReal_to_WithTopReal (d : ENNReal) : WithTop ℝ :=
     if d = ⊤ then ⊤ else (d.toReal : WithTop ℝ)
   exact sSup ((fun μ : ProbabilityMeasure Ω₁ =>
-    (mutual_information (joint_μ μ))) '' Set.univ)
+    (mutual_information (joint_μ μ).toMeasure)) '' Set.univ)
 
 theorem shannon_capacity_theorem (C : StationaryMemorylessChannel Ω₁ Ω₂) :
     information_capacity (Ω₁ := Ω₁) (Ω₂ := Ω₂) C = shannon_capacity (Ω₁ := Ω₁) (Ω₂ := Ω₂) C := by
