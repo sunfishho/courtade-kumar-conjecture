@@ -1,11 +1,4 @@
-import Mathlib.MeasureTheory.Measure.Decomposition.IntegralRNDeriv
-import Mathlib.MeasureTheory.Measure.MeasureSpaceDef
-import Mathlib.Probability.Kernel.CondDistrib
-import Mathlib.Analysis.SpecialFunctions.Log.NegMulLog
-import Mathlib.Probability.ProductMeasure
-
 import Mathlib
-
 
 open Real MeasureTheory Set ProbabilityTheory
 open scoped ENNReal NNReal
@@ -27,7 +20,8 @@ noncomputable def discrete_conditional_entropy
     (y_pmf y)
       * (∑' x : α, ENNReal.ofReal (Real.negMulLog ((pX_givenY y x).toReal)))
 
-/-- Dependent conditional entropy \(H(X|Y)\) from a joint PMF on a sigma type `Σ y, α y`. -/
+
+/-- Dependent conditional entropy H(X|Y) from a joint PMF on a sigma type `Σ y, α y`. -/
 noncomputable def dependent_discrete_conditional_entropy
     {β : Type*} {α : β → Type*} [Countable β] [∀ y : β, Countable (α y)]
     (joint_pmf : PMF (Sigma α)) : ℝ≥0∞ :=
@@ -37,6 +31,12 @@ noncomputable def dependent_discrete_conditional_entropy
   (ENNReal.ofReal (Real.logb 2 (exp 1))) * ∑' y : β,
     (y_pmf y)
       * (∑' x : α y, ENNReal.ofReal (Real.negMulLog ((pX_givenY y x).toReal)))
+
+/--Conditional entropy H(X|Y) when Y is not necessarily discrete -/
+noncomputable def conditional_entropy_general {α β : Type*} [MeasurableSpace α] [MeasurableSpace β] [Nonempty α][StandardBorelSpace α] [StandardBorelSpace β] [Countable α] (Pxy : Measure (α × β)) [IsProbabilityMeasure Pxy] : ℝ≥0∞ :=
+  let P_xy := (Pxy.map Prod.swap).condKernel
+  let x_given_y_pmf := fun y : β => (P_xy y).toPMF
+  by exact ∫⁻ y, discrete_entropy (x_given_y_pmf y) ∂Pxy.snd
 
 -- I(X;Y) := H(X) + H(Y) - H(X,Y)
 noncomputable def discrete_mutual_information
