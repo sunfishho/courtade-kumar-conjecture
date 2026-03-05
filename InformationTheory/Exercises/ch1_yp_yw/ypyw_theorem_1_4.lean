@@ -49,18 +49,14 @@ sorry
 /-- A recursive “chain rule sum” built from conditional entropies by splitting off the last coordinate. -/
 noncomputable def chain_rule_entropy_sum :
     ∀ n : ℕ, (α : Fin n → Type*) → (∀ i : Fin n, Countable (α i)) → PMF (∀ i : Fin n, α i) → ℝ≥0∞
-  | 0, _α, _hα, _joint_pmf => 0
-  | Nat.succ n, α, hα, joint_pmf =>
-      by
-        letI : Countable (α (Fin.last n)) := hα (Fin.last n)
-        letI : ∀ i : Fin n, Countable (α (Fin.castSucc i)) := fun i => hα (Fin.castSucc i)
-        let pair_pmf :
-            PMF (α (Fin.last n) × (∀ i : Fin n, α (Fin.castSucc i))) :=
-          PMF.map (Fin.snocEquiv α).symm joint_pmf
-        exact
-          chain_rule_entropy_sum n (fun i : Fin n => α (Fin.castSucc i)) (fun i => hα (Fin.castSucc i))
-              (PMF.map Prod.snd pair_pmf)
-            + discrete_conditional_entropy pair_pmf
+  | 0, _, _, _ => 0
+  | n + 1, α, hα, joint_pmf =>
+      letI : Countable (α (Fin.last n)) := hα (Fin.last n)
+      letI : ∀ i : Fin n, Countable (α (Fin.castSucc i)) := fun i => hα (Fin.castSucc i)
+      let pair_pmf := PMF.map (Fin.snocEquiv α).symm joint_pmf
+      chain_rule_entropy_sum n (fun i => α (Fin.castSucc i)) (fun i => hα (Fin.castSucc i))
+          (PMF.map Prod.snd pair_pmf)
+        + discrete_conditional_entropy pair_pmf
 
 /-- Chain rule for any number of random variables, subadditivity, and equality implying independence of PMFs -/
 theorem chain_rule_entropy_full {n : ℕ+} (α : Fin n → Type*) [∀ i : Fin n, Countable (α i)] (joint_pmf : PMF (∀ i : Fin n, α i)) :

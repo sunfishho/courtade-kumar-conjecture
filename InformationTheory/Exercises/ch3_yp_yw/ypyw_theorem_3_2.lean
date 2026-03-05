@@ -1,5 +1,6 @@
 import Mathlib
 import InformationTheory.General.InformationQuantities
+import InformationTheory.General.ProbabilityProjectionProofs
 
 -- Theorem 3.2 in Information Theory: From Coding to Learning
 
@@ -14,8 +15,6 @@ theorem mi_as_conditional_kl (Pxy : Measure (X × Y)) [IsProbabilityMeasure Pxy]
 
 theorem mi_symmetric (Pxy : Measure (X × Y)) [IsProbabilityMeasure Pxy] :
   let Pyx := Pxy.map Prod.swap
-  haveI : IsProbabilityMeasure Pyx :=
-    Measure.isProbabilityMeasure_map (μ := Pxy) (f := Prod.swap) (by fun_prop)
   mutual_information Pxy = mutual_information Pyx :=
   by sorry
 
@@ -32,12 +31,12 @@ theorem deterministic_dpi_mi (f : X → Y) (hf : Measurable f) (Pxy : Measure (X
     exact Measure.isProbabilityMeasure_map (μ := Pxy) (f := g) hg.aemeasurable
   mutual_information Pxy ≥ mutual_information Pfxy
   -- assume that there exists some function g such that g ∘ f = id, and g is measurable
-  ∧ (Function.Injective f ∧ (∃ g : Y → X, Measurable g ∧ Function.LeftInverse g f)) → mutual_information Pxy = mutual_information Pfxy :=
+  -- note that having a left inverse actually already implies injectivity
+  ∧ ((∃ g : Y → X, Measurable g ∧ Function.LeftInverse g f) → mutual_information Pxy = mutual_information Pfxy) :=
 by sorry
 
-theorem monotonicity_mi (Pxyz : Measure ((X × Y) × Z)) [IsProbabilityMeasure Pxyz] :
-  let Pxz := Pxyz.map (fun p : (X × Y) × Z => (p.1.1, p.2))
-  haveI : IsProbabilityMeasure Pxz :=
-    Measure.isProbabilityMeasure_map (μ := Pxyz) (f := fun p : (X × Y) × Z => (p.1.1, p.2)) (by fun_prop)
+
+theorem monotonicity_mi (Pxyz : Measure (X × Y × Z)) [IsProbabilityMeasure Pxyz] :
+  let Pxz := Pxyz.map (fun p : (X × Y × Z) => (p.1, p.2.2))
   mutual_information Pxyz ≥ mutual_information Pxz :=
 by sorry

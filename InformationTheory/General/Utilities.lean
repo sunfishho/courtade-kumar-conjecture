@@ -4,6 +4,7 @@ open scoped ENNReal EReal
 
 namespace Utilities
 
+set_option maxHeartbeats 0
 
 /-- Definition of submodularity for a function defined over subsets of a finite set S. -/
 def submodular (α : Type*) [DecidableEq α] (S : Finset α) (f : {T : Finset α // T ⊆ S} → ℝ≥0∞) :
@@ -28,5 +29,14 @@ noncomputable def ereal_expect {Ω : Type*} [MeasurableSpace Ω] [StandardBorelS
   (ENNReal.toEReal (∫⁻ ω, (f ω).toENNReal ∂P))
     - (ENNReal.toEReal (∫⁻ ω, (-f ω).toENNReal ∂P))
 
+def isMarkovChain {Ω₁ Ω₂ Ω₃ : Type*}
+    [MeasurableSpace Ω₁] [StandardBorelSpace Ω₁]
+    [MeasurableSpace Ω₂] [StandardBorelSpace Ω₂]
+    [MeasurableSpace Ω₃] [StandardBorelSpace Ω₃]
+    (Pxyz : Measure (Ω₁ × Ω₂ × Ω₃)) [IsProbabilityMeasure Pxyz] : Prop :=
+  let mY : MeasurableSpace (Ω₁ × Ω₂ × Ω₃) := ‹MeasurableSpace Ω₂›.comap (fun p => p.2.1)
+  let mX : MeasurableSpace (Ω₁ × Ω₂ × Ω₃) := ‹MeasurableSpace Ω₁›.comap Prod.fst
+  let mZ : MeasurableSpace (Ω₁ × Ω₂ × Ω₃) := ‹MeasurableSpace Ω₃›.comap (fun p => p.2.2)
+  CondIndep mY mX mZ (measurable_fst.comp measurable_snd).comap_le (μ := Pxyz)
 
 end Utilities
