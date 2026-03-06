@@ -10,6 +10,11 @@ noncomputable def discrete_entropy
     {α : Type*} [Countable α] (pmf : PMF α) : ℝ≥0∞ :=
   (ENNReal.ofReal (Real.logb 2 (exp 1))) * ∑' a : α, ENNReal.ofReal (Real.negMulLog ((pmf a).toReal))
 
+-- h(x) := -x log x - (1-x) log (1-x)
+noncomputable def bin_entropy
+  (x : ℝ) : ℝ :=
+  -x * (Real.logb 2 x) - (1 - x) * (Real.logb 2 (1 - x))
+
 /-- Conditional entropy \(H(X|Y)\) from a joint PMF on `α × β`. -/
 noncomputable def discrete_conditional_entropy
 {α β : Type*} [Countable α] [Countable β] (joint_pmf : PMF (α × β)) : ℝ≥0∞ :=
