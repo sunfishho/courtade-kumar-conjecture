@@ -38,6 +38,11 @@ noncomputable def mutual_information (PQ : Measure (Ω₁ × Ω₂)) [IsProbabil
   let Q := PQ.snd
   klDivBase2 PQ (P.prod Q)
 
+-- I(P_X, P_{Y|X}) = I(P_X, P_{Y|X}) (using notation from book)
+noncomputable def mutual_information_kernel (Px : Measure Ω₁) [IsProbabilityMeasure Px] (P_yx : Kernel Ω₁ Ω₂) [IsMarkovKernel P_yx] : ℝ≥0∞ :=
+  let Pxy: Measure (Ω₁ × Ω₂) := Px.compProd P_yx
+  mutual_information Pxy
+
 -- I(X;Y|Z)
 noncomputable def conditional_mutual_information [Nonempty Ω₁] [Nonempty Ω₂]
     (PQR : Measure (Ω₁ × Ω₂ × Ω₃)) [IsProbabilityMeasure PQR] : ℝ≥0∞ :=
