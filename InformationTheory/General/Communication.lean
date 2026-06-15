@@ -23,8 +23,8 @@ noncomputable def uniform_input_measure (M : ℕ+) : ProbabilityMeasure (Fin M) 
   ⟨uniformOn (Set.univ : Set (Fin M)),
   by
      classical
-     -- uniformOn_isProbabilityMeasure has been deprecated in lean 2.7.0
-     exact ProbabilityTheory.uniformOn_isProbabilityMeasure
+     -- `uniformOn_isProbabilityMeasure` was renamed in mathlib v4.28.0
+     exact ProbabilityTheory.isProbabilityMeasure_uniformOn
        (s := (Set.univ : Set (Fin M)))
        (hs  := (Set.finite_univ : Set.Finite (Set.univ : Set (Fin M))))
        (hs' := (Set.univ_nonempty : Set.Nonempty (Set.univ : Set (Fin M))))⟩
