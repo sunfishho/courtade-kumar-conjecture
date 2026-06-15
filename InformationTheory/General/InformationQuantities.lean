@@ -8,39 +8,39 @@ open scoped ENNReal
 
 namespace InformationQuantities
 
-variable {Ω₁ Ω₂ Ω₃: Type*} [MeasurableSpace Ω₁] [MeasurableSpace Ω₂] [MeasurableSpace Ω₃]
-[StandardBorelSpace Ω₁] [StandardBorelSpace Ω₂] [StandardBorelSpace Ω₃]
+variable {Ω Ω₁ Ω₂ Ω₃ : Type*}
+  [MeasurableSpace Ω] [MeasurableSpace Ω₁] [MeasurableSpace Ω₂] [MeasurableSpace Ω₃]
+  [StandardBorelSpace Ω] [StandardBorelSpace Ω₁] [StandardBorelSpace Ω₂] [StandardBorelSpace Ω₃] (Px Qx : Measure Ω) [IsProbabilityMeasure Px] [IsProbabilityMeasure Qx] (Pxy Qxy : Measure (Ω₁ × Ω₂)) [IsProbabilityMeasure Pxy] [IsProbabilityMeasure Qxy] (P_yx : Kernel Ω Ω₁) [IsMarkovKernel P_yx]
 
 /-- Kl divergence between two probability measures-/
-noncomputable def klDivBase2 {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] (P Q : Measure Ω) [IsProbabilityMeasure P] [IsProbabilityMeasure Q]: ℝ≥0∞ :=
-  klDiv P Q * (ENNReal.ofReal (Real.logb 2 (Real.exp 1)))
+noncomputable def klDivBase2 : ℝ≥0∞ :=
+  klDiv Px Qx * (ENNReal.ofReal (Real.logb 2 (Real.exp 1)))
 
 /-- Kl divergence between two measures, not necessarily probability measures-/
-noncomputable def generalklDivBase2 {Ω : Type*} [MeasurableSpace Ω] [StandardBorelSpace Ω] (P Q : Measure Ω) : EReal :=
+noncomputable def generalklDivBase2 (P Q : Measure Ω) : EReal :=
   klDiv P Q * (ENNReal.ofReal (Real.logb 2 (Real.exp 1)))
+
+noncomputable def differential_entropy {n : ℕ} (S : Set (EuclideanSpace ℝ (Fin n))) (P : Measure S) [IsProbabilityMeasure P] : EReal :=
+  -generalklDivBase2 (P.map (Subtype.val : S → EuclideanSpace ℝ (Fin n))) ((volume : Measure (EuclideanSpace ℝ (Fin n))).restrict S)
 
 /-- conditional Kl divergence $D(P_{Y|X}||Q_{Y|X}|P_X)$, where $P,Q$ are over $Ω₁ × Ω₂$ and $X ∈ Ω₁, Y ∈ Ω₂$ -/
 -- note that we don't need $Ω₁$ to be a standard Borel space because we are only conditioning on $Ω₂$
-noncomputable def conditionalklDivBase2 {Ω₁ Ω₂ : Type*} [MeasurableSpace Ω₁] [MeasurableSpace Ω₂]
-    [StandardBorelSpace Ω₂] [Nonempty Ω₂]
-    (P Q : Measure (Ω₁ × Ω₂)) [IsProbabilityMeasure P] [IsProbabilityMeasure Q] : ℝ≥0∞ :=
+noncomputable def conditionalklDivBase2 [Nonempty Ω₂] : ℝ≥0∞ :=
   ∫⁻ x,
       klDivBase2
-        ((ProbabilityTheory.condDistrib (Y := Prod.snd) (X := Prod.fst) P) x)
-        ((ProbabilityTheory.condDistrib (Y := Prod.snd) (X := Prod.fst) Q) x)
-    ∂(P.fst)
-
+        ((ProbabilityTheory.condDistrib (Y := Prod.snd) (X := Prod.fst) Pxy) x)
+        ((ProbabilityTheory.condDistrib (Y := Prod.snd) (X := Prod.fst) Qxy) x)
+    ∂(Pxy.fst)
 
 -- I(P_X, P_{Y|X}) = D(P_{X,Y}||P_XP_Y)
--- should probably take in probability measures instead of measures
-noncomputable def mutual_information (PQ : Measure (Ω₁ × Ω₂)) [IsProbabilityMeasure PQ] : ℝ≥0∞ :=
-  let P := PQ.fst
-  let Q := PQ.snd
-  klDivBase2 PQ (P.prod Q)
+noncomputable def mutual_information : ℝ≥0∞ :=
+  let P := Pxy.fst
+  let Q := Pxy.snd
+  klDivBase2 Pxy (P.prod Q)
 
 -- I(P_X, P_{Y|X}) = I(P_X, P_{Y|X}) (using notation from book)
-noncomputable def mutual_information_kernel (Px : Measure Ω₁) [IsProbabilityMeasure Px] (P_yx : Kernel Ω₁ Ω₂) [IsMarkovKernel P_yx] : ℝ≥0∞ :=
-  let Pxy: Measure (Ω₁ × Ω₂) := Px.compProd P_yx
+noncomputable def mutual_information_kernel : ℝ≥0∞ :=
+  let Pxy : Measure (Ω × Ω₁) := Px.compProd P_yx
   mutual_information Pxy
 
 -- I(X;Y|Z)
@@ -50,8 +50,10 @@ noncomputable def conditional_mutual_information [Nonempty Ω₁] [Nonempty Ω�
         klDiv μ (μ.fst.prod μ.snd) * ENNReal.ofReal (Real.logb 2 (Real.exp 1))
   ∂PQR.map (fun p => p.2.2)
 
-
-noncomputable def differential_entropy {n : ℕ} (S : Set (EuclideanSpace ℝ (Fin n))) (P : Measure S) [IsProbabilityMeasure P] : EReal :=
-  -generalklDivBase2 (P.map (Subtype.val : S → EuclideanSpace ℝ (Fin n))) ((volume : Measure (EuclideanSpace ℝ (Fin n))).restrict S)
+-- Given a set of probability distributions P over Ω and a kernel P_{Y|X}, take the supremum of I(P_X, P_{Y|X}) over P_X ∈ P
+noncomputable def information_channel_capacity (P : Set (Measure Ω)) (hP : ∀ μ ∈ P, IsProbabilityMeasure μ) : ℝ≥0∞ :=
+  ⨆ (μ : Measure Ω) (hμ : μ ∈ P),
+    haveI : IsProbabilityMeasure μ := hP μ hμ
+    mutual_information_kernel μ P_yx
 
 end InformationQuantities

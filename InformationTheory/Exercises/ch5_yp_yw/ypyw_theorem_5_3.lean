@@ -1,7 +1,7 @@
 import Mathlib
 import InformationTheory.General.InformationQuantities
 
--- Theorem 5.1 in Information Theory: From Coding to Learning
+-- Theorem 5.3 in Information Theory: From Coding to Learning
 
 open InformationQuantities MeasureTheory ProbabilityTheory ENNReal
 

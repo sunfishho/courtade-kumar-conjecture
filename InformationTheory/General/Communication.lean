@@ -82,7 +82,8 @@ def achievable_M (C : StationaryMemorylessChannel Ω₁ Ω₂) (N : ℕ+) (ε : 
 noncomputable def M_avg
   (C : StationaryMemorylessChannel Ω₁ Ω₂) (N : ℕ+) (ε : ℝ) : WithTop ℕ := by
   classical
-  exact sSup { M : WithTop ℕ | ∃ M : ℕ+, achievable_M C N ε M }
+  exact sSup { m : WithTop ℕ | ∃ M : ℕ+, (M : WithTop ℕ) = m ∧ achievable_M C N ε M }
+
 
 /-- defining R*(n,ε) -/
 noncomputable def R_star
