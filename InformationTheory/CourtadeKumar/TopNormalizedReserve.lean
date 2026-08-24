@@ -11,6 +11,10 @@ namespace CourtadeKumar
 noncomputable def topNormalizedQ (c q : ℝ) : ℝ :=
   topPerspectiveTerm c (Real.sqrt q) / (c * q)
 
+/-- The positive density whose integral from `c` to `1` is `Q(c,q)`. -/
+noncomputable def topChannelP (c q : ℝ) : ℝ :=
+  -Real.log (1 - q * (c / (2 - c)) ^ 2) / (2 * q * c ^ 2)
+
 /-- The channel coefficient `w(R) = (R log 2 - Phi(sqrt R))/(1-R)`. -/
 noncomputable def topChannelW (R : ℝ) : ℝ :=
   (R * Real.log 2 - topPhi (Real.sqrt R)) / (1 - R)
@@ -39,6 +43,120 @@ theorem topReserve_eq_scale_mul_topChannelH
   simp only [topR, hsqrtR, hsqrtq]
   field_simp [hs, hc, hq]
   ring
+
+lemma topPhi_eq_mul_artanh_add_log {x : ℝ} (hx : x ∈ Ioo (-1 : ℝ) 1) :
+    topPhi x =
+      x * Real.artanh x + Real.log (1 - x ^ 2) / 2 := by
+  have hp : 0 < 1 + x := by linarith [hx.1]
+  have hm : 0 < 1 - x := by linarith [hx.2]
+  rw [topPhi_eq_log_formula hx]
+  rw [Real.artanh_eq_half_log ⟨hx.1.le, hx.2.le⟩]
+  rw [Real.log_div hp.ne' hm.ne']
+  rw [show 1 - x ^ 2 = (1 + x) * (1 - x) by ring,
+    Real.log_mul hp.ne' hm.ne']
+  ring
+
+/-- Exact differentiation of the perspective quotient. -/
+theorem hasDerivAt_topNormalizedQ {c q : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (fun u : ℝ ↦ topNormalizedQ u q) (-topChannelP c q) c := by
+  let r := Real.sqrt q
+  let x := c * r / (2 - c)
+  have hr0 : 0 < r := by simpa [r] using Real.sqrt_pos.2 hq.1
+  have hrsq : r ^ 2 = q := by simpa [r] using Real.sq_sqrt hq.1.le
+  have hr1 : r < 1 := by
+    dsimp [r]
+    simpa using (Real.sqrt_lt_sqrt_iff hq.1.le).2 hq.2
+  have htwo : 2 - c ≠ 0 := by linarith [hc.2]
+  have hx0 : 0 < x := by
+    dsimp [x]
+    exact div_pos (mul_pos hc.1 hr0) (by linarith [hc.2])
+  have hx1 : x < 1 := by
+    dsimp [x]
+    rw [div_lt_one (by linarith [hc.2] : 0 < 2 - c)]
+    have hcr : c * r < c := by
+      simpa using mul_lt_mul_of_pos_left hr1 hc.1
+    linarith [hc.2]
+  have hx : x ∈ Ioo (-1 : ℝ) 1 := ⟨by linarith, hx1⟩
+  have harg0 := ((hasDerivAt_id c).mul_const r).div
+    ((hasDerivAt_const c 2).sub (hasDerivAt_id c)) htwo
+  have harg : HasDerivAt (fun u : ℝ ↦ u * r / (2 - u))
+      (2 * r / (2 - c) ^ 2) c := by
+    convert harg0 using 1
+    simp only [id_eq, Pi.sub_apply]
+    field_simp [htwo]
+    ring
+  have hphiArg := (hasDerivAt_topPhi hx).comp c harg
+  have hleft := ((hasDerivAt_id c).div_const 2).mul_const (topPhi r)
+  have hwidth := ((hasDerivAt_const c 2).sub (hasDerivAt_id c)).div_const 2
+  have hright := hwidth.mul hphiArg
+  have hperspective := hleft.sub hright
+  have hden := (hasDerivAt_id c).mul_const q
+  have hquot := hperspective.div hden (mul_ne_zero hc.1.ne' hq.1.ne')
+  have hphiX := topPhi_eq_mul_artanh_add_log hx
+  convert hquot using 1
+  · unfold topChannelP
+    simp only [id_eq, Pi.sub_apply, Function.comp_apply]
+    dsimp [x] at hphiX ⊢
+    rw [hphiX]
+    field_simp [hc.1.ne', hq.1.ne', htwo]
+    rw [hrsq]
+    ring
+
+lemma topChannelP_pos {c q : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    0 < topChannelP c q := by
+  have htwo : 0 < 2 - c := by linarith [hc.2]
+  have ht0 : 0 < c / (2 - c) := div_pos hc.1 htwo
+  have ht1 : c / (2 - c) < 1 := by
+    rw [div_lt_one htwo]
+    linarith [hc.2]
+  have ht2 : (c / (2 - c)) ^ 2 < 1 := by nlinarith
+  have hprod : q * (c / (2 - c)) ^ 2 < 1 := by
+    nlinarith [mul_pos (sub_pos.mpr hq.2) (sub_pos.mpr ht2)]
+  have hden : 0 < 1 - q * (c / (2 - c)) ^ 2 := by linarith
+  have hlt : 1 - q * (c / (2 - c)) ^ 2 < 1 := by
+    nlinarith [mul_pos hq.1 (sq_pos_of_pos ht0)]
+  have hlog := Real.log_neg hden hlt
+  unfold topChannelP
+  exact div_pos (neg_pos.mpr hlog)
+    (mul_pos (mul_pos (by norm_num) hq.1) (sq_pos_of_pos hc.1))
+
+lemma topChannelW_nonneg {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ topChannelW R := by
+  have hsqrt0 : 0 ≤ Real.sqrt R := Real.sqrt_nonneg R
+  have hsqrt1 : Real.sqrt R ≤ 1 := by
+    simpa using (Real.sqrt_le_one.mpr hR.2.le)
+  have hell := topEll_nonneg (show Real.sqrt R ∈ Icc (0 : ℝ) 1 from
+    ⟨hsqrt0, hsqrt1⟩)
+  unfold topChannelW
+  apply div_nonneg
+  · simpa [topEll, topR, Real.sq_sqrt hR.1.le] using hell
+  · exact sub_nonneg.mpr hR.2.le
+
+/-- With `(R,q)` fixed, the normalized corrected reserve has the simple
+strictly negative derivative stated in the manuscript. -/
+theorem hasDerivAt_topChannelH {R c q : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (fun u : ℝ ↦ topChannelH R u q)
+      (-topChannelP c q - topChannelW R) c := by
+  have hQ := hasDerivAt_topNormalizedQ hc hq
+  have hlinear := (hasDerivAt_id c).mul_const (topChannelW R)
+  have hconstant := hasDerivAt_const c (topChannelK R q)
+  unfold topChannelH
+  convert (hQ.sub hlinear).add hconstant using 1 <;> ring
+
+theorem topChannelH_strictAntiOn {R q : ℝ}
+    (hR : R ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    StrictAntiOn (fun c : ℝ ↦ topChannelH R c q) (Ioo (0 : ℝ) 1) := by
+  apply strictAntiOn_of_deriv_neg (convex_Ioo (0 : ℝ) 1)
+  · intro c hc
+    exact (hasDerivAt_topChannelH hc hq).continuousAt.continuousWithinAt
+  · intro c hc
+    rw [(hasDerivAt_topChannelH (by simpa using hc) hq).deriv]
+    have hp := topChannelP_pos (by simpa using hc) hq
+    have hw := topChannelW_nonneg hR
+    linarith
 
 /-- The logarithmic cross-ratio appearing in the full-tail comparison. -/
 noncomputable def topCapCrossRatio (c q : ℝ) : ℝ :=
