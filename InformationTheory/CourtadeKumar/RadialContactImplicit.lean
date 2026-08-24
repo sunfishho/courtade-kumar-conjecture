@@ -90,4 +90,29 @@ theorem isContDiffImplicitAt_radialEulerEquation
       exact div_mul_cancel₀ y hcontact
   exact ⟨hf, hcont, hg_bijective, two_ne_zero⟩
 
+/-- A nondegenerate radial Euler contact lies on a local `C²` solution
+branch of the contact equation. -/
+theorem exists_localContDiff_radialContact
+    {rho theta r z : ℝ}
+    (hargR : radialEulerLogArg rho r z ≠ 0)
+    (harg1 : radialEulerLogArg 1 r z ≠ 0)
+    (hden : radialEulerLog 1 r z ≠ 0)
+    (hcontact : deriv (radialEulerLogRatio rho r) z ≠ 0)
+    (hroot : radialEulerLogRatio rho r z = theta) :
+    ∃ φ : ℝ → ℝ,
+      ContDiffAt ℝ (2 : WithTop ℕ∞) φ r ∧
+      φ r = z ∧
+      ∀ᶠ s in nhds r, radialEulerLogRatio rho s (φ s) = theta := by
+  let h := isContDiffImplicitAt_radialEulerEquation
+    (theta := theta) hargR harg1 hden hcontact
+  let φ : ℝ → ℝ := h.implicitFunction
+  refine ⟨φ, h.contDiffAt_implicitFunction, ?_, ?_⟩
+  · have hself := h.eventually_implicitFunction_apply_eq.self_of_nhds
+    exact hself rfl
+  · filter_upwards [h.apply_implicitFunction] with s hs
+    change radialEulerLogRatio rho s (φ s) - theta =
+      radialEulerLogRatio rho r z - theta at hs
+    rw [hroot] at hs
+    linarith
+
 end CourtadeKumar
