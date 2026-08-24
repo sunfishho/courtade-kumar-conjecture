@@ -48,4 +48,24 @@ theorem singleRayLR_of_entropyResidual
     (singleRayScalarContact_of_strictReserve alpha
       (singleRayStrictReserve_of_entropyResidual alpha hentropy))
 
+theorem orderedTriangleTwoPhase_of_geometry_and_entropyResidual
+    (alpha : ℝ≥0)
+    (hgeometry : OrderedTriangleGeometricTwoPhaseTheorem alpha)
+    (hentropy : SingleRayEntropyResidualTheorem alpha) :
+    OrderedTriangleTwoPhaseTheorem alpha :=
+  orderedTriangleTwoPhase_of_geometry_and_LR alpha hgeometry
+    (singleRayLR_of_entropyResidual alpha hentropy)
+
+/-- End-to-end closure from perspective geometry and the pure-entropy
+strict residual. -/
+theorem courtadeKumar_of_perspectiveGeometry_and_entropyResidual
+    (hgeometry : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      OrderedTriangleGeometricTwoPhaseTheorem alpha)
+    (hentropy : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      SingleRayEntropyResidualTheorem alpha) :
+    Statement :=
+  courtadeKumar_of_perspectiveGeometry_and_LR hgeometry
+    (fun alpha halpha ↦ singleRayLR_of_entropyResidual alpha
+      (hentropy alpha halpha))
+
 end CourtadeKumar
