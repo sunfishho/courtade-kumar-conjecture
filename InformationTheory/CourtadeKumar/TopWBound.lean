@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.TopLogBound
+import InformationTheory.CourtadeKumar.TopPhiSeries
 
 /-! The rational replacement of `log 2` in the eight-term `w(R)`
 truncation used by the full-cap certificate. -/

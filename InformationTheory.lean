@@ -36,6 +36,7 @@ import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
 import InformationTheory.CourtadeKumar.TopLogBound
+import InformationTheory.CourtadeKumar.TopPhiSeries
 import InformationTheory.CourtadeKumar.TopWBound
 import InformationTheory.CourtadeKumar.EntropyDropTransition
 import InformationTheory.CourtadeKumar.TopEndpointIdentity
