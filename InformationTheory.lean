@@ -6,6 +6,7 @@ import InformationTheory.CourtadeKumar.Statement
 import InformationTheory.CourtadeKumar.Posterior
 import InformationTheory.CourtadeKumar.CubeSplit
 import InformationTheory.CourtadeKumar.PosteriorRecursion
+import InformationTheory.CourtadeKumar.Entropy
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
