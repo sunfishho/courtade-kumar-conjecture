@@ -35,6 +35,13 @@ noncomputable def topCapJ (c q : ℝ) : ℝ :=
     topCapRDeriv c q *
       (c * topChannelWDeriv R - topChannelKDeriv R q)
 
+/-- The common-primitive correction `B` in the manuscript, expressed
+directly through the already differentiated channel functions. -/
+noncomputable def topCapB (c q : ℝ) : ℝ :=
+  let R := topCapR c q
+  (1 - R) ^ 2 *
+    (c * topChannelWDeriv R - topChannelKDeriv R q)
+
 lemma hasDerivAt_topPsi {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
     HasDerivAt (fun x : ℝ ↦ topPhi (Real.sqrt x)) (topPsiDeriv R) R := by
   have hsqrt := Real.hasDerivAt_sqrt hR.1.ne'
@@ -102,6 +109,42 @@ theorem hasDerivAt_topCapR {c q : ℝ}
   convert hnum.div hden hdenNe using 1
   simp only [Pi.sub_apply]
   field_simp [hdenNe]
+  ring
+
+lemma one_sub_topCapR {c q : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    1 - topCapR c q = c ^ 2 * (1 - q) / (1 - c ^ 2 * q) := by
+  have hden := (topCapDen_pos hc hq).ne'
+  unfold topCapR
+  field_simp [hden]
+  ring
+
+lemma topCapRDeriv_eq_scale {c q : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    topCapRDeriv c q =
+      -2 * (1 - topCapR c q) / (c * (1 - c ^ 2 * q)) := by
+  have hcne := hc.1.ne'
+  have hden := (topCapDen_pos hc hq).ne'
+  rw [one_sub_topCapR hc hq]
+  unfold topCapRDeriv
+  field_simp [hcne, hden]
+
+/-- Exact common-primitive form of the cap derivative loss. -/
+theorem topCapJ_eq_B {c q : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hq : q ∈ Ioo (0 : ℝ) 1) :
+    topCapJ c q =
+      topChannelP c q + topChannelW (topCapR c q) -
+        2 * topCapB c q / (c ^ 3 * (1 - q)) := by
+  have hcne := hc.1.ne'
+  have hqne : 1 - q ≠ 0 := by linarith [hq.2]
+  have hden := (topCapDen_pos hc hq).ne'
+  have hs : 1 - topCapR c q ≠ 0 := by
+    rw [one_sub_topCapR hc hq]
+    exact div_ne_zero (mul_ne_zero (pow_ne_zero 2 hcne) hqne) hden
+  unfold topCapJ topCapB
+  dsimp only
+  rw [topCapRDeriv_eq_scale hc hq, one_sub_topCapR hc hq]
+  field_simp [hcne, hqne, hden, hs]
   ring
 
 /-- The named quantity `topCapJ` is exactly the negative derivative of the
