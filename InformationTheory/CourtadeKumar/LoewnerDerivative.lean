@@ -351,6 +351,50 @@ theorem loewnerNormalizedQuadratic_monotoneOn
       (loewnerDerivativeFactor_pos hp (hphysical sigma ⟨hs.1.le, hs.2.le⟩)).le
       (loewnerB_quadratic_nonneg hp (hphysical sigma ⟨hs.1.le, hs.2.le⟩))
 
+theorem loewnerNormalizedQuadratic_strictMonoOn
+    {p u x y sigma₁ sigma₂ : ℝ}
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hu : u ≠ 0) (hxy : x ≠ 0 ∨ y ≠ 0)
+    (hphysical : ∀ sigma ∈ Icc sigma₁ sigma₂,
+      sigma * u ^ 2 / p ^ 2 ∈ Ico (0 : ℝ) 1) :
+    StrictMonoOn (loewnerNormalizedQuadratic p u x y)
+      (Icc sigma₁ sigma₂) := by
+  let tau : ℝ → ℝ := fun sigma ↦ sigma * u ^ 2 / p ^ 2
+  let hp' : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ) := ⟨hp.1, hp.2.le⟩
+  have hderiv : ∀ sigma ∈ Icc sigma₁ sigma₂,
+      HasDerivAt (loewnerNormalizedQuadratic p u x y)
+        (loewnerDerivativeFactor p (tau sigma) *
+          (loewnerB11 p (tau sigma) u * x ^ 2 +
+            2 * loewnerB12 p (tau sigma) u * x * y +
+            loewnerB22 p (tau sigma) * y ^ 2)) sigma := by
+    intro sigma hs
+    exact hasDerivAt_loewnerNormalizedQuadratic hp' (hphysical sigma hs) rfl
+  apply strictMonoOn_of_deriv_pos (convex_Icc sigma₁ sigma₂)
+  · intro sigma hs
+    exact (hderiv sigma hs).continuousAt.continuousWithinAt
+  · intro sigma hs
+    rw [interior_Icc] at hs
+    rw [(hderiv sigma ⟨hs.1.le, hs.2.le⟩).deriv]
+    exact mul_pos
+      (loewnerDerivativeFactor_pos hp' (hphysical sigma ⟨hs.1.le, hs.2.le⟩))
+      (two_by_two_quadratic_pos
+        (loewnerB11_nonneg hp' (hphysical sigma ⟨hs.1.le, hs.2.le⟩))
+        (loewnerB22_pos hp' (hphysical sigma ⟨hs.1.le, hs.2.le⟩)).le
+        (loewnerBDet_pos hp (hphysical sigma ⟨hs.1.le, hs.2.le⟩) hu)
+        hxy)
+
+theorem loewnerNormalizedQuadratic_lt
+    {p u x y sigma₁ sigma₂ : ℝ}
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hu : u ≠ 0) (hxy : x ≠ 0 ∨ y ≠ 0)
+    (hsigma : sigma₁ < sigma₂)
+    (hphysical : ∀ sigma ∈ Icc sigma₁ sigma₂,
+      sigma * u ^ 2 / p ^ 2 ∈ Ico (0 : ℝ) 1) :
+    loewnerNormalizedQuadratic p u x y sigma₁ <
+      loewnerNormalizedQuadratic p u x y sigma₂ :=
+  loewnerNormalizedQuadratic_strictMonoOn hp hu hxy hphysical
+    (left_mem_Icc.2 hsigma.le) (right_mem_Icc.2 hsigma.le) hsigma
+
 /-- Integrated Loewner monotonicity of the normalized entropy Hessian family. -/
 theorem loewnerNormalizedGMatrix_mono
     {p u sigma₁ sigma₂ : ℝ}
