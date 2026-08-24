@@ -89,6 +89,18 @@ theorem loewnerMainBracket_nonneg
     nlinarith [mul_nonneg hp.1.le h12]
   exact sub_nonneg.2 (hbase.trans hmul)
 
+theorem loewnerMainBracket_pos
+    {p tau : ℝ}
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (htau : tau ∈ Ico (0 : ℝ) 1) :
+    0 < (1 - p) * loewnerEll p tau - p := by
+  have hell := loewnerEll_ge_two_mul ⟨hp.1, hp.2.le⟩ htau
+  have h1p : 0 ≤ 1 - p := by linarith [hp.2]
+  have hmul := mul_le_mul_of_nonneg_left hell h1p
+  have hbase : p < (1 - p) * (2 * p) := by
+    nlinarith [mul_pos hp.1 (sub_pos.2 (by linarith [hp.2] : 0 < 1 - 2 * p))]
+  exact sub_pos.2 (hbase.trans_le hmul)
+
 theorem loewnerBraceBase_nonneg
     {p tau : ℝ}
     (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
@@ -155,6 +167,53 @@ theorem loewnerDetReserve_nonneg
     rw [hrewrite]
     exact add_nonneg
       (mul_nonneg (mul_nonneg hY.1.le hell0) (by linarith [hp.2]))
+      (mul_nonneg (sub_nonneg.2 hell1') hbrace)
+
+/-- The determinant reserve is strict below the centered boundary `p = 1/2`. -/
+theorem loewnerDetReserve_pos
+    {p tau : ℝ}
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (htau : tau ∈ Ico (0 : ℝ) 1) :
+    0 < loewnerDetReserve p tau := by
+  let hp' : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ) := ⟨hp.1, hp.2.le⟩
+  have hY := loewnerY_mem_Ioo hp' htau
+  have hellLower := loewnerEll_ge_two_mul hp' htau
+  have hell0 : 0 < loewnerEll p tau :=
+    (mul_pos (by norm_num) hp.1).trans_le hellLower
+  have hmain := loewnerMainBracket_pos hp htau
+  by_cases hell1 : loewnerEll p tau ≤ 1
+  · unfold loewnerDetReserve
+    exact add_pos_of_pos_of_nonneg
+      (mul_pos (mul_pos hY.1 hell0) hmain)
+      (mul_nonneg
+        (mul_nonneg (mul_nonneg (pow_nonneg hp.1.le 3) htau.1)
+          (sub_nonneg.2 htau.2.le))
+        (sub_nonneg.2 hell1))
+  · have hell1' : 1 ≤ loewnerEll p tau := le_of_not_ge hell1
+    have hbase := loewnerBraceBase_nonneg hp' htau
+    have hY1p : 0 ≤ loewnerY p tau * (1 - p) :=
+      mul_nonneg hY.1.le (by linarith [hp.2])
+    have hbrace : 0 ≤ loewnerY p tau * loewnerEll p tau * (1 - p) -
+        p ^ 3 * tau * (1 - tau) := by
+      have hscale : loewnerY p tau * (1 - p) ≤
+          loewnerY p tau * loewnerEll p tau * (1 - p) := by
+        calc
+          loewnerY p tau * (1 - p) =
+              loewnerY p tau * (1 - p) * 1 := by ring
+          _ ≤ loewnerY p tau * (1 - p) * loewnerEll p tau :=
+            mul_le_mul_of_nonneg_left hell1' hY1p
+          _ = loewnerY p tau * loewnerEll p tau * (1 - p) := by ring
+      linarith
+    have hrewrite : loewnerDetReserve p tau =
+        loewnerY p tau * loewnerEll p tau * (1 - 2 * p) +
+          (loewnerEll p tau - 1) *
+            (loewnerY p tau * loewnerEll p tau * (1 - p) -
+              p ^ 3 * tau * (1 - tau)) := by
+      unfold loewnerDetReserve
+      ring
+    rw [hrewrite]
+    exact add_pos_of_pos_of_nonneg
+      (mul_pos (mul_pos hY.1 hell0) (by linarith [hp.2]))
       (mul_nonneg (sub_nonneg.2 hell1') hbrace)
 
 theorem loewnerX_pos

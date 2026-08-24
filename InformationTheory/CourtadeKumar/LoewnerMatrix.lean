@@ -94,6 +94,24 @@ theorem loewnerBDet_nonneg
         (sq_nonneg (loewnerEll p tau)))
   exact mul_nonneg hfactor (loewnerDetReserve_nonneg hp htau)
 
+theorem loewnerBDet_pos
+    {p tau u : ℝ}
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (htau : tau ∈ Ico (0 : ℝ) 1)
+    (hu : u ≠ 0) :
+    0 < loewnerBDet p tau u := by
+  rw [loewnerBDet_eq ⟨hp.1, hp.2.le⟩ htau]
+  have hell : 0 < loewnerEll p tau :=
+    (mul_pos (by norm_num) hp.1).trans_le
+      (loewnerEll_ge_two_mul ⟨hp.1, hp.2.le⟩ htau)
+  have hfactor : 0 <
+      u ^ 2 * p / (loewnerY p tau * loewnerEll p tau ^ 2) :=
+    div_pos
+      (mul_pos (sq_pos_of_ne_zero hu) hp.1)
+      (mul_pos (loewnerY_mem_Ioo ⟨hp.1, hp.2.le⟩ htau).1
+        (sq_pos_of_pos hell))
+  exact mul_pos hfactor (loewnerDetReserve_pos hp htau)
+
 /-- The elementary scalar criterion for a symmetric two-by-two quadratic form. -/
 theorem two_by_two_quadratic_nonneg
     {a b c x y : ℝ}
@@ -108,6 +126,33 @@ theorem two_by_two_quadratic_nonneg
     have hrhs : 0 ≤ (a * x + b * y) ^ 2 + (a * c - b ^ 2) * y ^ 2 :=
       add_nonneg (sq_nonneg _) (mul_nonneg hdet (sq_nonneg y))
     nlinarith
+
+theorem two_by_two_quadratic_pos
+    {a b c x y : ℝ}
+    (ha : 0 ≤ a) (hc : 0 ≤ c) (hdet : 0 < a * c - b ^ 2)
+    (hxy : x ≠ 0 ∨ y ≠ 0) :
+    0 < a * x ^ 2 + 2 * b * x * y + c * y ^ 2 := by
+  have ha' : 0 < a := by
+    refine lt_of_le_of_ne ha ?_
+    intro ha0
+    rw [ha0] at hdet
+    nlinarith [sq_nonneg b]
+  have hid : a * (a * x ^ 2 + 2 * b * x * y + c * y ^ 2) =
+      (a * x + b * y) ^ 2 + (a * c - b ^ 2) * y ^ 2 := by
+    ring
+  have hrhs : 0 < (a * x + b * y) ^ 2 + (a * c - b ^ 2) * y ^ 2 := by
+    by_cases hy : y = 0
+    · subst y
+      have hs := sq_pos_of_ne_zero
+        (mul_ne_zero ha'.ne' (hxy.resolve_right (by simp)))
+      norm_num at ⊢
+      exact hs
+    · exact add_pos_of_nonneg_of_pos (sq_nonneg _)
+        (mul_pos hdet (sq_pos_of_ne_zero hy))
+  rw [← hid] at hrhs
+  exact ((mul_pos_iff.mp hrhs).resolve_right (by
+    intro hneg
+    linarith [hneg.1])).2
 
 /-- The inner matrix in the differentiated Loewner quotient is positive semidefinite. -/
 theorem loewnerB_quadratic_nonneg
@@ -133,6 +178,30 @@ theorem loewnerBMatrix_posSemidef
   · intro x
     have hq := loewnerB_quadratic_nonneg (p := p) (tau := tau) (u := u)
       (x := x 0) (y := x 1) hp htau
+    simp [loewnerBMatrix, dotProduct, Matrix.mulVec, Fin.sum_univ_two, mul_add]
+    nlinarith
+
+/-- Strict form away from the centered boundary and the degenerate direction `u = 0`. -/
+theorem loewnerBMatrix_posDef
+    {p tau u : ℝ}
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (htau : tau ∈ Ico (0 : ℝ) 1)
+    (hu : u ≠ 0) :
+    Matrix.PosDef (loewnerBMatrix p tau u) := by
+  apply Matrix.PosDef.of_dotProduct_mulVec_pos
+  · ext i j
+    fin_cases i <;> fin_cases j <;> simp [loewnerBMatrix]
+  · intro x hx
+    have hcoords : x 0 ≠ 0 ∨ x 1 ≠ 0 := by
+      by_contra h
+      push_neg at h
+      apply hx
+      funext i
+      fin_cases i <;> simp [h]
+    have hq := two_by_two_quadratic_pos
+      (loewnerB11_nonneg ⟨hp.1, hp.2.le⟩ htau)
+      (loewnerB22_pos ⟨hp.1, hp.2.le⟩ htau).le
+      (loewnerBDet_pos hp htau hu) hcoords
     simp [loewnerBMatrix, dotProduct, Matrix.mulVec, Fin.sum_univ_two, mul_add]
     nlinarith
 
