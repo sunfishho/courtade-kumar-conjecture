@@ -17,6 +17,69 @@ noncomputable def topWCoeff (j : ℕ) : ℝ :=
 noncomputable def topW8Series (R : ℝ) : ℝ :=
   ∑ j ∈ Finset.range 8, topWCoeff (j + 1) * R ^ (j + 1)
 
+/-- After the first eight `w` coefficients, the numerator remainder is
+nonnegative.  It is the positive coefficient tail weighted by
+`R⁹ - Rᵐ`, with `m ≥ 10`. -/
+lemma topW8_numerator_remainder_nonneg {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ topWCoeff 9 * R ^ 9 -
+      (topPhi (Real.sqrt R) - ∑ n ∈ Finset.range 9,
+        R ^ (n + 1) / (2 * (n + 1) * (2 * (n + 1) - 1))) := by
+  have hc := (top_hasSum_phiCoefficients_tail 9).mul_left (R ^ 9)
+  have hp := topPhi_sqrt_tail_hasSum hR 9
+  have hd := hc.sub hp
+  have hnonneg : ∀ n : ℕ, 0 ≤
+      R ^ 9 * ((1 : ℝ) /
+        (2 * (n + 9 + 1) * (2 * (n + 9 + 1) - 1))) -
+      R ^ (n + 9 + 1) /
+        (2 * (n + 9 + 1) * (2 * (n + 9 + 1) - 1)) := by
+    intro n
+    have hpow : R ^ (n + 9 + 1) ≤ R ^ 9 :=
+      pow_le_pow_of_le_one hR.1.le hR.2.le (by omega)
+    have hn : 0 ≤ (n : ℝ) := Nat.cast_nonneg n
+    have ha : 0 ≤ (1 : ℝ) /
+        (2 * (n + 9 + 1) * (2 * (n + 9 + 1) - 1)) := by
+      apply one_div_nonneg.mpr
+      apply mul_nonneg
+      · positivity
+      · nlinarith
+    calc
+      0 ≤ ((1 : ℝ) /
+          (2 * (n + 9 + 1) * (2 * (n + 9 + 1) - 1))) *
+            (R ^ 9 - R ^ (n + 9 + 1)) := mul_nonneg ha (sub_nonneg.mpr hpow)
+      _ = _ := by ring
+  have hscalar :
+      0 ≤ R ^ 9 *
+          (Real.log 2 - ∑ n ∈ Finset.range 9,
+            (1 : ℝ) / (2 * (n + 1) * (2 * (n + 1) - 1))) -
+        (topPhi (Real.sqrt R) - ∑ n ∈ Finset.range 9,
+          R ^ (n + 1) / (2 * (n + 1) * (2 * (n + 1) - 1))) := by
+    rw [← hd.tsum_eq]
+    exact tsum_nonneg hnonneg
+  convert hscalar using 1
+  all_goals simp [topWCoeff] <;> ring
+
+/-- The exact analytic channel ratio dominates its first eight positive
+`R`-series terms. -/
+theorem topW8Series_le_capRatio {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    topW8Series R ≤
+      (R * Real.log 2 - topPhi (Real.sqrt R)) / (1 - R) := by
+  have hrem := topW8_numerator_remainder_nonneg hR
+  have hid :
+      R * Real.log 2 - topPhi (Real.sqrt R) -
+          (1 - R) * topW8Series R =
+        topWCoeff 9 * R ^ 9 -
+          (topPhi (Real.sqrt R) - ∑ n ∈ Finset.range 9,
+            R ^ (n + 1) / (2 * (n + 1) * (2 * (n + 1) - 1))) := by
+    norm_num [topW8Series, topWCoeff, Finset.sum_range_succ]
+    ring
+  have hnum :
+      0 ≤ R * Real.log 2 - topPhi (Real.sqrt R) -
+        (1 - R) * topW8Series R := by
+    rw [hid]
+    exact hrem
+  rw [le_div_iff₀ (sub_pos.mpr hR.2)]
+  nlinarith
+
 lemma logTwo_ge_certificateLower :
     (6931 : ℝ) / 10000 ≤ Real.log 2 := by
   have h := Real.log_two_gt_d9
@@ -65,5 +128,18 @@ theorem topFiniteClaim_with_W8Series {c z e : ℝ}
         Real.log (topCertX c z) / (2 * c ^ 2 * topCapQ c z) + e := by
   exact topFiniteClaim_of_analytic_bounds hc hz
     (topCertW8_le_topW8Series ⟨hc.1.le, hc.2.le⟩ ⟨hz.1.le, hz.2.le⟩) he
+
+/-- The finite TOP certificate with its polynomial `w` surrogate replaced
+by the genuine analytic cap ratio. -/
+theorem topFiniteClaim_with_capRatio {c z e : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1)
+    (he : topCertEnum c z / topCertR c z ^ 9 ≤ e) :
+    (1 : ℝ) / 100 ≤
+      (topCertR c z * Real.log 2 - topPhi (Real.sqrt (topCertR c z))) /
+          (1 - topCertR c z) +
+        Real.log (topCertX c z) / (2 * c ^ 2 * topCapQ c z) + e := by
+  exact topFiniteClaim_of_analytic_bounds hc hz
+    ((topCertW8_le_topW8Series ⟨hc.1.le, hc.2.le⟩ ⟨hz.1.le, hz.2.le⟩).trans
+      (topW8Series_le_capRatio (topCertR_mem_Ioo hc hz))) he
 
 end CourtadeKumar
