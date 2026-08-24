@@ -33,6 +33,7 @@ import InformationTheory.CourtadeKumar.CapAuxConcavity
 import InformationTheory.CourtadeKumar.CapClosure
 import InformationTheory.CourtadeKumar.BernsteinCertificate
 import InformationTheory.CourtadeKumar.TopCertificateData
+import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.EntropyDropTransition
 import InformationTheory.CourtadeKumar.TopEndpointIdentity
 import InformationTheory.CourtadeKumar.ReserveConcavity
