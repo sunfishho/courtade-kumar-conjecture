@@ -15,6 +15,12 @@ def xorVec {n : ℕ} (x z : BitVec n) : BitVec n :=
   fun i ↦ Bool.xor (x i) (z i)
 
 @[simp]
+lemma xorVec_comm {n : ℕ} (x y : BitVec n) : xorVec x y = xorVec y x := by
+  funext i
+  change Bool.xor (x i) (y i) = Bool.xor (y i) (x i)
+  exact Bool.xor_comm _ _
+
+@[simp]
 lemma xorVec_xorVec {n : ℕ} (x y : BitVec n) : xorVec x (xorVec x y) = y := by
   funext i
   change Bool.xor (x i) (Bool.xor (x i) (y i)) = y i
