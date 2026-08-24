@@ -16,14 +16,21 @@ structure SingleRayGeometryData
   z : ℝ
   a : ℝ
   b : ℝ
+  alpha_interior : (alpha : ℝ) ∈ Set.Ioo (0 : ℝ) (1 / 2 : ℝ)
+  mean_interior : M ∈ Set.Ioo (0 : ℝ) (1 / 2 : ℝ)
   theta_nonneg : 0 ≤ theta
   z_pos : 0 < z
+  ray_interior : r ∈ Set.Ioo (0 : ℝ) 1
+  contact_before_half : z ∈ Set.Ioo (0 : ℝ) (1 / 2 : ℝ)
   contactProfile : RadialContactProfile alpha theta c
   affineMinorant : RadialAffineMinorant c a b
   affine_touches : a + b * r = c r
   radial_contact : c r = radialTriangleDifference alpha theta r z / z
   moment_contact : d = M * r
   entropy_contact : E0 = M / z * radialTriangleEntropy r z
+  threshold_eq : E0 =
+    (bellmanEnvelope (alpha : ℝ) (M - d) +
+      bellmanEnvelope (alpha : ℝ) (M + d)) / 2
 
 /-- The precise scalar LR assertion needed after the perspective geometry
 has selected its contact. -/

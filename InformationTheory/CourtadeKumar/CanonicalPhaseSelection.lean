@@ -79,11 +79,14 @@ observed ray. -/
 noncomputable def canonicalSingleRayGeometry_of_entropyContact
     {alpha : ℝ≥0} {M d E0 r z : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : 0 < M)
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
     (hr : r ∈ Ioo (0 : ℝ) 1)
     (hz : z ∈ Ioo (0 : ℝ) (1 / 2))
     (hmoment : d = M * r)
-    (hentropy : E0 / M = radialEntropyRatio r z) :
+    (hentropy : E0 / M = radialEntropyRatio r z)
+    (hthreshold : E0 =
+      (bellmanEnvelope (alpha : ℝ) (M - d) +
+        bellmanEnvelope (alpha : ℝ) (M + d)) / 2) :
     SingleRayGeometryData alpha M d E0 := by
   let rho : ℝ := channelRho (alpha : ℝ)
   have hrho : rho ∈ Ioo (0 : ℝ) 1 := by
@@ -129,13 +132,13 @@ noncomputable def canonicalSingleRayGeometry_of_entropyContact
           (canonicalRadialContactZ alpha theta halpha htheta r) := by
     rw [hcanonical]
     calc
-      E0 = M * (E0 / M) := by field_simp [hM.ne']
+      E0 = M * (E0 / M) := by field_simp [hM.1.ne']
       _ = M * radialEntropyRatio r z := by rw [hentropy]
       _ = M / z * radialTriangleEntropy r z := by
         unfold radialEntropyRatio
         ring
   exact canonicalSingleRayGeometryData
-    halpha htheta hrstar hcenter ⟨hrstarr, hr.2⟩ hmoment hentropy'
+    halpha hM htheta hrstar hcenter ⟨hrstarr, hr.2⟩ hmoment hentropy' hthreshold
 
 /-- The centered entropy root itself decides the geometric phase.  If the
 observed moment ray lies before it, use the centered chord.  Otherwise the
@@ -173,7 +176,7 @@ theorem canonicalTwoPhaseGeometry_of_centeredEntropyContact
     obtain ⟨z, hz, hzeq⟩ :=
       (existsUnique_radialEntropyRatio_eq_before_half hr habove).exists
     exact Or.inl ⟨canonicalSingleRayGeometry_of_entropyContact
-      halpha hM.1 hr hz hmoment hzeq.symm⟩
+      halpha hM hr hz hmoment hzeq.symm hthreshold⟩
 
 /-- Complete interior geometric classification from a positive target
 entropy level.  Both scalar contacts are constructed internally. -/
