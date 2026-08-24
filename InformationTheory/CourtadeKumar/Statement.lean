@@ -1,4 +1,5 @@
-import InformationTheory.CourtadeKumar.Basic
+import InformationTheory.CourtadeKumar.CapacityClosure
+import InformationTheory.CourtadeKumar.EnergyPositivity
 
 open scoped ENNReal NNReal
 
@@ -16,6 +17,26 @@ def Statement : Prop :=
     InformationQuantities.mutual_information
         (bscJointPMF n alpha (crossover_le_one halpha) b).toMeasure
       ≤ ENNReal.ofReal (1 - binaryEntropyBits (alpha : ℝ))
+
+/-- The exact remaining scalar interface: a Bellman step at every admissible
+BSC parameter implies the full measure-theoretic statement. -/
+theorem courtadeKumar_of_bellmanStep
+    (hstep : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      BooleanBellmanStep alpha) : Statement := by
+  intro n alpha halpha b
+  exact bscMutualInformation_le_capacity_of_step alpha halpha
+    (hstep alpha halpha) n b
+
+/-- Equivalently, it suffices to prove the ordered equal-multiplier
+assertion.  Sorting dominance has already been discharged from concavity of
+the explicit envelope. -/
+theorem courtadeKumar_of_orderedEqualMultiplier
+    (hordered : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      OrderedEqualMultiplierBellmanStep alpha) : Statement := by
+  apply courtadeKumar_of_bellmanStep
+  intro alpha halpha
+  exact booleanBellmanStep_of_orderedEqualMultiplier alpha
+    (hordered alpha halpha) (bellmanEnvelopeSortingDominance alpha halpha)
 
 /-- Proof target. This theorem is the single intentional placeholder at the statement milestone. -/
 theorem courtadeKumar : Statement := by
