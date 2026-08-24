@@ -175,4 +175,40 @@ theorem canonicalTwoPhaseGeometry_of_centeredEntropyContact
     exact Or.inl ⟨canonicalSingleRayGeometry_of_entropyContact
       halpha hM.1 hr hz hmoment hzeq.symm⟩
 
+/-- Complete interior geometric classification from a positive target
+entropy level.  Both scalar contacts are constructed internally. -/
+theorem canonicalInteriorTwoPhaseGeometry
+    {alpha : ℝ≥0} {M d E0 : ℝ}
+    (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hd : 0 < d)
+    (hdM : d < M)
+    (hE0 : 0 < E0)
+    (hthreshold : E0 =
+      (bellmanEnvelope (alpha : ℝ) (M - d) +
+        bellmanEnvelope (alpha : ℝ) (M + d)) / 2) :
+    Nonempty (SingleRayGeometryData alpha M d E0) ∨
+      Nonempty (CenteredEndpointGeometryData alpha M d E0) := by
+  let t : ℝ := E0 / (2 * d)
+  have ht : 0 < t := div_pos hE0 (mul_pos (by norm_num) hd)
+  obtain ⟨s, hs, hseq⟩ :=
+    (existsUnique_centeredEntropyRatio_eq ht).exists
+  let r : ℝ := d / M
+  have hr : r ∈ Ioo (0 : ℝ) 1 := by
+    dsimp [r]
+    exact ⟨div_pos hd hM.1, (div_lt_one hM.1).2 hdM⟩
+  have hmoment : d = M * r := by
+    dsimp [r]
+    field_simp [hM.1.ne']
+  have hentropy : E0 =
+      2 * d / s * radialTriangleEntropy s (1 / 2) := by
+    rw [centeredEntropyRatio_eq_radial] at hseq
+    dsimp [t] at hseq
+    calc
+      E0 = 2 * d * (E0 / (2 * d)) := by field_simp [hd.ne']
+      _ = 2 * d * (radialTriangleEntropy s (1 / 2) / s) := by rw [← hseq]
+      _ = 2 * d / s * radialTriangleEntropy s (1 / 2) := by ring
+  exact canonicalTwoPhaseGeometry_of_centeredEntropyContact
+    halpha hM hd hs hr hmoment hentropy hthreshold
+
 end CourtadeKumar
