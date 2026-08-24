@@ -22,6 +22,10 @@ noncomputable def loewnerB22 (p tau : ℝ) : ℝ :=
 noncomputable def loewnerBDet (p tau u : ℝ) : ℝ :=
   loewnerB11 p tau u * loewnerB22 p tau - loewnerB12 p tau u ^ 2
 
+noncomputable def loewnerBMatrix (p tau u : ℝ) : Matrix (Fin 2) (Fin 2) ℝ :=
+  !![loewnerB11 p tau u, loewnerB12 p tau u;
+    loewnerB12 p tau u, loewnerB22 p tau]
+
 theorem loewnerZ_pos
     {p tau : ℝ}
     (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
@@ -116,5 +120,20 @@ theorem loewnerB_quadratic_nonneg
     (loewnerB11_nonneg hp htau)
     (loewnerB22_pos hp htau).le
     (loewnerBDet_nonneg hp htau)
+
+/-- Matrix-form version of the explicit Loewner certificate. -/
+theorem loewnerBMatrix_posSemidef
+    {p tau u : ℝ}
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (htau : tau ∈ Ico (0 : ℝ) 1) :
+    Matrix.PosSemidef (loewnerBMatrix p tau u) := by
+  apply Matrix.PosSemidef.of_dotProduct_mulVec_nonneg
+  · ext i j
+    fin_cases i <;> fin_cases j <;> simp [loewnerBMatrix]
+  · intro x
+    have hq := loewnerB_quadratic_nonneg (p := p) (tau := tau) (u := u)
+      (x := x 0) (y := x 1) hp htau
+    simp [loewnerBMatrix, dotProduct, Matrix.mulVec, Fin.sum_univ_two, mul_add]
+    nlinarith
 
 end CourtadeKumar
