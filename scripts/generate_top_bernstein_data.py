@@ -22,6 +22,7 @@ SOURCE = (
     / "verify_full_cap_bernstein_closure.py"
 )
 TARGET = REPO / "InformationTheory/CourtadeKumar/TopCertificateData.lean"
+EXPANDED_TARGET = REPO / "InformationTheory/CourtadeKumar/TopCertificateExpanded.lean"
 
 
 def load_verifier():
@@ -39,6 +40,34 @@ def lean_rat(q: Fraction) -> str:
         return str(q.numerator)
     numerator = f"({q.numerator})" if q.numerator < 0 else str(q.numerator)
     return f"mkRat {numerator} {q.denominator}"
+
+
+def lean_real_rat(q: Fraction) -> str:
+    if q == 0:
+        return "0"
+    if q.denominator == 1:
+        return f"({q.numerator} : ℝ)"
+    return f"(({q.numerator} : ℝ) / {q.denominator})"
+
+
+def horner(coefficients: list[Fraction], variable: str) -> str:
+    last = max((i for i, q in enumerate(coefficients) if q != 0), default=0)
+    value = lean_real_rat(coefficients[last])
+    for q in reversed(coefficients[:last]):
+        value = f"({lean_real_rat(q)} + {variable} * ({value}))"
+    return value
+
+
+def balanced_sum(terms: list[str]) -> str:
+    if not terms:
+        return "0"
+    current = terms
+    while len(current) > 1:
+        current = [
+            f"({current[i]} + {current[i + 1]})" if i + 1 < len(current) else current[i]
+            for i in range(0, len(current), 2)
+        ]
+    return current[0]
 
 
 def main() -> None:
@@ -79,11 +108,16 @@ def main() -> None:
     assert len(power_flat) == 48 * 23
     assert sum(value != 0 for value in power_flat) == 918
     power_rows = []
-    for start in range(0, len(power_flat), 4):
+    for i in range(48):
+        row = power_flat[i * 23 : (i + 1) * 23]
         power_rows.append(
-            "    " + ", ".join(map(lean_rat, power_flat[start : start + 4]))
+            f"def topCertificatePowerRowData{i} : Array ℚ :=\n"
+            + "  #[" + ", ".join(map(lean_rat, row)) + "]"
         )
-    power_payload = ",\n".join(power_rows)
+    power_row_defs = "\n\n".join(power_rows)
+    power_payload = ",\n    ".join(
+        f"topCertificatePowerRowData{i}" for i in range(48)
+    )
 
     text = f'''import InformationTheory.CourtadeKumar.BernsteinCertificate
 
@@ -117,18 +151,26 @@ theorem topElevatedBernsteinCoeff_minimum_witness :
       3174973 / 1518982002412875 := by
   native_decide
 
-def topCertificatePowerData : Array ℚ :=
-  #[
-{power_payload}
-  ]
+{power_row_defs}
+
+def topCertificatePowerData : Array (Array ℚ) :=
+  #[{power_payload}]
 
 theorem topCertificatePowerData_size :
-    topCertificatePowerData.size = 1104 := by
+    topCertificatePowerData.size = 48 ∧
+      ∀ row ∈ topCertificatePowerData, row.size = 23 := by
   native_decide
 
 def topCertificatePowerCoeffRat (i : Fin 48) (j : Fin 61) : ℚ :=
   if hj : j.val < 23 then
-    (topCertificatePowerData[i.val * 23 + j.val]?).getD 0
+    (((topCertificatePowerData[i.val]?).getD #[])[j.val]?).getD 0
+  else 0
+
+def topCertificatePowerCoeffRatNat (i j : ℕ) : ℚ :=
+  if hi : i < 48 then
+    if hj : j < 61 then
+      topCertificatePowerCoeffRat ⟨i, hi⟩ ⟨j, hj⟩
+    else 0
   else 0
 
 set_option maxHeartbeats 10000000 in
@@ -142,7 +184,92 @@ theorem topBernsteinPowerCoeff_eq_certificate :
 end CourtadeKumar
 '''
     TARGET.write_text(text)
+    expanded_rows = []
+    row_theorems = []
+    for i in range(48):
+        row_terms = []
+        for j in range(23):
+            q = power_flat[i * 23 + j]
+            if q == 0:
+                continue
+            factors = [lean_real_rat(q)]
+            if j:
+                factors.append(f"z ^ {j}")
+            row_terms.append(" * ".join(factors))
+        row_value = balanced_sum(row_terms)
+        expanded_rows.append(
+            f"noncomputable def topCertificatePowerRowExpanded{i} (z : ℝ) : ℝ :=\n"
+            f"  {row_value}"
+        )
+        row_theorems.append(
+            f'''set_option maxHeartbeats 2000000 in
+theorem topCertificatePowerRowEval{i} (c z : ℝ) :
+    (∑ j ∈ Finset.range 61,
+      (topCertificatePowerCoeffRatNat {i} j : ℝ) *
+        c ^ {i} * z ^ j) =
+      topCertificatePowerRowExpanded{i} z * c ^ {i} := by
+  classical
+  norm_num [topCertificatePowerCoeffRatNat, topCertificatePowerCoeffRat,
+    topCertificatePowerData,
+    topCertificatePowerRowData{i}, topCertificatePowerRowExpanded{i},
+    Finset.sum_range_succ] <;> ring'''
+        )
+    expanded_row_defs = "\n\n".join(expanded_rows)
+    row_theorem_text = "\n\n".join(row_theorems)
+    row_dispatch = "\n".join(
+        f"  | {i} => topCertificatePowerRowExpanded{i} z" for i in range(48)
+    )
+    generic_row_cases = "\n".join(
+        f"  · simpa [topCertificatePowerRowExpanded] using "
+        f"topCertificatePowerRowEval{i} c z"
+        for i in range(48)
+    )
+    outer_terms = [
+        f"topCertificatePowerRowExpanded{i} z * c ^ {i}" for i in range(48)
+    ]
+    value = balanced_sum(outer_terms)
+    expanded_text = f'''import InformationTheory.CourtadeKumar.TopCertificateData
+
+/-! Generated balanced evaluation of the exact 48-by-23 power coefficient
+table.  This is an evaluation view of the same rationals checked in
+`TopCertificateData`; it contains no floating-point constants. -/
+
+namespace CourtadeKumar
+
+open scoped BigOperators
+
+{expanded_row_defs}
+
+noncomputable def topCertificatePowerExpanded (c z : ℝ) : ℝ :=
+  {value}
+
+{row_theorem_text}
+
+noncomputable def topCertificatePowerRowExpanded (i : ℕ) (z : ℝ) : ℝ :=
+  match i with
+{row_dispatch}
+  | _ => 0
+
+theorem topCertificatePowerRowEval (i : ℕ) (hi : i < 48) (c z : ℝ) :
+    (∑ j ∈ Finset.range 61,
+      (topCertificatePowerCoeffRatNat i j : ℝ) * c ^ i * z ^ j) =
+      topCertificatePowerRowExpanded i z * c ^ i := by
+  interval_cases i
+{generic_row_cases}
+
+set_option maxHeartbeats 2000000 in
+theorem topCertificatePowerExpanded_eq_sum (c z : ℝ) :
+    topCertificatePowerExpanded c z =
+      ∑ i ∈ Finset.range 48, topCertificatePowerRowExpanded i z * c ^ i := by
+  unfold topCertificatePowerExpanded
+  norm_num [topCertificatePowerRowExpanded, Finset.sum_range_succ]
+  ring
+
+end CourtadeKumar
+'''
+    EXPANDED_TARGET.write_text(expanded_text)
     print(f"wrote {TARGET} ({len(flat)} exact coefficients)")
+    print(f"wrote {EXPANDED_TARGET} (balanced exact power form)")
 
 
 if __name__ == "__main__":

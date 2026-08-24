@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.TopCertificateData
+import InformationTheory.CourtadeKumar.TopCertificateExpanded
 
 /-! The exact polynomial numerator in the full-cap TOP certificate. -/
 
@@ -83,51 +83,74 @@ lemma topBernsteinPowerCoeff_cast (a b : ℕ) :
     simp [him, hjn]
 
 def topCertificatePowerDataEval (c z : ℝ) : ℝ :=
-  ∑ i : Fin 48, ∑ j : Fin 61,
-    (topCertificatePowerCoeffRat i j : ℝ) * c ^ i.val * z ^ j.val
+  ∑ i ∈ Finset.range 48, ∑ j ∈ Finset.range 61,
+    (topCertificatePowerCoeffRatNat i j : ℝ) * c ^ i * z ^ j
 
 theorem topCertificateBernsteinEval_eq_powerDataEval (c z : ℝ) :
     topCertificateBernsteinEval c z = topCertificatePowerDataEval c z := by
   rw [topCertificateBernsteinEval, tensorBernsteinEval_eq_powerEval]
   unfold tensorBernsteinPowerEval topCertificatePowerDataEval
-  calc
-    _ = ∑ i : Fin 48, ∑ j ∈ Finset.range 61,
-          tensorBernsteinPowerCoeff
-              (p := fun a b ↦ (topElevatedBernsteinCoeff a b : ℝ))
-              i.val j * c ^ i.val * z ^ j := by
-        exact (Fin.sum_univ_eq_sum_range
-          (fun i ↦ ∑ j ∈ Finset.range 61,
-            tensorBernsteinPowerCoeff
-                (p := fun a b ↦ (topElevatedBernsteinCoeff a b : ℝ))
-                i j * c ^ i * z ^ j) 48).symm
-    _ = ∑ i : Fin 48, ∑ j : Fin 61,
-          tensorBernsteinPowerCoeff
-              (p := fun a b ↦ (topElevatedBernsteinCoeff a b : ℝ))
-              i.val j.val * c ^ i.val * z ^ j.val := by
-        apply Finset.sum_congr rfl
-        intro i hi
-        exact (Fin.sum_univ_eq_sum_range
-          (fun j ↦ tensorBernsteinPowerCoeff
-              (p := fun a b ↦ (topElevatedBernsteinCoeff a b : ℝ))
-              i.val j * c ^ i.val * z ^ j) 61).symm
-    _ = _ := by
-        apply Finset.sum_congr rfl
-        intro i hi
-        apply Finset.sum_congr rfl
-        intro j hj
-        rw [← topBernsteinPowerCoeff_cast,
-          topBernsteinPowerCoeff_eq_certificate i j]
+  apply Finset.sum_congr rfl
+  intro i hi
+  apply Finset.sum_congr rfl
+  intro j hj
+  have hi' : i < 48 := Finset.mem_range.mp hi
+  have hj' : j < 61 := Finset.mem_range.mp hj
+  rw [← topBernsteinPowerCoeff_cast,
+    topBernsteinPowerCoeff_eq_certificate ⟨i, hi'⟩ ⟨j, hj'⟩]
+  simp [topCertificatePowerCoeffRatNat, hi', hj']
 
 set_option maxHeartbeats 20000000 in
 set_option maxRecDepth 100000 in
-theorem topCertificatePolynomial_eq_powerDataEval (c z : ℝ) :
-    topCertificatePolynomial c z = topCertificatePowerDataEval c z := by
+theorem topCertificatePolynomial_eq_powerExpanded (c z : ℝ) :
+    topCertificatePolynomial c z = topCertificatePowerExpanded c z := by
   classical
-  norm_num [topCertificatePolynomial, topCertEnum, topCertGeometric,
+  simp only [topCertificatePolynomial, topCertEnum, topCertGeometric,
     topCertDnOverC2, topCertW8, topCertZNum, topCertZDen, topCertH,
-    topCertB, topCertD, topCertR, topCertificatePowerDataEval,
-    topCertificatePowerCoeffRat, topCertificatePowerData, Fin.sum_univ_succ]
+    topCertB, topCertD, topCertR, Finset.sum_range_succ,
+    Finset.sum_range_zero]
+  unfold topCertificatePowerExpanded
+    topCertificatePowerRowExpanded0 topCertificatePowerRowExpanded1
+    topCertificatePowerRowExpanded2 topCertificatePowerRowExpanded3
+    topCertificatePowerRowExpanded4 topCertificatePowerRowExpanded5
+    topCertificatePowerRowExpanded6 topCertificatePowerRowExpanded7
+    topCertificatePowerRowExpanded8 topCertificatePowerRowExpanded9
+    topCertificatePowerRowExpanded10 topCertificatePowerRowExpanded11
+    topCertificatePowerRowExpanded12 topCertificatePowerRowExpanded13
+    topCertificatePowerRowExpanded14 topCertificatePowerRowExpanded15
+    topCertificatePowerRowExpanded16 topCertificatePowerRowExpanded17
+    topCertificatePowerRowExpanded18 topCertificatePowerRowExpanded19
+    topCertificatePowerRowExpanded20 topCertificatePowerRowExpanded21
+    topCertificatePowerRowExpanded22 topCertificatePowerRowExpanded23
+    topCertificatePowerRowExpanded24 topCertificatePowerRowExpanded25
+    topCertificatePowerRowExpanded26 topCertificatePowerRowExpanded27
+    topCertificatePowerRowExpanded28 topCertificatePowerRowExpanded29
+    topCertificatePowerRowExpanded30 topCertificatePowerRowExpanded31
+    topCertificatePowerRowExpanded32 topCertificatePowerRowExpanded33
+    topCertificatePowerRowExpanded34 topCertificatePowerRowExpanded35
+    topCertificatePowerRowExpanded36 topCertificatePowerRowExpanded37
+    topCertificatePowerRowExpanded38 topCertificatePowerRowExpanded39
+    topCertificatePowerRowExpanded40 topCertificatePowerRowExpanded41
+    topCertificatePowerRowExpanded42 topCertificatePowerRowExpanded43
+    topCertificatePowerRowExpanded44 topCertificatePowerRowExpanded45
+    topCertificatePowerRowExpanded46 topCertificatePowerRowExpanded47
   ring
+
+theorem topCertificatePowerDataEval_eq_powerExpanded (c z : ℝ) :
+    topCertificatePowerDataEval c z = topCertificatePowerExpanded c z := by
+  unfold topCertificatePowerDataEval
+  calc
+    _ = ∑ i ∈ Finset.range 48,
+          topCertificatePowerRowExpanded i z * c ^ i := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact topCertificatePowerRowEval i (Finset.mem_range.mp hi) c z
+    _ = _ := (topCertificatePowerExpanded_eq_sum c z).symm
+
+theorem topCertificatePolynomial_eq_powerDataEval (c z : ℝ) :
+    topCertificatePolynomial c z = topCertificatePowerDataEval c z :=
+  (topCertificatePolynomial_eq_powerExpanded c z).trans
+    (topCertificatePowerDataEval_eq_powerExpanded c z).symm
 
 /-- The exact certificate identity, checked through the intermediate
 power-basis table rather than one monolithic symbolic expansion. -/

@@ -34,7 +34,9 @@ lemma topCertH_pos {c z : ℝ}
     (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
     0 < topCertH c z := by
   unfold topCertH
-  positivity
+  have hd := topCertD_pos hc
+  have hb := topCertB_pos hc hz
+  linarith
 
 lemma topCertZDen_pos {c z : ℝ}
     (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
