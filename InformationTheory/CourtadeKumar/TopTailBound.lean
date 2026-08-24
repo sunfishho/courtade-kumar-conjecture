@@ -14,6 +14,35 @@ def topDn (R : ℝ) (n : ℕ) : ℝ :=
   (1 - R) ^ 2 *
     ∑ j ∈ Finset.range n, (j + 1 : ℝ) * R ^ j
 
+lemma topDn_eq_closed (R : ℝ) (n : ℕ) :
+    topDn R n = 1 - (n + 1) * R ^ n + n * R ^ (n + 1) := by
+  induction n with
+  | zero => simp [topDn]
+  | succ n ih =>
+      unfold topDn at ih ⊢
+      rw [Finset.sum_range_succ]
+      push_cast
+      rw [pow_succ R (n + 1)]
+      linear_combination ih
+
+lemma topDn_nonneg {R : ℝ} (hR : R ∈ Icc (0 : ℝ) 1) (n : ℕ) :
+    0 ≤ topDn R n := by
+  unfold topDn
+  apply mul_nonneg (sq_nonneg _)
+  apply Finset.sum_nonneg
+  intro j hj
+  exact mul_nonneg (by positivity) (pow_nonneg hR.1 j)
+
+lemma topDn_le_one {R : ℝ} (hR : R ∈ Icc (0 : ℝ) 1) (n : ℕ) :
+    topDn R n ≤ 1 := by
+  rw [topDn_eq_closed]
+  have hp : 0 ≤ R ^ n := pow_nonneg hR.1 n
+  have hnterm : 0 ≤ (n : ℝ) * (1 - R) :=
+    mul_nonneg (Nat.cast_nonneg n) (sub_nonneg.mpr hR.2)
+  have hfactor : 0 ≤ (1 : ℝ) + n * (1 - R) := by linarith
+  rw [pow_succ]
+  nlinarith [mul_nonneg hp hfactor]
+
 lemma topDn_div_c_sq {c z : ℝ} (hc : c ≠ 0) (n : ℕ) :
     topDn (topCertR c z) n / c ^ 2 = topCertDnOverC2 c z n := by
   unfold topDn topCertDnOverC2 topCertR
@@ -61,6 +90,45 @@ noncomputable def topCapETerm (c z : ℝ) (n : ℕ) : ℝ :=
 noncomputable def topCapE10 (c z : ℝ) : ℝ :=
   ∑ n ∈ Finset.range 10, topCapETerm c z (n + 1)
 
+lemma topCertZ_lt_R {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    z < topCertR c z := by
+  have hc2lt : c ^ 2 < 1 := by nlinarith [hc.1, hc.2]
+  have hprod : 0 < (1 - c ^ 2) * (1 - z) :=
+    mul_pos (sub_pos.mpr hc2lt) (sub_pos.mpr hz.2)
+  unfold topCertR
+  nlinarith
+
+lemma topCapQ_mem_Ioo {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    topCapQ c z ∈ Ioo (0 : ℝ) 1 := by
+  have hR := topCertR_mem_Ioo hc hz
+  exact ⟨topCapQ_pos hc hz, by
+    unfold topCapQ
+    exact (div_lt_one hR.1).2 (topCertZ_lt_R hc hz)⟩
+
+lemma topCapETerm_nonneg {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) (n : ℕ) :
+    0 ≤ topCapETerm c z n := by
+  have hR := topCertR_mem_Ioo hc hz
+  have hq := topCapQ_mem_Ioo hc hz
+  have hqpow : (z / topCertR c z) ^ n ≤ 1 :=
+    pow_le_one₀ hq.1.le hq.2.le
+  unfold topCapQ at hq
+  unfold topCapETerm
+  dsimp only
+  apply div_nonneg
+  · apply mul_nonneg
+    · exact div_nonneg (sub_nonneg.mpr hqpow) (sub_nonneg.mpr hq.2.le)
+    · exact div_nonneg (topDn_nonneg ⟨hR.1.le, hR.2.le⟩ n) (sq_nonneg c)
+  · positivity
+
+lemma topCapE10_nonneg {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ topCapE10 c z := by
+  unfold topCapE10
+  exact Finset.sum_nonneg fun n hn ↦ topCapETerm_nonneg hc hz (n + 1)
+
 lemma topCapETerm_eq_certificateTerm {c z : ℝ} {n : ℕ}
     (hc : c ≠ 0) (hR : topCertR c z ≠ 0)
     (hq : z / topCertR c z ≠ 1) (hn : n ≤ 10) :
@@ -79,12 +147,7 @@ theorem topCapE10_eq_certificate {c z : ℝ}
     (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
     topCapE10 c z = topCertEnum c z / topCertR c z ^ 9 := by
   have hRmem := topCertR_mem_Ioo hc hz
-  have hzR : z < topCertR c z := by
-    have hc2lt : c ^ 2 < 1 := by nlinarith [hc.1, hc.2]
-    have hprod : 0 < (1 - c ^ 2) * (1 - z) :=
-      mul_pos (sub_pos.mpr hc2lt) (sub_pos.mpr hz.2)
-    unfold topCertR
-    nlinarith
+  have hzR : z < topCertR c z := topCertZ_lt_R hc hz
   have hq : z / topCertR c z ≠ 1 :=
     ne_of_lt (div_lt_one hRmem.1 |>.2 hzR)
   unfold topCapE10 topCertEnum
