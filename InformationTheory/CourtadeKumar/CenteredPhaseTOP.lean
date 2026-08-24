@@ -84,4 +84,32 @@ theorem centeredEndpoint_top_bound_of_correctedTop
   rw [radialTriangleChannelEntropy_centered]
   simpa using htop
 
+/-- Perspective feasibility `d/M ≤ r` automatically supplies the TOP
+weight cap `c = 2d/r ≤ 2M < 1`. -/
+theorem centeredEndpoint_top_bound_of_phaseContact
+    {alpha M d r : ℝ}
+    (halpha : alpha ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hd : 0 < d) (hshape : d / M ≤ r)
+    (hcontact :
+      2 * d / r * binaryEntropyBits ((1 - r) / 2) =
+        (bellmanEnvelope alpha (M - d) +
+          bellmanEnvelope alpha (M + d)) / 2) :
+    bellmanEnvelope alpha M ≤
+      2 * d / r * radialTriangleChannelEntropy
+        (⟨alpha, halpha.1.le⟩ : ℝ≥0) r (1 / 2) := by
+  have hdMr : d ≤ M * r := by
+    have := (div_le_iff₀ hM.1).mp hshape
+    nlinarith
+  have hcap : 2 * d / r ≤ 2 * M := by
+    rw [div_le_iff₀ hr.1]
+    nlinarith
+  have hc : 2 * d / r ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact div_pos (mul_pos (by norm_num) hd) hr.1
+    · exact hcap.trans_lt (by linarith [hM.2])
+  exact centeredEndpoint_top_bound_of_correctedTop
+    halpha hr hM hc hcap hcontact
+
 end CourtadeKumar
