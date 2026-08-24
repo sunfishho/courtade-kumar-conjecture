@@ -66,4 +66,35 @@ theorem topContactResidual_monotoneOn_nonneg
     exact topContactResidual_deriv_nonneg hs hell hXin.1
       (hdomain X hXin).1 (hdomain X hXin).2
 
+/-- A contact in the admissible interval brackets the fixed-weight residual
+between its centered and endpoint values. -/
+theorem topContactResidual_bracket_of_contact
+    {rho c r X U : ℝ}
+    (hs : 0 ≤ topS rho) (hell : 0 ≤ topEll rho)
+    (hX : X ∈ Icc (0 : ℝ) U)
+    (hdomain : ∀ Y ∈ Icc (0 : ℝ) U,
+      Y + c * r ∈ Ioo (-1 : ℝ) 1 ∧ Y - c * r ∈ Ioo (-1 : ℝ) 1)
+    (hcontact : topContactResidual rho c r X = 0) :
+    topContactResidual rho c r 0 ≤ 0 ∧
+      0 ≤ topContactResidual rho c r U := by
+  have hU : 0 ≤ U := hX.1.trans hX.2
+  have hmono := topContactResidual_monotoneOn_nonneg hs hell hdomain
+  have hleft := hmono (show (0 : ℝ) ∈ Icc 0 U from ⟨le_rfl, hU⟩) hX hX.1
+  have hright := hmono hX (show U ∈ Icc (0 : ℝ) U from ⟨hU, le_rfl⟩) hX.2
+  rw [hcontact] at hleft hright
+  exact ⟨hleft, hright⟩
+
+/-- Consequently, every admissible fixed-weight contact lies at or before
+the balanced root in the sense `G(c,r) ≤ 0`. -/
+theorem balancedResidual_nonpos_of_contact
+    {rho c r X U : ℝ}
+    (hs : 0 ≤ topS rho) (hell : 0 ≤ topEll rho)
+    (hX : X ∈ Icc (0 : ℝ) U)
+    (hdomain : ∀ Y ∈ Icc (0 : ℝ) U,
+      Y + c * r ∈ Ioo (-1 : ℝ) 1 ∧ Y - c * r ∈ Ioo (-1 : ℝ) 1)
+    (hcontact : topContactResidual rho c r X = 0) :
+    balancedResidual rho c r ≤ 0 := by
+  rw [← topContactResidual_zero]
+  exact (topContactResidual_bracket_of_contact hs hell hX hdomain hcontact).1
+
 end CourtadeKumar
