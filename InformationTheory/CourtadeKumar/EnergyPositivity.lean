@@ -98,6 +98,37 @@ lemma topS_nonneg {rho : ℝ} (hrho : rho ∈ Icc (0 : ℝ) 1) :
   unfold topS topR
   nlinarith [sq_nonneg rho, mul_nonneg (sub_nonneg.mpr hrho.2) (add_nonneg hrho.1 zero_le_one)]
 
+/-- The TOP slope is monotone for every admissible channel, with the
+coefficient signs now discharged internally. -/
+theorem topP_monotoneOn_channel {rho : ℝ} (hrho : rho ∈ Icc (0 : ℝ) 1) :
+    MonotoneOn (topP rho) (Ioo (-1 : ℝ) 1) :=
+  topP_monotoneOn rho (topS_nonneg hrho) (topEll_nonneg hrho)
+
+/-- A fixed-weight contact brackets the centered and transition residuals
+for every admissible channel. -/
+theorem topContactResidual_bracket_of_contact_channel
+    {rho c r X U : ℝ}
+    (hrho : rho ∈ Icc (0 : ℝ) 1)
+    (hX : X ∈ Icc (0 : ℝ) U)
+    (hdomain : ∀ Y ∈ Icc (0 : ℝ) U,
+      Y + c * r ∈ Ioo (-1 : ℝ) 1 ∧ Y - c * r ∈ Ioo (-1 : ℝ) 1)
+    (hcontact : topContactResidual rho c r X = 0) :
+    topContactResidual rho c r 0 ≤ 0 ∧
+      0 ≤ topContactResidual rho c r U :=
+  topContactResidual_bracket_of_contact (topS_nonneg hrho) (topEll_nonneg hrho)
+    hX hdomain hcontact
+
+theorem balancedResidual_nonpos_of_contact_channel
+    {rho c r X U : ℝ}
+    (hrho : rho ∈ Icc (0 : ℝ) 1)
+    (hX : X ∈ Icc (0 : ℝ) U)
+    (hdomain : ∀ Y ∈ Icc (0 : ℝ) U,
+      Y + c * r ∈ Ioo (-1 : ℝ) 1 ∧ Y - c * r ∈ Ioo (-1 : ℝ) 1)
+    (hcontact : topContactResidual rho c r X = 0) :
+    balancedResidual rho c r ≤ 0 :=
+  balancedResidual_nonpos_of_contact (topS_nonneg hrho) (topEll_nonneg hrho)
+    hX hdomain hcontact
+
 /-- Consequently the bit-valued Bellman coefficient is nonnegative on the
 whole BSC parameter interval. -/
 theorem bellmanLambda_nonneg {alpha : ℝ}
