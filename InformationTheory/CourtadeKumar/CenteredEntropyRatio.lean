@@ -3,7 +3,8 @@ import Mathlib.Analysis.Convex.Deriv
 
 /-! Monotonicity of the centered entropy-per-displacement profile. -/
 
-open Set
+open Filter Set
+open scoped Topology
 
 namespace CourtadeKumar
 
@@ -95,5 +96,74 @@ theorem strictAntiOn_centeredEntropyRatio :
   · intro r hr
     rw [interior_Ioo] at hr
     exact deriv_centeredEntropyRatio_neg hr
+
+theorem tendsto_centeredEntropyRatio_zero :
+    Tendsto centeredEntropyRatio (nhdsWithin (0 : ℝ) (Ioi 0)) atTop := by
+  have hnum : Tendsto (fun r : ℝ ↦ binaryEntropyBits ((1 - r) / 2))
+      (nhdsWithin (0 : ℝ) (Ioi 0)) (nhds 1) := by
+    have hcont : ContinuousAt (fun r : ℝ ↦
+        binaryEntropyBits ((1 - r) / 2)) 0 := by
+      unfold binaryEntropyBits
+      fun_prop
+    have hhalf : binaryEntropyBits (1 / 2) = 1 := by
+      unfold binaryEntropyBits
+      rw [(Real.binEntropy_eq_log_two).2 (by norm_num)]
+      field_simp [log_two_ne_zero]
+    convert hcont.tendsto.mono_left nhdsWithin_le_nhds using 1
+    simpa using hhalf.symm
+  have hinv : Tendsto (fun r : ℝ ↦ r⁻¹)
+      (nhdsWithin (0 : ℝ) (Ioi 0)) atTop :=
+    tendsto_inv_nhdsGT_zero
+  have hprod := hnum.pos_mul_atTop (by norm_num : (0 : ℝ) < 1) hinv
+  simpa [centeredEntropyRatio, div_eq_mul_inv] using hprod
+
+theorem tendsto_centeredEntropyRatio_one :
+    Tendsto centeredEntropyRatio (nhdsWithin (1 : ℝ) (Iio 1)) (nhds 0) := by
+  have hcont : ContinuousAt centeredEntropyRatio 1 := by
+    have hnum : ContinuousAt (fun r : ℝ ↦
+        binaryEntropyBits ((1 - r) / 2)) 1 := by
+      unfold binaryEntropyBits
+      fun_prop
+    exact hnum.div continuousAt_id one_ne_zero
+  simpa [centeredEntropyRatio, binaryEntropyBits] using
+    hcont.tendsto.mono_left nhdsWithin_le_nhds
+
+/-- Every positive entropy-per-displacement level has one and only one
+centered shape contact. -/
+theorem existsUnique_centeredEntropyRatio_eq
+    {t : ℝ} (ht : 0 < t) :
+    ∃! r : ℝ, r ∈ Ioo (0 : ℝ) 1 ∧ centeredEntropyRatio r = t := by
+  have hlarge : ∀ᶠ r in nhdsWithin (0 : ℝ) (Ioi 0),
+      t < centeredEntropyRatio r :=
+    (tendsto_centeredEntropyRatio_zero.eventually (eventually_gt_atTop t))
+  have hsmall : ∀ᶠ r in nhdsWithin (0 : ℝ) (Ioi 0), r < 1 :=
+    (eventually_lt_nhds (by norm_num : (0 : ℝ) < 1)).filter_mono
+      nhdsWithin_le_nhds
+  have hpositive : ∀ᶠ r in nhdsWithin (0 : ℝ) (Ioi 0), 0 < r :=
+    self_mem_nhdsWithin
+  obtain ⟨a, ha0, ha1, hat⟩ :=
+    (hpositive.and (hsmall.and hlarge)).exists
+  have hcont : ContinuousOn centeredEntropyRatio (Icc a 1) := by
+    intro x hx
+    unfold centeredEntropyRatio binaryEntropyBits
+    apply ContinuousAt.continuousWithinAt
+    fun_prop (disch := nlinarith [ha0, hx.1])
+  have hvalue1 : centeredEntropyRatio 1 = 0 := by
+    simp [centeredEntropyRatio, binaryEntropyBits, Real.binEntropy]
+  have htmem : t ∈ Icc (centeredEntropyRatio 1) (centeredEntropyRatio a) := by
+    rw [hvalue1]
+    exact ⟨ht.le, hat.le⟩
+  obtain ⟨r, hrange, hre⟩ :=
+    intermediate_value_Icc' ha1.le hcont htmem
+  have hr0 : 0 < r := ha0.trans_le hrange.1
+  have hr1 : r < 1 := by
+    rcases hrange.2.eq_or_lt with rfl | hr1
+    · rw [hvalue1] at hre
+      linarith
+    · exact hr1
+  refine ⟨r, ⟨⟨hr0, hr1⟩, hre⟩, ?_⟩
+  intro s hs
+  exact (strictAntiOn_centeredEntropyRatio.injOn
+    ⟨hr0, hr1⟩ hs.1 (hre.trans hs.2.symm)).symm
 
 end CourtadeKumar
