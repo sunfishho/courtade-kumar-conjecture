@@ -1,0 +1,140 @@
+import InformationTheory.CourtadeKumar.CanonicalCenteredGeometry
+import InformationTheory.CourtadeKumar.CanonicalSingleRayGeometry
+import InformationTheory.CourtadeKumar.RadialContactShape
+import InformationTheory.CourtadeKumar.RadialEntropyRatio
+
+/-! Direct scalar selection of the centered and single-ray geometries. -/
+
+open Filter Set
+open scoped NNReal Topology
+
+namespace CourtadeKumar
+
+/-- Every genuine radial Euler contact defines an interior multiplier. -/
+theorem radialEulerLogRatio_mem_Ioo_physical
+    {rho r z : ℝ} (hrho : rho ∈ Ioo (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 + r)⁻¹) :
+    radialEulerLogRatio rho r z ∈ Ioo (0 : ℝ) 1 := by
+  have hupper : (1 + r) * z < 1 := by
+    calc
+      (1 + r) * z = z * (1 + r) := mul_comm _ _
+      _ < (1 + r)⁻¹ * (1 + r) :=
+        mul_lt_mul_of_pos_right hz.2 (by linarith [hr.1])
+      _ = 1 := inv_mul_cancel₀ (by linarith [hr.1] : 1 + r ≠ 0)
+  obtain ⟨harg1, hargR, horder⟩ :=
+    radialEulerLogArg_order_physical
+      (show rho ∈ Ico (0 : ℝ) 1 from ⟨hrho.1.le, hrho.2⟩)
+      hr.1 hz.1 hupper
+  have harg1' : radialEulerLogArg 1 r z ∈ Ioo (0 : ℝ) 1 :=
+    ⟨harg1.1, harg1.2.trans (by linarith [hz.1])⟩
+  have hargR' : radialEulerLogArg rho r z ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hargR.1, hargR.2.trans (by linarith [hz.1])⟩
+  have hden : 0 < radialEulerLog 1 r z :=
+    radialEulerLog_pos_of_arg harg1'
+  have hnum : 0 < radialEulerLog rho r z :=
+    radialEulerLog_pos_of_arg hargR'
+  have hlogOrder : Real.log (radialEulerLogArg 1 r z) <
+      Real.log (radialEulerLogArg rho r z) :=
+    Real.log_lt_log harg1.1 horder
+  have hnumden : radialEulerLog rho r z < radialEulerLog 1 r z := by
+    unfold radialEulerLog
+    nlinarith
+  unfold radialEulerLogRatio
+  exact ⟨div_pos hnum hden, (div_lt_one hden).2 hnumden⟩
+
+/-- A centered entropy contact satisfying the phase shape condition produces
+the canonical centered geometry record. -/
+noncomputable def canonicalCenteredGeometry_of_entropyContact
+    {alpha : ℝ≥0} {M d E0 s : ℝ}
+    (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hd : 0 < d)
+    (hs : s ∈ Ioo (0 : ℝ) 1)
+    (hshape : d / M ≤ s)
+    (hentropy : E0 =
+      2 * d / s * radialTriangleEntropy s (1 / 2))
+    (hthreshold : E0 =
+      (bellmanEnvelope (alpha : ℝ) (M - d) +
+        bellmanEnvelope (alpha : ℝ) (M + d)) / 2) :
+    CenteredEndpointGeometryData alpha M d E0 := by
+  let rho : ℝ := channelRho (alpha : ℝ)
+  let theta : ℝ := radialEulerLogRatio rho s (1 / 2)
+  have hrho : rho ∈ Ioo (0 : ℝ) 1 := by
+    dsimp [rho]
+    unfold channelRho
+    constructor <;> linarith [halpha.1, halpha.2]
+  have hhalfcap : (1 / 2 : ℝ) < (1 + s)⁻¹ := by
+    rw [inv_eq_one_div, lt_div_iff₀ (by linarith [hs.1] : 0 < 1 + s)]
+    nlinarith [hs.2]
+  have htheta : theta ∈ Ioo (0 : ℝ) 1 :=
+    radialEulerLogRatio_mem_Ioo_physical hrho hs
+      ⟨by norm_num, hhalfcap⟩
+  exact canonicalCenteredEndpointGeometryData
+    halpha hM hd hs hshape htheta (by rfl) hentropy hthreshold
+
+/-- An entropy-matched contact before the midpoint produces the canonical
+single-ray geometry.  Its centered threshold is automatically behind the
+observed ray. -/
+noncomputable def canonicalSingleRayGeometry_of_entropyContact
+    {alpha : ℝ≥0} {M d E0 r z : ℝ}
+    (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : 0 < M)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2))
+    (hmoment : d = M * r)
+    (hentropy : E0 / M = radialEntropyRatio r z) :
+    SingleRayGeometryData alpha M d E0 := by
+  let rho : ℝ := channelRho (alpha : ℝ)
+  have hrho : rho ∈ Ioo (0 : ℝ) 1 := by
+    dsimp [rho]
+    unfold channelRho
+    constructor <;> linarith [halpha.1, halpha.2]
+  have hhalfcap : (1 / 2 : ℝ) < (1 + r)⁻¹ := by
+    rw [inv_eq_one_div, lt_div_iff₀ (by linarith [hr.1] : 0 < 1 + r)]
+    nlinarith [hr.2]
+  have hzphys : z ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+    ⟨hz.1, hz.2.trans hhalfcap⟩
+  let theta : ℝ := radialEulerLogRatio rho r z
+  have htheta : theta ∈ Ioo (0 : ℝ) 1 :=
+    radialEulerLogRatio_mem_Ioo_physical hrho hr hzphys
+  let hroot := existsUnique_centeredRadialShape hrho htheta
+  let rstar : ℝ := Classical.choose hroot.exists
+  have hrstarSpec : rstar ∈ Ioo (0 : ℝ) 1 ∧
+      radialEulerLogRatio rho rstar (1 / 2) = theta :=
+    Classical.choose_spec hroot.exists
+  have hrstar := hrstarSpec.1
+  have hcenter := hrstarSpec.2
+  have hcanonical :
+      canonicalRadialContactZ alpha theta halpha htheta r = z := by
+    have hspec := canonicalRadialContactZ_spec halpha htheta hr.1
+    exact (existsUnique_radialEulerLogRatio_eq
+      (show rho ∈ Ico (0 : ℝ) 1 from ⟨hrho.1.le, hrho.2⟩)
+      htheta hr.1).unique ⟨hspec.1, hspec.2⟩ ⟨hzphys, rfl⟩
+  have hrstarr : rstar < r := by
+    by_contra hn
+    have hle : r ≤ rstar := le_of_not_gt hn
+    rcases hle.eq_or_lt with hEq | hlt
+    · have hhalf := canonicalRadialContactZ_eq_half_of_centeredRoot
+        halpha htheta hrstar hcenter
+      rw [← hEq, hcanonical] at hhalf
+      linarith [hz.2]
+    · have hgt := canonicalRadialContactZ_gt_half_before_threshold
+        halpha htheta hrstar hcenter hr hlt
+      rw [hcanonical] at hgt
+      linarith [hz.2]
+  have hentropy' : E0 = M /
+      canonicalRadialContactZ alpha theta halpha htheta r *
+        radialTriangleEntropy r
+          (canonicalRadialContactZ alpha theta halpha htheta r) := by
+    rw [hcanonical]
+    calc
+      E0 = M * (E0 / M) := by field_simp [hM.ne']
+      _ = M * radialEntropyRatio r z := by rw [hentropy]
+      _ = M / z * radialTriangleEntropy r z := by
+        unfold radialEntropyRatio
+        ring
+  exact canonicalSingleRayGeometryData
+    halpha htheta hrstar hcenter ⟨hrstarr, hr.2⟩ hmoment hentropy'
+
+end CourtadeKumar
