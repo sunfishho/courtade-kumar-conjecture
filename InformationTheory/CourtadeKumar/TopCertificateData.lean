@@ -747,7 +747,7 @@ def topElevatedBernsteinData : Array ℚ :=
 
 theorem topElevatedBernsteinData_size :
     topElevatedBernsteinData.size = 2928 := by
-  native_decide
+  rfl
 
 def topElevatedBernsteinCoeff (i : Fin 48) (j : Fin 61) : ℚ :=
   (topElevatedBernsteinData[i.val * 61 + j.val]?).getD 0
