@@ -82,6 +82,8 @@ def OrderedEqualMultiplierBellmanStep (alpha : ℝ≥0) : Prop :=
 finite form of the concavity/monotonicity consequence used in the manuscript. -/
 def BellmanEnvelopeSortingDominance (alpha : ℝ≥0) : Prop :=
   ∀ (n : ℕ) (A B : BitVec n → ℝ),
+    (∀ y, 0 ≤ A y ∧ A y ≤ 1) →
+    (∀ y, 0 ≤ B y ∧ B y ≤ 1) →
     bellmanEnvelope (alpha : ℝ) (cubeAverage n A) +
         bellmanEnvelope (alpha : ℝ) (cubeAverage n B) ≥
       bellmanEnvelope (alpha : ℝ)
@@ -129,7 +131,7 @@ theorem booleanBellmanStep_of_orderedEqualMultiplier
             bellmanEnvelope (alpha : ℝ) (cubeAverage n B) := hOriginal
       _ ≥ bellmanEnvelope (alpha : ℝ) (cubeAverage n Amin) +
             bellmanEnvelope (alpha : ℝ) (cubeAverage n Amax) := by
-              simpa [Amin, Amax] using hSort n A B
+              simpa [Amin, Amax] using hSort n A B hA hB
   have hOrderedResult :=
     hOrdered n Amin Amax hminus hplus horder hEntropySum
   calc
