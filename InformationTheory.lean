@@ -43,6 +43,7 @@ import InformationTheory.CourtadeKumar.TopCapComparison
 import InformationTheory.CourtadeKumar.TopNormalizedReserve
 import InformationTheory.CourtadeKumar.TopCapDerivative
 import InformationTheory.CourtadeKumar.TopCapPrimitive
+import InformationTheory.CourtadeKumar.TopB0Series
 import InformationTheory.CourtadeKumar.EntropyDropTransition
 import InformationTheory.CourtadeKumar.TopEndpointIdentity
 import InformationTheory.CourtadeKumar.ReserveConcavity
