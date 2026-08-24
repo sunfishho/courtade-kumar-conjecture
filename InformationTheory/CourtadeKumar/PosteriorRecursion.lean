@@ -108,4 +108,42 @@ lemma bscPosteriorPMF_apply_bitVecSnoc_true (n : ℕ) (alpha : ℝ≥0)
   rw [bscPosteriorPMF_apply_bitVecSnoc, Fintype.sum_bool]
   simp [PMF.bernoulli_apply, add_comm]
 
+/-- The `true` posterior bias for final output `false`, as an affine real mixture. -/
+lemma bscPosterior_true_toReal_bitVecSnoc_false
+    (n : ℕ) (alpha : ℝ≥0) (halpha : alpha ≤ 1)
+    (b : BitVec (n + 1) → Bool) (y : BitVec n) :
+    (bscPosteriorPMF (n + 1) alpha halpha b (bitVecSnoc y false) true).toReal =
+      (1 - (alpha : ℝ)) *
+          (bscPosteriorPMF n alpha halpha (lastSection b false) y true).toReal +
+        (alpha : ℝ) *
+          (bscPosteriorPMF n alpha halpha (lastSection b true) y true).toReal := by
+  rw [bscPosteriorPMF_apply_bitVecSnoc_false]
+  rw [ENNReal.toReal_add
+    (ENNReal.mul_ne_top (by simp)
+      ((bscPosteriorPMF n alpha halpha (lastSection b false) y).apply_ne_top true))
+    (ENNReal.mul_ne_top (by simp)
+      ((bscPosteriorPMF n alpha halpha (lastSection b true) y).apply_ne_top true)),
+    ENNReal.toReal_mul, ENNReal.toReal_mul, ENNReal.coe_toReal, ENNReal.coe_toReal,
+    NNReal.coe_sub halpha]
+  norm_num
+
+/-- The `true` posterior bias for final output `true`, as an affine real mixture. -/
+lemma bscPosterior_true_toReal_bitVecSnoc_true
+    (n : ℕ) (alpha : ℝ≥0) (halpha : alpha ≤ 1)
+    (b : BitVec (n + 1) → Bool) (y : BitVec n) :
+    (bscPosteriorPMF (n + 1) alpha halpha b (bitVecSnoc y true) true).toReal =
+      (alpha : ℝ) *
+          (bscPosteriorPMF n alpha halpha (lastSection b false) y true).toReal +
+        (1 - (alpha : ℝ)) *
+          (bscPosteriorPMF n alpha halpha (lastSection b true) y true).toReal := by
+  rw [bscPosteriorPMF_apply_bitVecSnoc_true]
+  rw [ENNReal.toReal_add
+    (ENNReal.mul_ne_top (by simp)
+      ((bscPosteriorPMF n alpha halpha (lastSection b false) y).apply_ne_top true))
+    (ENNReal.mul_ne_top (by simp)
+      ((bscPosteriorPMF n alpha halpha (lastSection b true) y).apply_ne_top true)),
+    ENNReal.toReal_mul, ENNReal.toReal_mul, ENNReal.coe_toReal, ENNReal.coe_toReal,
+    NNReal.coe_sub halpha]
+  norm_num
+
 end CourtadeKumar
