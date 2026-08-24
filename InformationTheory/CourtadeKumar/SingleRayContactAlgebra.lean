@@ -8,6 +8,13 @@ namespace CourtadeKumar
     radialNatEntropy c 0 z = Real.binEntropy z := by
   simp [radialNatEntropy]
 
+@[simp] theorem radialNatEntropy_neg_shape (c r z : ℝ) :
+    radialNatEntropy c (-r) z = radialNatEntropy c r z := by
+  unfold radialNatEntropy
+  rw [show 1 - c * -r = 1 + c * r by ring,
+    show 1 + c * -r = 1 - c * r by ring]
+  ring
+
 /-- Averaging the natural Bellman envelope over a radial pair separates its
 entropy and quadratic contributions. -/
 theorem average_lowerRayNatEnvelope_radial (rho M r : ℝ) :
@@ -77,6 +84,25 @@ noncomputable def singleRayEntropyResidual
     (rho M z c : ℝ) :
     singleRayEntropyResidual rho M 0 z c = 0 := by
   simp [singleRayEntropyResidual]
+
+@[simp] theorem singleRayNatLocalGap_neg_shape (rho M r : ℝ) :
+    singleRayNatLocalGap rho M (-r) = singleRayNatLocalGap rho M r := by
+  rw [singleRayNatLocalGap_explicit, singleRayNatLocalGap_explicit]
+  simp only [radialNatEntropy_neg_shape]
+  ring
+
+@[simp] theorem singleRayEntropyResidual_neg_shape
+    (rho M r z c : ℝ) :
+    singleRayEntropyResidual rho M (-r) z c =
+      singleRayEntropyResidual rho M r z c := by
+  unfold singleRayEntropyResidual singleRayContactDenom
+  simp only [radialNatEntropy_neg_shape]
+  ring
+
+theorem even_singleRayEntropyResidual (rho M z c : ℝ) :
+    Function.Even (singleRayEntropyResidual rho M · z c) := by
+  intro r
+  exact singleRayEntropyResidual_neg_shape rho M r z c
 
 theorem continuous_singleRayEntropyResidual
     (rho M z c : ℝ) :
