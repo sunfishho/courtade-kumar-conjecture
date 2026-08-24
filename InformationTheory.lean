@@ -11,6 +11,7 @@ import InformationTheory.CourtadeKumar.EntropyRecursion
 import InformationTheory.CourtadeKumar.DiscreteKL
 import InformationTheory.CourtadeKumar.MutualInformation
 import InformationTheory.CourtadeKumar.EntropyDefect
+import InformationTheory.CourtadeKumar.BSCEntropyBridge
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
