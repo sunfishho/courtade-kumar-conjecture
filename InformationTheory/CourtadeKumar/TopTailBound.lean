@@ -129,6 +129,100 @@ lemma topCapE10_nonneg {c z : ℝ}
   unfold topCapE10
   exact Finset.sum_nonneg fun n hn ↦ topCapETerm_nonneg hc hz (n + 1)
 
+private lemma topCapETerm_le_pSeries {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) (n : ℕ) :
+    topCapETerm c z (n + 1) ≤
+      (1 / ((1 - topCapQ c z) * c ^ 2)) *
+        (1 / ((n + 1 : ℝ) ^ 2)) := by
+  have hR := topCertR_mem_Ioo hc hz
+  have hq := topCapQ_mem_Ioo hc hz
+  have hqpow0 : 0 ≤ topCapQ c z ^ (n + 1) := pow_nonneg hq.1.le _
+  have hratio_nonneg : 0 ≤
+      (1 - topCapQ c z ^ (n + 1)) / (1 - topCapQ c z) :=
+    div_nonneg (sub_nonneg.mpr (pow_le_one₀ hq.1.le hq.2.le))
+      (sub_nonneg.mpr hq.2.le)
+  have hratio :
+      (1 - topCapQ c z ^ (n + 1)) / (1 - topCapQ c z) ≤
+        1 / (1 - topCapQ c z) := by
+    exact div_le_div_of_nonneg_right (by linarith) (sub_nonneg.mpr hq.2.le)
+  have hDnonneg : 0 ≤ topDn (topCertR c z) (n + 1) / c ^ 2 :=
+    div_nonneg (topDn_nonneg ⟨hR.1.le, hR.2.le⟩ _) (sq_nonneg c)
+  have hDone : topDn (topCertR c z) (n + 1) / c ^ 2 ≤ 1 / c ^ 2 :=
+    div_le_div_of_nonneg_right (topDn_le_one ⟨hR.1.le, hR.2.le⟩ _)
+      (sq_nonneg c)
+  have hproduct :
+      ((1 - topCapQ c z ^ (n + 1)) / (1 - topCapQ c z)) *
+          (topDn (topCertR c z) (n + 1) / c ^ 2) ≤
+        1 / ((1 - topCapQ c z) * c ^ 2) := by
+    calc
+      _ ≤ (1 / (1 - topCapQ c z)) * (1 / c ^ 2) :=
+        mul_le_mul hratio hDone hDnonneg
+          (one_div_nonneg.mpr (sub_nonneg.mpr hq.2.le))
+      _ = _ := by
+        field_simp [hc.1.ne', sub_ne_zero.mpr hq.2.ne]
+  let m : ℝ := (n : ℝ) + 1
+  have hn0 : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+  have hm : 1 ≤ m := by dsimp [m]; linarith
+  have hm0 : 0 ≤ m := zero_le_one.trans hm
+  have hmpos : 0 < m := zero_lt_one.trans_le hm
+  have hfirst : m ^ 2 ≤ 2 * m * (m + 1) := by
+    rw [pow_two]
+    nlinarith [mul_nonneg hm0 hm0]
+  have hlast : 1 ≤ 2 * m + 1 := by nlinarith
+  have hden : m ^ 2 ≤ 2 * m * (m + 1) * (2 * m + 1) :=
+    hfirst.trans (le_mul_of_one_le_right (by positivity) hlast)
+  unfold topCapETerm
+  dsimp only
+  push_cast
+  have hratio_nonneg' : 0 ≤
+      (1 - (z / topCertR c z) ^ (n + 1)) / (1 - z / topCertR c z) := by
+    simpa [topCapQ] using hratio_nonneg
+  have hDnonneg' : 0 ≤ topDn (topCertR c z) (n + 1) / c ^ 2 := hDnonneg
+  have hproduct' :
+      ((1 - (z / topCertR c z) ^ (n + 1)) / (1 - z / topCertR c z)) *
+          (topDn (topCertR c z) (n + 1) / c ^ 2) ≤
+        1 / ((1 - z / topCertR c z) * c ^ 2) := by
+    simpa [topCapQ] using hproduct
+  have hKnonneg : 0 ≤ 1 / ((1 - z / topCertR c z) * c ^ 2) := by
+    apply one_div_nonneg.mpr
+    exact mul_nonneg (sub_nonneg.mpr hq.2.le) (sq_nonneg c)
+  change
+    (((1 - (z / topCertR c z) ^ (n + 1)) / (1 - z / topCertR c z)) *
+      (topDn (topCertR c z) (n + 1) / c ^ 2)) /
+        (2 * m * (m + 1) * (2 * m + 1)) ≤ _
+  calc
+    _ ≤ (1 / ((1 - z / topCertR c z) * c ^ 2)) / m ^ 2 :=
+      div_le_div₀ hKnonneg hproduct' (pow_pos hmpos 2) hden
+    _ = _ := by simp [topCapQ, m]; ring
+
+theorem summable_topCapETerm {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    Summable (fun n : ℕ ↦ topCapETerm c z (n + 1)) := by
+  apply Summable.of_nonneg_of_le
+    (fun n ↦ topCapETerm_nonneg hc hz (n + 1))
+    (fun n ↦ topCapETerm_le_pSeries hc hz n)
+  have hp : Summable (fun n : ℕ ↦ 1 / ((n + 1 : ℝ) ^ 2)) := by
+    simpa using (summable_nat_add_iff 1).2
+      (Real.summable_one_div_nat_pow.mpr one_lt_two)
+  exact hp.mul_left (1 / ((1 - topCapQ c z) * c ^ 2))
+
+/-- The full nonnegative tail `E(c,q)` after the cap square substitution. -/
+noncomputable def topCapETail (c z : ℝ) : ℝ :=
+  ∑' n : ℕ, topCapETerm c z (n + 1)
+
+theorem topCapE10_le_tail {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    topCapE10 c z ≤ topCapETail c z := by
+  unfold topCapE10 topCapETail
+  exact (summable_topCapETerm hc hz).sum_le_tsum (Finset.range 10)
+    (fun n hn ↦ topCapETerm_nonneg hc hz (n + 1))
+
+theorem topCapETail_nonneg {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ topCapETail c z := by
+  unfold topCapETail
+  exact tsum_nonneg fun n ↦ topCapETerm_nonneg hc hz (n + 1)
+
 lemma topCapETerm_eq_certificateTerm {c z : ℝ} {n : ℕ}
     (hc : c ≠ 0) (hR : topCertR c z ≠ 0)
     (hq : z / topCertR c z ≠ 1) (hn : n ≤ 10) :
@@ -170,5 +264,17 @@ theorem topFiniteClaim_with_capE10 {c z : ℝ}
           topCapE10 c z := by
   apply topFiniteClaim_with_capRatio hc hz
   rw [topCapE10_eq_certificate hc hz]
+
+/-- The exact certificate lower bound with the complete analytic tail. -/
+theorem topFiniteClaim_with_capETail {c z : ℝ}
+    (hc : c ∈ Ioo (0 : ℝ) 1) (hz : z ∈ Ioo (0 : ℝ) 1) :
+    (1 : ℝ) / 100 ≤
+      (topCertR c z * Real.log 2 - topPhi (Real.sqrt (topCertR c z))) /
+          (1 - topCertR c z) +
+        Real.log (topCertX c z) / (2 * c ^ 2 * topCapQ c z) +
+          topCapETail c z := by
+  have hfinite := topFiniteClaim_with_capE10 hc hz
+  have htail := topCapE10_le_tail hc hz
+  linarith
 
 end CourtadeKumar
