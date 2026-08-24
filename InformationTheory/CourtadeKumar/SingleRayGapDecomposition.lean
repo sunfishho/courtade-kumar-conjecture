@@ -112,7 +112,7 @@ theorem singleRayScalarContact_of_natDecomposition
       0 ≤ singleRayNatLocalGap (channelRho (alpha : ℝ)) M r +
         singleRayNatScalingReserve (channelRho (alpha : ℝ)) (M / z) r z) :
     SingleRayScalarContactTheorem alpha := by
-  intro M r z hM hr hz hcontact
+  intro _halpha M r z hM hr hz hcontact
   have hgap := hreserve M r z hM hr hz hcontact
   have hdiv : 0 ≤
       (singleRayNatLocalGap (channelRho (alpha : ℝ)) M r +

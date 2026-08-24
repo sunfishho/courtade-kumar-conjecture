@@ -11,6 +11,7 @@ namespace CourtadeKumar
 affine tangent, displacement, and entropy threshold from the single-ray
 geometry record. -/
 def SingleRayScalarContactTheorem (alpha : ℝ≥0) : Prop :=
+  (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
   ∀ (M r z : ℝ),
     M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
     r ∈ Ioo (0 : ℝ) 1 →
@@ -42,7 +43,7 @@ theorem singleRayLR_of_scalarContact
       _ = (bellmanEnvelope (alpha : ℝ) (M * (1 - h.r)) +
           bellmanEnvelope (alpha : ℝ) (M * (1 + h.r))) / 2 := by
         rw [hminus, hplus]
-  exact hscalar M h.r h.z h.mean_interior h.ray_interior
+  exact hscalar h.alpha_interior M h.r h.z h.mean_interior h.ray_interior
     h.contact_before_half hcontact
 
 end CourtadeKumar
