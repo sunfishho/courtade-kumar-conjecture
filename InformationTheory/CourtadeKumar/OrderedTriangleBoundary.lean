@@ -100,4 +100,53 @@ theorem exists_orderedTriangleAffineSupport_of_averageU_eq_zero
   ring_nf
   exact le_rfl
 
+lemma binaryEntropyBits_nonneg_of_mem_Icc
+    {p : ℝ} (hp : p ∈ Icc (0 : ℝ) 1) :
+    0 ≤ binaryEntropyBits p := by
+  unfold binaryEntropyBits
+  exact div_nonneg (Real.binEntropy_nonneg hp.1 hp.2)
+    (Real.log_pos (by norm_num)).le
+
+theorem orderedTriangleChannelEntropy_nonneg
+    {alpha : ℝ≥0} (halpha : (alpha : ℝ) ≤ 1 / 2)
+    {m u : ℝ} (hu0 : 0 ≤ u) (hum : u ≤ m) (hu1m : u ≤ 1 - m) :
+    0 ≤ orderedTriangleChannelEntropy alpha m u := by
+  have halpha0 : (0 : ℝ) ≤ alpha := alpha.2
+  have hrho : channelRho (alpha : ℝ) ∈ Icc (0 : ℝ) 1 := by
+    unfold channelRho
+    constructor <;> linarith
+  have hminus : m - channelRho (alpha : ℝ) * u ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · nlinarith [mul_le_mul_of_nonneg_right hrho.2 hu0]
+    · nlinarith [mul_nonneg hrho.1 hu0]
+  have hplus : m + channelRho (alpha : ℝ) * u ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · nlinarith [mul_nonneg hrho.1 hu0]
+    · nlinarith [mul_le_mul_of_nonneg_right hrho.2 hu0]
+  unfold orderedTriangleChannelEntropy
+  exact div_nonneg (add_nonneg
+    (binaryEntropyBits_nonneg_of_mem_Icc hminus)
+    (binaryEntropyBits_nonneg_of_mem_Icc hplus)) (by norm_num)
+
+@[simp] lemma bellmanEnvelope_zero_channel (p : ℝ) :
+    bellmanEnvelope 0 p = 0 := by
+  simp [bellmanEnvelope, channelS, channelRho, bellmanLambda,
+    binaryEntropyBits, Real.binEntropy]
+
+/-- At the noiseless-channel boundary, the zero multiplier and zero affine
+functional are a global support, since the target envelope vanishes. -/
+theorem orderedTriangle_zeroChannel_affineSupport :
+    TriangleAffineSupport (0 : ℝ≥0) 0 0 0 := by
+  intro m u hu0 hum hu1m
+  simp only [zero_mul, zero_add, sub_zero]
+  exact orderedTriangleChannelEntropy_nonneg (by norm_num) hu0 hum hu1m
+
+/-- Complete affine-support theorem for the channel boundary `alpha = 0`. -/
+theorem orderedTriangleAffineSupportTheorem_zero :
+    OrderedTriangleAffineSupportTheorem (0 : ℝ≥0) := by
+  intro n M U hdomain
+  dsimp
+  refine ⟨0, 0, 0, by norm_num, orderedTriangle_zeroChannel_affineSupport, ?_⟩
+  simp
+
 end CourtadeKumar
