@@ -2,6 +2,7 @@ import InformationTheory.Discrete.AEP
 import InformationTheory.Discrete.DiscreteInformationQuantities
 import InformationTheory.Discrete.DiscreteRandomVariable
 import InformationTheory.Discrete.TypicalSequences
+import InformationTheory.CourtadeKumar.Statement
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
