@@ -20,6 +20,7 @@ import InformationTheory.CourtadeKumar.BalancedReserve
 import InformationTheory.CourtadeKumar.FixedWeightReduction
 import InformationTheory.CourtadeKumar.ScalarUnitConversion
 import InformationTheory.CourtadeKumar.TopPhi
+import InformationTheory.CourtadeKumar.TopDerivatives
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
