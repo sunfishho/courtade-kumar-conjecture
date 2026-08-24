@@ -58,4 +58,107 @@ theorem radialEulerCrossCore_neg_of_arg_order
   exact div_neg_of_neg_of_pos
     (log_cross_neg_of_lt hq harg1 hargR horder) hz
 
+/-- The two Euler-log arguments have the exact order required by the scalar
+monotonicity lemma throughout the open radial cell. -/
+theorem radialEulerLogArg_order_physical
+    {rho r z : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : 0 < r)
+    (hz : 0 < z)
+    (hupper : (1 + r) * z < 1) :
+    radialEulerLogArg 1 r z ∈ Ioo (0 : ℝ) (1 - z) ∧
+      radialEulerLogArg rho r z ∈ Ioo (0 : ℝ) (1 - z) ∧
+      radialEulerLogArg 1 r z < radialEulerLogArg rho r z := by
+  have hrz : 0 < r * z := mul_pos hr hz
+  have hq0 : 0 < 1 - z := by nlinarith
+  have hq1 : 1 - z < 1 := by linarith
+  have hgap : 0 < 1 - z - r * z := by nlinarith [hupper]
+  have hsum : 0 < 1 - z + r * z := by nlinarith
+  have harg1pos : 0 < radialEulerLogArg 1 r z := by
+    unfold radialEulerLogArg
+    nlinarith [mul_pos hgap hsum]
+  have hqsq : (1 - z) ^ 2 < 1 - z := by
+    nlinarith [mul_pos hq0 (sub_pos.2 hq1)]
+  have harg1lt : radialEulerLogArg 1 r z < 1 - z := by
+    unfold radialEulerLogArg
+    nlinarith [sq_nonneg (r * z)]
+  have hrhoplus : 0 < 1 + rho := by linarith [hrho.1]
+  have hrhosq : rho ^ 2 < 1 := by
+    nlinarith [mul_pos (sub_pos.2 hrho.2) hrhoplus]
+  have hspread : 0 < r ^ 2 * z ^ 2 :=
+    mul_pos (sq_pos_of_pos hr) (sq_pos_of_pos hz)
+  have horder : radialEulerLogArg 1 r z < radialEulerLogArg rho r z := by
+    unfold radialEulerLogArg
+    nlinarith [mul_pos (sub_pos.2 hrhosq) hspread]
+  have hargRpos : 0 < radialEulerLogArg rho r z :=
+    harg1pos.trans horder
+  have hargRlt : radialEulerLogArg rho r z < 1 - z := by
+    unfold radialEulerLogArg
+    nlinarith [mul_nonneg (sq_nonneg rho)
+      (mul_nonneg (sq_nonneg r) (sq_nonneg z))]
+  exact ⟨⟨harg1pos, harg1lt⟩, ⟨hargRpos, hargRlt⟩, horder⟩
+
+theorem radialEulerCrossCore_neg_physical
+    {rho r z : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : 0 < r)
+    (hz : 0 < z)
+    (hupper : (1 + r) * z < 1) :
+    radialEulerCrossCore rho r z < 0 := by
+  obtain ⟨harg1, hargR, horder⟩ :=
+    radialEulerLogArg_order_physical hrho hr hz hupper
+  have hq : 1 - z ∈ Ioo (0 : ℝ) 1 := by
+    constructor <;> nlinarith [mul_pos hr hz]
+  exact radialEulerCrossCore_neg_of_arg_order hz hq harg1 hargR horder
+
+theorem radialEulerLog_pos_of_arg
+    {c r z : ℝ} (harg : radialEulerLogArg c r z ∈ Ioo (0 : ℝ) 1) :
+    0 < radialEulerLog c r z := by
+  unfold radialEulerLog
+  nlinarith [Real.log_neg harg.1 harg.2]
+
+/-- The radial Euler ratio is strictly decreasing on every nondegenerate open
+ray cell. This replaces the manuscript's power-series proof by the elementary
+logarithmic-fraction monotonicity argument above. -/
+theorem radialEulerLogRatio_strictAntiOn_physical
+    {rho r : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : 0 < r) :
+    StrictAntiOn (radialEulerLogRatio rho r)
+      (Ioo (0 : ℝ) (1 + r)⁻¹) := by
+  have h1r : 0 < 1 + r := by linarith
+  let D : Set ℝ := Ioo (0 : ℝ) (1 + r)⁻¹
+  have hphysical : ∀ z ∈ D,
+      radialEulerLogArg 1 r z ∈ Ioo (0 : ℝ) (1 - z) ∧
+        radialEulerLogArg rho r z ∈ Ioo (0 : ℝ) (1 - z) ∧
+        radialEulerLogArg 1 r z < radialEulerLogArg rho r z := by
+    intro z hz
+    have hupper : (1 + r) * z < 1 := by
+      calc
+        (1 + r) * z = z * (1 + r) := mul_comm _ _
+        _ < (1 + r)⁻¹ * (1 + r) := mul_lt_mul_of_pos_right hz.2 h1r
+        _ = 1 := inv_mul_cancel₀ h1r.ne'
+    exact radialEulerLogArg_order_physical hrho hr hz.1 hupper
+  change StrictAntiOn (radialEulerLogRatio rho r) D
+  apply strictAntiOn_radialEulerLogRatio_of_crossNumerator_neg
+      (convex_Ioo (0 : ℝ) (1 + r)⁻¹)
+  · intro z hz
+    exact (hphysical z hz).2.1.1.ne'
+  · intro z hz
+    exact (hphysical z hz).1.1.ne'
+  · intro z hz
+    have hq1 : 1 - z < 1 := by linarith [hz.1]
+    exact (radialEulerLog_pos_of_arg
+      ⟨(hphysical z hz).1.1, (hphysical z hz).1.2.trans hq1⟩).ne'
+  · intro z hz
+    rw [interior_Ioo] at hz
+    obtain ⟨harg1, hargR, horder⟩ := hphysical z hz
+    rw [radialEulerRatioCrossNumerator_lt_zero_iff_core hargR.1 harg1.1]
+    have hupper : (1 + r) * z < 1 := by
+      calc
+        (1 + r) * z = z * (1 + r) := mul_comm _ _
+        _ < (1 + r)⁻¹ * (1 + r) := mul_lt_mul_of_pos_right hz.2 h1r
+        _ = 1 := inv_mul_cancel₀ h1r.ne'
+    exact radialEulerCrossCore_neg_physical hrho hr hz.1 hupper
+
 end CourtadeKumar
