@@ -15,6 +15,7 @@ import InformationTheory.CourtadeKumar.BSCEntropyBridge
 import InformationTheory.CourtadeKumar.BellmanInduction
 import InformationTheory.CourtadeKumar.EqualMultiplier
 import InformationTheory.CourtadeKumar.EnvelopeConcavity
+import InformationTheory.CourtadeKumar.EnvelopeFormula
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
