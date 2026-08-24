@@ -162,7 +162,7 @@ theorem topPhi_hasSum {x : ℝ} (hx : x ∈ Ioo (-1 : ℝ) 1) :
     ht.summable.comp_injective (by
       intro a b h
       change 2 * a + 1 = 2 * b + 1 at h
-      exact Nat.mul_left_cancel (by decide) (Nat.add_right_cancel h))
+      exact Nat.mul_left_cancel (by norm_num) (Nat.add_right_cancel h))
   have heo :
       tsum (fun n : ℕ ↦ t (2 * n)) + tsum (fun n : ℕ ↦ t (2 * n + 1)) =
         topPhi x := by
