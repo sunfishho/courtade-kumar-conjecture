@@ -60,6 +60,26 @@ theorem singleRayNatGap_nonneg_of_decomposition
   rw [← sub_nonneg, singleRayNatGap_eq_local_add_scalingReserve hM hcontact]
   exact hdecomp
 
+/-- A bit-valued scalar contact is the same contact equation in natural
+units. -/
+theorem singleRayNatContact_of_bitContact
+    {alpha : ℝ≥0} {M r z : ℝ}
+    (hz : 0 < z)
+    (hcontact : M / z * radialTriangleEntropy r z =
+      (bellmanEnvelope (alpha : ℝ) (M * (1 - r)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2) :
+    M / z * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope (channelRho (alpha : ℝ)) (M * (1 - r)) +
+        lowerRayNatEnvelope (channelRho (alpha : ℝ)) (M * (1 + r))) / 2 := by
+  have hminus := lowerRayNatEnvelope_eq_bellman
+    (alpha : ℝ) (M * (1 - r))
+  have hplus := lowerRayNatEnvelope_eq_bellman
+    (alpha : ℝ) (M * (1 + r))
+  rw [radialTriangleEntropy_eq_nat] at hcontact
+  rw [hminus, hplus]
+  field_simp [log_two_ne_zero, hz.ne'] at hcontact ⊢
+  linarith
+
 /-- Exact bit/nat bridge for the decomposed LR gap. -/
 theorem singleRayBitGap_eq_natDecomposition
     {alpha : ℝ≥0} {M r z : ℝ}
@@ -79,15 +99,8 @@ theorem singleRayBitGap_eq_natDecomposition
   have hcontactNat : c * radialNatEntropy 1 r z =
       (lowerRayNatEnvelope (channelRho (alpha : ℝ)) (M * (1 - r)) +
         lowerRayNatEnvelope (channelRho (alpha : ℝ)) (M * (1 + r))) / 2 := by
-    have hminus := lowerRayNatEnvelope_eq_bellman
-      (alpha : ℝ) (M * (1 - r))
-    have hplus := lowerRayNatEnvelope_eq_bellman
-      (alpha : ℝ) (M * (1 + r))
-    rw [radialTriangleEntropy_eq_nat] at hcontact
     dsimp [c]
-    rw [hminus, hplus]
-    field_simp [log_two_ne_zero, hz.ne'] at hcontact ⊢
-    linarith
+    exact singleRayNatContact_of_bitContact hz hcontact
   have hdecomp := singleRayNatGap_eq_local_add_scalingReserve
     hcz hcontactNat
   have henv := lowerRayNatEnvelope_eq_bellman (alpha : ℝ) M

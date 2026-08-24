@@ -1,0 +1,51 @@
+import InformationTheory.CourtadeKumar.SingleRayContactAlgebra
+
+/-! Closure of LR from the pure-entropy strict residual. -/
+
+open Set
+open scoped NNReal
+
+namespace CourtadeKumar
+
+/-- The final strict scalar assertion after the Bellman coefficient and all
+geometric auxiliary data have been eliminated. -/
+def SingleRayEntropyResidualTheorem (alpha : ℝ≥0) : Prop :=
+  ∀ (M r z : ℝ),
+    M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    r ∈ Ioo (0 : ℝ) 1 →
+    z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    M < z →
+    M / z * radialTriangleEntropy r z =
+      (bellmanEnvelope (alpha : ℝ) (M * (1 - r)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 →
+    0 ≤ singleRayEntropyResidual (channelRho (alpha : ℝ))
+      M r z (M / z)
+
+theorem singleRayStrictReserve_of_entropyResidual
+    (alpha : ℝ≥0) (hentropy : SingleRayEntropyResidualTheorem alpha) :
+    SingleRayStrictReserveTheorem alpha := by
+  intro M r z hM hr hz hMz hcontact
+  have hcontactNat := singleRayNatContact_of_bitContact
+    hz.1 hcontact
+  have hresidual := hentropy M r z hM hr hz hMz hcontact
+  have hgap := singleRayNatGap_nonneg_of_entropyResidual
+    hM hr hcontactNat hresidual
+  have hcz : M = M / z * z := by field_simp [hz.1.ne']
+  have hdecomp := singleRayNatGap_eq_local_add_scalingReserve
+    hcz hcontactNat
+  have hgap' : 0 ≤
+      M / z * radialNatEntropy (channelRho (alpha : ℝ)) r z -
+        lowerRayNatEnvelope (channelRho (alpha : ℝ)) M :=
+    sub_nonneg.mpr hgap
+  rw [hdecomp] at hgap'
+  exact hgap'
+
+/-- The pure-entropy residual closes the complete single-ray LR interface. -/
+theorem singleRayLR_of_entropyResidual
+    (alpha : ℝ≥0) (hentropy : SingleRayEntropyResidualTheorem alpha) :
+    SingleRayLRTheorem alpha :=
+  singleRayLR_of_scalarContact alpha
+    (singleRayScalarContact_of_strictReserve alpha
+      (singleRayStrictReserve_of_entropyResidual alpha hentropy))
+
+end CourtadeKumar
