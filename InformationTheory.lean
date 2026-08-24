@@ -24,6 +24,7 @@ import InformationTheory.CourtadeKumar.TopDerivatives
 import InformationTheory.CourtadeKumar.TopMonotonicity
 import InformationTheory.CourtadeKumar.ArtanhDerivative
 import InformationTheory.CourtadeKumar.EntropyDropTransition
+import InformationTheory.CourtadeKumar.TopEndpointIdentity
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
