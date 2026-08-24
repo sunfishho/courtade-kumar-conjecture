@@ -4,6 +4,10 @@ import InformationTheory.CourtadeKumar.SingleRayStrictReduction
 
 namespace CourtadeKumar
 
+@[simp] theorem radialNatEntropy_zero_shape (c z : ℝ) :
+    radialNatEntropy c 0 z = Real.binEntropy z := by
+  simp [radialNatEntropy]
+
 /-- Averaging the natural Bellman envelope over a radial pair separates its
 entropy and quadratic contributions. -/
 theorem average_lowerRayNatEnvelope_radial (rho M r : ℝ) :
@@ -63,6 +67,22 @@ noncomputable def singleRayEntropyResidual
     M * r ^ 2 *
       (c * radialNatEntropy 1 r z -
         topS rho * radialNatEntropy 1 r M)
+
+@[simp] theorem singleRayNatLocalGap_zero_shape (rho M : ℝ) :
+    singleRayNatLocalGap rho M 0 = 0 := by
+  rw [singleRayNatLocalGap_explicit]
+  simp
+
+@[simp] theorem singleRayEntropyResidual_zero_shape
+    (rho M z c : ℝ) :
+    singleRayEntropyResidual rho M 0 z c = 0 := by
+  simp [singleRayEntropyResidual]
+
+theorem continuous_singleRayEntropyResidual
+    (rho M z c : ℝ) :
+    Continuous (singleRayEntropyResidual rho M · z c) := by
+  unfold singleRayEntropyResidual singleRayContactDenom radialNatEntropy
+  fun_prop
 
 theorem singleRayContactDenom_pos
     {M r : ℝ} (hM : M ∈ Set.Ioo (0 : ℝ) (1 / 2 : ℝ))
