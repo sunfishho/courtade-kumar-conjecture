@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.TopCapComparison
+import InformationTheory.CourtadeKumar.CapClosure
 
 /-! The normalized corrected TOP reserve and its exact relation to the
 manuscript's channel coordinates. -/
@@ -43,6 +44,18 @@ theorem topReserve_eq_scale_mul_topChannelH
   simp only [topR, hsqrtR, hsqrtq]
   field_simp [hs, hc, hq]
   ring
+
+theorem topReserve_eq_scale_mul_topChannelH_sqCoordinates
+    {rho c r : ℝ} (hrho : rho ∈ Ioo (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1) (hc : c ≠ 0) :
+    topReserve rho c r =
+      topS rho * c * r ^ 2 * topChannelH (rho ^ 2) c (r ^ 2) := by
+  have hrhoSqNe : rho ^ 2 ≠ 1 := by nlinarith [hrho.1, hrho.2]
+  have h := topReserve_eq_scale_mul_topChannelH
+    (R := rho ^ 2) (c := c) (q := r ^ 2)
+    (sq_nonneg rho) (sq_nonneg r) hrhoSqNe hc (pow_ne_zero 2 hr.1.ne')
+  simpa [topS, topR, Real.sqrt_sq_eq_abs, abs_of_pos hrho.1,
+    abs_of_pos hr.1] using h
 
 lemma topPhi_eq_mul_artanh_add_log {x : ℝ} (hx : x ∈ Ioo (-1 : ℝ) 1) :
     topPhi x =
@@ -157,6 +170,43 @@ theorem topChannelH_strictAntiOn {R q : ℝ}
     have hp := topChannelP_pos (by simpa using hc) hq
     have hw := topChannelW_nonneg hR
     linarith
+
+lemma balancedCap_mem_Ioo_strict {rho r : ℝ}
+    (hrho : rho ∈ Ioo (0 : ℝ) 1) (hr : r ∈ Ioo (0 : ℝ) 1) :
+    balancedCap rho r ∈ Ioo (0 : ℝ) 1 := by
+  have hden := balancedCapDen_pos hrho hr
+  have hr2lt : r ^ 2 < 1 := by nlinarith [hr.1, hr.2]
+  have hgap : 0 < rho ^ 2 * (1 - r ^ 2) :=
+    mul_pos (sq_pos_of_pos hrho.1) (sub_pos.mpr hr2lt)
+  have hslt : topS rho < balancedCapDen rho r := by
+    unfold topS topR balancedCapDen
+    nlinarith
+  have hratio : topS rho / balancedCapDen rho r < 1 :=
+    (div_lt_one hden).2 hslt
+  have hsq := balancedCap_sq hrho hr
+  exact ⟨balancedCap_pos hrho hr, by
+    nlinarith [sq_nonneg (balancedCap rho r - 1)]⟩
+
+/-- The already verified balanced-root cap and fixed-channel monotonicity
+transfer any cap lower bound to the actual corrected entropy root. -/
+theorem topChannelH_balancedRoot_ge_cap
+    {rho r c : ℝ}
+    (hrho : rho ∈ Ioo (0 : ℝ) 1) (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hc : c ∈ Ioo (0 : ℝ) 1)
+    (hroot : balancedResidual rho c r = 0) :
+    topChannelH (rho ^ 2) (balancedCap rho r) (r ^ 2) ≤
+      topChannelH (rho ^ 2) c (r ^ 2) := by
+  have hR : rho ^ 2 ∈ Ioo (0 : ℝ) 1 := by
+    constructor <;> nlinarith [hrho.1, hrho.2]
+  have hq : r ^ 2 ∈ Ioo (0 : ℝ) 1 := by
+    constructor <;> nlinarith [hr.1, hr.2]
+  have hcap := balancedCap_mem_Ioo_strict hrho hr
+  have hsq := balancedRoot_sq_le_capRatio hrho hr
+    ⟨hc.1.le, hc.2.le⟩ hroot
+  rw [← balancedCap_sq hrho hr] at hsq
+  have hle : c ≤ balancedCap rho r := by
+    nlinarith [hc.1, balancedCap_pos hrho hr]
+  exact (topChannelH_strictAntiOn hR hq).antitoneOn hc hcap hle
 
 /-- The logarithmic cross-ratio appearing in the full-tail comparison. -/
 noncomputable def topCapCrossRatio (c q : ℝ) : ℝ :=
