@@ -24,6 +24,7 @@ import InformationTheory.CourtadeKumar.TopDerivatives
 import InformationTheory.CourtadeKumar.TopMonotonicity
 import InformationTheory.CourtadeKumar.ArtanhDerivative
 import InformationTheory.CourtadeKumar.EnergyPositivity
+import InformationTheory.CourtadeKumar.BalancedRoot
 import InformationTheory.CourtadeKumar.EntropyDropTransition
 import InformationTheory.CourtadeKumar.TopEndpointIdentity
 import InformationTheory.CourtadeKumar.ReserveConcavity
