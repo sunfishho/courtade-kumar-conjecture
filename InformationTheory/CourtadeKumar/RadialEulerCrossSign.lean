@@ -161,4 +161,79 @@ theorem radialEulerLogRatio_strictAntiOn_physical
         _ = 1 := inv_mul_cancel₀ h1r.ne'
     exact radialEulerCrossCore_neg_physical hrho hr hz.1 hupper
 
+/-- In the genuine entropy interior, the original Euler ratio inherits the
+strict decrease of its closed logarithmic form. -/
+theorem radialEulerRatio_strictAntiOn_physical
+    {rho r : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1) :
+    StrictAntiOn (radialEulerRatio rho r)
+      (Ioo (0 : ℝ) (1 + r)⁻¹) := by
+  apply (radialEulerLogRatio_strictAntiOn_physical hrho hr.1).congr
+  intro z hz
+  have h1r : 0 < 1 + r := add_pos_of_pos_of_nonneg zero_lt_one hr.1.le
+  have hupper : (1 + r) * z < 1 := by
+    calc
+      (1 + r) * z = z * (1 + r) := mul_comm _ _
+      _ < (1 + r)⁻¹ * (1 + r) := mul_lt_mul_of_pos_right hz.2 h1r
+      _ = 1 := inv_mul_cancel₀ h1r.ne'
+  have hminus : (1 - r) * z ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos (sub_pos.2 hr.2) hz.1
+    · nlinarith [mul_pos hr.1 hz.1]
+  have hplus : (1 + r) * z ∈ Ioo (0 : ℝ) 1 := by
+    exact ⟨mul_pos h1r hz.1, hupper⟩
+  have hrhor_nonneg : 0 ≤ rho * r := mul_nonneg hrho.1 hr.1.le
+  have hrhor_lt : rho * r < 1 := by
+    have hle : rho * r ≤ r := by
+      nlinarith [mul_nonneg (sub_nonneg.2 hrho.2.le) hr.1.le]
+    exact hle.trans_lt hr.2
+  have hrhor_le_r : rho * r ≤ r := by
+    nlinarith [mul_nonneg (sub_nonneg.2 hrho.2.le) hr.1.le]
+  have hRminus : (1 - rho * r) * z ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos (sub_pos.2 hrhor_lt) hz.1
+    · exact (mul_le_mul_of_nonneg_right (by linarith [hrhor_nonneg, hr.1]) hz.1.le).trans_lt
+        hplus.2
+  have hRplus : (1 + rho * r) * z ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos (by linarith) hz.1
+    · exact (mul_le_mul_of_nonneg_right (by linarith [hrhor_le_r]) hz.1.le).trans_lt
+        hplus.2
+  exact (radialEulerRatio_eq_logRatio hRminus hRplus hminus hplus).symm
+
+/-- A prescribed interior Euler multiplier has at most one radial contact. -/
+theorem radial_stationary_contact_unique
+    {rho theta r z₁ z₂ : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz₁ : z₁ ∈ Ioo (0 : ℝ) (1 + r)⁻¹)
+    (hz₂ : z₂ ∈ Ioo (0 : ℝ) (1 + r)⁻¹)
+    (hstat₁ : theta * radialEulerDefect 1 r z₁ -
+      radialEulerDefect rho r z₁ = 0)
+    (hstat₂ : theta * radialEulerDefect 1 r z₂ -
+      radialEulerDefect rho r z₂ = 0) :
+    z₁ = z₂ := by
+  have h1r : 0 < 1 + r := add_pos_of_pos_of_nonneg zero_lt_one hr.1.le
+  have hargs : ∀ z ∈ Ioo (0 : ℝ) (1 + r)⁻¹,
+      (1 - r) * z ∈ Ioo (0 : ℝ) 1 ∧
+        (1 + r) * z ∈ Ioo (0 : ℝ) 1 := by
+    intro z hz
+    have hupper : (1 + r) * z < 1 := by
+      calc
+        (1 + r) * z = z * (1 + r) := mul_comm _ _
+        _ < (1 + r)⁻¹ * (1 + r) := mul_lt_mul_of_pos_right hz.2 h1r
+        _ = 1 := inv_mul_cancel₀ h1r.ne'
+    constructor
+    · constructor
+      · exact mul_pos (sub_pos.2 hr.2) hz.1
+      · nlinarith [mul_pos hr.1 hz.1]
+    · exact ⟨mul_pos h1r hz.1, hupper⟩
+  have hratio₁ : radialEulerRatio rho r z₁ = theta :=
+    (radial_stationary_iff_ratio (hargs z₁ hz₁).1 (hargs z₁ hz₁).2).1 hstat₁
+  have hratio₂ : radialEulerRatio rho r z₂ = theta :=
+    (radial_stationary_iff_ratio (hargs z₂ hz₂).1 (hargs z₂ hz₂).2).1 hstat₂
+  exact (radialEulerRatio_strictAntiOn_physical hrho hr).injOn hz₁ hz₂
+    (hratio₁.trans hratio₂.symm)
+
 end CourtadeKumar
