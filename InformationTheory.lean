@@ -30,6 +30,7 @@ import InformationTheory.CourtadeKumar.BalancedRootCap
 import InformationTheory.CourtadeKumar.CapResidualDerivative
 import InformationTheory.CourtadeKumar.CapAuxDerivative
 import InformationTheory.CourtadeKumar.CapAuxConcavity
+import InformationTheory.CourtadeKumar.CapClosure
 import InformationTheory.CourtadeKumar.EntropyDropTransition
 import InformationTheory.CourtadeKumar.TopEndpointIdentity
 import InformationTheory.CourtadeKumar.ReserveConcavity
