@@ -112,4 +112,58 @@ theorem centeredEndpoint_top_bound_of_phaseContact
   exact centeredEndpoint_top_bound_of_correctedTop
     halpha hr hM hc hcap hcontact
 
+/-- The centered-phase geometry before its scalar objective bound is
+inserted.  All fields here belong to the perspective/contact classification;
+the corrected TOP theorem supplies the missing `top_bound`. -/
+structure CenteredEndpointGeometryData
+    (alpha : ℝ≥0) (M d E0 : ℝ) where
+  theta : ℝ
+  c : ℝ → ℝ
+  rstar : ℝ
+  alpha_interior : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)
+  mean_interior : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)
+  displacement_pos : 0 < d
+  rstar_interior : rstar ∈ Ioo (0 : ℝ) 1
+  phase_shape : d / M ≤ rstar
+  theta_nonneg : 0 ≤ theta
+  contactProfile : RadialContactProfile alpha theta c
+  chordSupport : RadialChordSupport c rstar
+  centered_contact : c rstar =
+    2 * radialTriangleDifference alpha theta rstar (1 / 2)
+  entropy_contact : E0 =
+    2 * d / rstar * radialTriangleEntropy rstar (1 / 2)
+  threshold_eq : E0 =
+    (bellmanEnvelope (alpha : ℝ) (M - d) +
+      bellmanEnvelope (alpha : ℝ) (M + d)) / 2
+
+/-- The corrected TOP theorem upgrades centered phase geometry to the full
+phase data required by weak duality. -/
+noncomputable def CenteredEndpointGeometryData.toPhaseData
+    {alpha : ℝ≥0} {M d E0 : ℝ}
+    (h : CenteredEndpointGeometryData alpha M d E0) :
+    CenteredEndpointPhaseData alpha M d E0 where
+  theta := h.theta
+  c := h.c
+  rstar := h.rstar
+  theta_nonneg := h.theta_nonneg
+  contactProfile := h.contactProfile
+  chordSupport := h.chordSupport
+  centered_contact := h.centered_contact
+  entropy_contact := h.entropy_contact
+  top_bound := by
+    have hcontact :
+        2 * d / h.rstar * binaryEntropyBits ((1 - h.rstar) / 2) =
+          (bellmanEnvelope (alpha : ℝ) (M - d) +
+            bellmanEnvelope (alpha : ℝ) (M + d)) / 2 := by
+      calc
+        2 * d / h.rstar * binaryEntropyBits ((1 - h.rstar) / 2) =
+            2 * d / h.rstar * radialTriangleEntropy h.rstar (1 / 2) := by
+              rw [radialTriangleEntropy_centered]
+        _ = E0 := h.entropy_contact.symm
+        _ = (bellmanEnvelope (alpha : ℝ) (M - d) +
+            bellmanEnvelope (alpha : ℝ) (M + d)) / 2 := h.threshold_eq
+    exact centeredEndpoint_top_bound_of_phaseContact
+      h.alpha_interior h.rstar_interior h.mean_interior
+      h.displacement_pos h.phase_shape hcontact
+
 end CourtadeKumar
