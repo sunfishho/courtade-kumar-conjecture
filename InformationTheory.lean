@@ -18,6 +18,7 @@ import InformationTheory.CourtadeKumar.EnvelopeConcavity
 import InformationTheory.CourtadeKumar.EnvelopeFormula
 import InformationTheory.CourtadeKumar.BalancedReserve
 import InformationTheory.CourtadeKumar.FixedWeightReduction
+import InformationTheory.CourtadeKumar.ScalarUnitConversion
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
