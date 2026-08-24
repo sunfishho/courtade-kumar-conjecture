@@ -69,4 +69,38 @@ theorem topAuxiliaryReserve_endpoint_eq_topReserve
   unfold topJ topS topR
   ring
 
+/-- The target gap at any admissible contact is bounded below by the explicit
+corrected reserve. -/
+theorem topGap_ge_topReserve_of_contact
+    {rho c r X : ℝ}
+    (hs : 0 ≤ topS rho) (hcr : 0 ≤ c * r) (hc : c ≠ 2)
+    (hX : X ∈ Set.Icc (0 : ℝ) (1 - c))
+    (hdomain : ∀ Y ∈ Set.Icc (0 : ℝ) (1 - c),
+      Y ∈ Set.Ioo (-1 : ℝ) 1 ∧
+        Y + c * r ∈ Set.Ioo (-1 : ℝ) 1 ∧
+          Y - c * r ∈ Set.Ioo (-1 : ℝ) 1)
+    (hcontact : topContactResidual rho c r X = 0) :
+    c * topJ (rho * r) - topEnvelope rho X ≥ topReserve rho c r := by
+  calc
+    c * topJ (rho * r) - topEnvelope rho X ≥
+        topAuxiliaryReserve rho c r (1 - c) :=
+      topGap_ge_endpointAuxiliaryReserve_of_contact hs hcr hX hdomain hcontact
+    _ = topReserve rho c r := topAuxiliaryReserve_endpoint_eq_topReserve rho c r hc
+
+/-- Nonnegativity of the explicit reserve proves the corrected TOP target at
+the contact. -/
+theorem correctedTopTarget_of_reserve_nonneg
+    {rho c r X : ℝ}
+    (hs : 0 ≤ topS rho) (hcr : 0 ≤ c * r) (hc : c ≠ 2)
+    (hX : X ∈ Set.Icc (0 : ℝ) (1 - c))
+    (hdomain : ∀ Y ∈ Set.Icc (0 : ℝ) (1 - c),
+      Y ∈ Set.Ioo (-1 : ℝ) 1 ∧
+        Y + c * r ∈ Set.Ioo (-1 : ℝ) 1 ∧
+          Y - c * r ∈ Set.Ioo (-1 : ℝ) 1)
+    (hcontact : topContactResidual rho c r X = 0)
+    (hreserve : 0 ≤ topReserve rho c r) :
+    topEnvelope rho X ≤ c * topJ (rho * r) := by
+  have hgap := topGap_ge_topReserve_of_contact hs hcr hc hX hdomain hcontact
+  linarith
+
 end CourtadeKumar
