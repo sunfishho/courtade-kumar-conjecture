@@ -137,4 +137,42 @@ noncomputable def canonicalSingleRayGeometry_of_entropyContact
   exact canonicalSingleRayGeometryData
     halpha htheta hrstar hcenter ⟨hrstarr, hr.2⟩ hmoment hentropy'
 
+/-- The centered entropy root itself decides the geometric phase.  If the
+observed moment ray lies before it, use the centered chord.  Otherwise the
+entropy level selects a unique pre-midpoint single-ray contact. -/
+theorem canonicalTwoPhaseGeometry_of_centeredEntropyContact
+    {alpha : ℝ≥0} {M d E0 s r : ℝ}
+    (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hd : 0 < d)
+    (hs : s ∈ Ioo (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hmoment : d = M * r)
+    (hentropy : E0 =
+      2 * d / s * radialTriangleEntropy s (1 / 2))
+    (hthreshold : E0 =
+      (bellmanEnvelope (alpha : ℝ) (M - d) +
+        bellmanEnvelope (alpha : ℝ) (M + d)) / 2) :
+    Nonempty (SingleRayGeometryData alpha M d E0) ∨
+      Nonempty (CenteredEndpointGeometryData alpha M d E0) := by
+  have hdr : d / M = r := by
+    rw [hmoment]
+    field_simp [hM.1.ne']
+  by_cases hrs : r ≤ s
+  · exact Or.inr ⟨canonicalCenteredGeometry_of_entropyContact
+      halpha hM hd hs (hdr.trans_le hrs) hentropy hthreshold⟩
+  · have hsr : s < r := lt_of_not_ge hrs
+    have hanti : centeredEntropyRatio r < centeredEntropyRatio s :=
+      strictAntiOn_centeredEntropyRatio hs hr hsr
+    have hlevel : E0 / M = 2 * r * centeredEntropyRatio s := by
+      rw [hentropy, hmoment, centeredEntropyRatio_eq_radial]
+      field_simp [hM.1.ne', hs.1.ne']
+    have habove : radialEntropyRatio r (1 / 2) < E0 / M := by
+      rw [radialEntropyRatio_half hr.1.ne', hlevel]
+      exact mul_lt_mul_of_pos_left hanti (mul_pos (by norm_num) hr.1)
+    obtain ⟨z, hz, hzeq⟩ :=
+      (existsUnique_radialEntropyRatio_eq_before_half hr habove).exists
+    exact Or.inl ⟨canonicalSingleRayGeometry_of_entropyContact
+      halpha hM.1 hr hz hmoment hzeq.symm⟩
+
 end CourtadeKumar
