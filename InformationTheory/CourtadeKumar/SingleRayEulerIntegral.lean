@@ -191,6 +191,17 @@ theorem radialEulerLogWeight_factor
   unfold radialEulerWeight radialEulerRatio
   field_simp [hD1]
 
+theorem radialEulerLogWeight_pos
+    {c r z : ℝ}
+    (hz : z ≠ 0)
+    (hminus : (1 - c * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hplus : (1 + c * r) * z ∈ Ioo (0 : ℝ) 1) :
+    0 < radialEulerLogWeight c r z := by
+  rw [← radialEulerWeight_eq_logWeight hminus hplus]
+  unfold radialEulerWeight
+  exact div_pos (radialEulerDefect_pos hminus hplus)
+    (sq_pos_of_ne_zero hz)
+
 /-- The quotient of the two Euler-weight integrals.  The factorization above
 makes this a positive-weight average of `radialEulerRatio` on `[M,z]`. -/
 noncomputable def radialEulerWeightedAverage
@@ -309,6 +320,82 @@ theorem hasDerivAt_radialEulerAlgebraicSurplus
   convert htotal using 1
   rw [hfactor]
   ring
+
+/-- Around a strict Euler-budget crossing the cumulative surplus is
+V-shaped: strictly decreasing before the crossing and strictly increasing
+after it. -/
+theorem radialEulerAlgebraicSurplus_strictVShape
+    {rho r M z budget τ : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M) (hMτ : M < τ) (hτz : τ < z)
+    (hzupper : z < (1 + r)⁻¹)
+    (hcross : radialEulerRatio rho r τ = budget) :
+    StrictAntiOn
+        (fun w ↦ radialEulerAlgebraicSurplus rho r M w budget) (Icc M τ) ∧
+      StrictMonoOn
+        (fun w ↦ radialEulerAlgebraicSurplus rho r M w budget) (Icc τ z) := by
+  have hrhoIcc : rho ∈ Icc (0 : ℝ) 1 := ⟨hrho.1, hrho.2.le⟩
+  have hargs : ∀ x ∈ Icc M z,
+      (1 - rho * r) * x ∈ Ioo (0 : ℝ) 1 ∧
+        (1 + rho * r) * x ∈ Ioo (0 : ℝ) 1 ∧
+        (1 - r) * x ∈ Ioo (0 : ℝ) 1 ∧
+        (1 + r) * x ∈ Ioo (0 : ℝ) 1 := by
+    intro x hx
+    exact radialEntropyArgs_physical hrhoIcc hr
+      ⟨hM.trans_le hx.1, hx.2.trans_lt hzupper⟩
+  have hτDom : τ ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+    ⟨hM.trans hMτ, hτz.trans hzupper⟩
+  have hcontinuous : ∀ {a b : ℝ}, Icc a b ⊆ Icc M z →
+      ContinuousOn
+        (fun w ↦ radialEulerAlgebraicSurplus rho r M w budget) (Icc a b) := by
+    intro a b hsub x hx
+    have hxMz := hsub hx
+    obtain ⟨hRminus, hRplus, hminus, hplus⟩ := hargs x hxMz
+    exact (hasDerivAt_radialEulerAlgebraicSurplus
+      (M := M) (budget := budget) (ne_of_gt (hM.trans_le hxMz.1))
+        hRminus hRplus hminus hplus).continuousAt.continuousWithinAt
+  constructor
+  · apply strictAntiOn_of_deriv_neg (convex_Icc M τ)
+      (hcontinuous (by intro x hx; exact ⟨hx.1, hx.2.trans hτz.le⟩))
+    intro x hx
+    rw [interior_Icc] at hx
+    have hxMz : x ∈ Icc M z := ⟨hx.1.le, hx.2.le.trans hτz.le⟩
+    obtain ⟨hRminus, hRplus, hminus, hplus⟩ := hargs x hxMz
+    have hslope := hasDerivAt_radialEulerAlgebraicSurplus
+      (M := M) (budget := budget) (ne_of_gt (hM.trans hx.1))
+        hRminus hRplus hminus hplus
+    rw [hslope.deriv]
+    have hxDom : x ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+      ⟨hM.trans hx.1, hx.2.trans hτDom.2⟩
+    have hratio : budget < radialEulerRatio rho r x := by
+      rw [← hcross]
+      exact radialEulerRatio_strictAntiOn_physical hrho hr
+        hxDom hτDom hx.2
+    have hweight : 0 < radialEulerLogWeight 1 r x :=
+      radialEulerLogWeight_pos (ne_of_gt (hM.trans hx.1))
+        (by simpa using hminus) (by simpa using hplus)
+    exact mul_neg_of_neg_of_pos (sub_neg.mpr hratio) hweight
+  · apply strictMonoOn_of_deriv_pos (convex_Icc τ z)
+      (hcontinuous (by intro x hx; exact ⟨hMτ.le.trans hx.1, hx.2⟩))
+    intro x hx
+    rw [interior_Icc] at hx
+    have hxMz : x ∈ Icc M z := ⟨hMτ.le.trans hx.1.le, hx.2.le⟩
+    obtain ⟨hRminus, hRplus, hminus, hplus⟩ := hargs x hxMz
+    have hslope := hasDerivAt_radialEulerAlgebraicSurplus
+      (M := M) (budget := budget) (ne_of_gt (hM.trans_le hxMz.1))
+        hRminus hRplus hminus hplus
+    rw [hslope.deriv]
+    have hxDom : x ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+      ⟨hτDom.1.trans hx.1, hx.2.trans hzupper⟩
+    have hratio : radialEulerRatio rho r x < budget := by
+      rw [← hcross]
+      exact radialEulerRatio_strictAntiOn_physical hrho hr
+        hτDom hxDom hx.1
+    have hweight : 0 < radialEulerLogWeight 1 r x :=
+      radialEulerLogWeight_pos (ne_of_gt (hM.trans_le hxMz.1))
+        (by simpa using hminus) (by simpa using hplus)
+    exact mul_pos (sub_pos.mpr hratio) hweight
 
 theorem radialEulerWeightedAverage_le_iff_cumulativeSurplus_nonneg
     {rho r M z budget : ℝ}
