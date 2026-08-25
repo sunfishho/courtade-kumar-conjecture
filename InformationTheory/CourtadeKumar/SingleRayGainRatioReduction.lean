@@ -33,6 +33,31 @@ theorem hasDerivAt_radialNatChannelGainRatio
   convert hquot using 1 <;> simp only [id_eq, Pi.sub_apply] <;>
     field_simp [hz] <;> ring
 
+theorem radialNatChannelGainRatio_deriv_eq_eulerFactor
+    {rho r z : ℝ}
+    (hminus : (1 - r) * z ∈ Ioo (0 : ℝ) 1)
+    (hplus : (1 + r) * z ∈ Ioo (0 : ℝ) 1) :
+    (radialEulerDefect 1 r z - radialEulerDefect rho r z) / z ^ 2 =
+      (1 - radialEulerRatio rho r z) *
+        radialEulerDefect 1 r z / z ^ 2 := by
+  have hden : radialEulerDefect 1 r z ≠ 0 :=
+    (radialEulerDefect_pos (by simpa using hminus)
+      (by simpa using hplus)).ne'
+  unfold radialEulerRatio
+  field_simp [hden]
+
+theorem hasDerivAt_radialNatChannelGainRatio_eulerFactor
+    {rho r z : ℝ} (hz : z ≠ 0)
+    (hRminus : (1 - rho * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hRplus : (1 + rho * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hminus : (1 - r) * z ∈ Ioo (0 : ℝ) 1)
+    (hplus : (1 + r) * z ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (radialNatChannelGainRatio rho r)
+      ((1 - radialEulerRatio rho r z) *
+        radialEulerDefect 1 r z / z ^ 2) z := by
+  rw [← radialNatChannelGainRatio_deriv_eq_eulerFactor hminus hplus]
+  exact hasDerivAt_radialNatChannelGainRatio hz hRminus hRplus hminus hplus
+
 theorem singleRayCorrectedReserve_eq_gain_form (rho M r z c : ℝ) :
     singleRayCorrectedReserve rho M r z c =
       c * radialNatChannelGain rho r z -
