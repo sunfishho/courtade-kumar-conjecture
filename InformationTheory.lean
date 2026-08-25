@@ -52,6 +52,7 @@ import InformationTheory.CourtadeKumar.EntropyDropTransition
 import InformationTheory.CourtadeKumar.TopEndpointIdentity
 import InformationTheory.CourtadeKumar.ReserveConcavity
 import InformationTheory.CourtadeKumar.ChannelEndpoints
+import InformationTheory.CourtadeKumar.LROdds
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
