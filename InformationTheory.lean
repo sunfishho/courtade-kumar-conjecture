@@ -54,6 +54,7 @@ import InformationTheory.CourtadeKumar.ReserveConcavity
 import InformationTheory.CourtadeKumar.ChannelEndpoints
 import InformationTheory.CourtadeKumar.LROdds
 import InformationTheory.CourtadeKumar.LRReserve
+import InformationTheory.CourtadeKumar.LRPrefixPhysicality
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
