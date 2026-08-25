@@ -14,7 +14,7 @@ field needed by the corrected TOP phase. -/
 noncomputable def canonicalCenteredEndpointGeometryData
     {alpha : ℝ≥0} {M d E0 theta rstar : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hd : 0 < d)
     (hrstar : rstar ∈ Ioo (0 : ℝ) 1)
     (hshape : d / M ≤ rstar)
@@ -31,7 +31,7 @@ noncomputable def canonicalCenteredEndpointGeometryData
   c := canonicalRadialProfile alpha theta halpha htheta
   rstar := rstar
   alpha_interior := halpha
-  mean_interior := hM
+  mean_lowerHalf := hM
   displacement_pos := hd
   rstar_interior := hrstar
   phase_shape := hshape
@@ -49,7 +49,7 @@ the complete centered phase record consumed by weak duality. -/
 noncomputable def canonicalCenteredEndpointPhaseData
     {alpha : ℝ≥0} {M d E0 theta rstar : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hd : 0 < d)
     (hrstar : rstar ∈ Ioo (0 : ℝ) 1)
     (hshape : d / M ≤ rstar)

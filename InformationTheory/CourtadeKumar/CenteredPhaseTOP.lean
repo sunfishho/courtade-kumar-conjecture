@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.PerspectivePhases
+import InformationTheory.CourtadeKumar.LowerRayTheorem
 import InformationTheory.CourtadeKumar.TopBitTheorem
 
 /-! Application of corrected TOP to the centered-endpoint perspective phase. -/
@@ -35,7 +36,7 @@ theorem centeredEndpoint_top_bound_of_correctedTop
     {alpha M d r : ℝ}
     (halpha : alpha ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
     (hr : r ∈ Ioo (0 : ℝ) 1)
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hc : 2 * d / r ∈ Ioo (0 : ℝ) 1)
     (hcap : 2 * d / r ≤ 2 * M)
     (hcontact :
@@ -90,7 +91,7 @@ theorem centeredEndpoint_top_bound_of_phaseContact
     {alpha M d r : ℝ}
     (halpha : alpha ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
     (hr : r ∈ Ioo (0 : ℝ) 1)
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hd : 0 < d) (hshape : d / M ≤ r)
     (hcontact :
       2 * d / r * binaryEntropyBits ((1 - r) / 2) =
@@ -108,7 +109,36 @@ theorem centeredEndpoint_top_bound_of_phaseContact
   have hc : 2 * d / r ∈ Ioo (0 : ℝ) 1 := by
     constructor
     · exact div_pos (mul_pos (by norm_num) hd) hr.1
-    · exact hcap.trans_lt (by linarith [hM.2])
+    · have hcle : 2 * d / r ≤ 1 := hcap.trans (by linarith [hM.2])
+      apply lt_of_le_of_ne hcle
+      intro hceq
+      let p : ℝ := (1 - r) / 2
+      have hdEq : d = r / 2 := by
+        rw [div_eq_iff hr.1.ne'] at hceq
+        linarith
+      have hMlower : 1 / 2 ≤ M := by
+        have hdMr : d ≤ M * r := by
+          simpa [mul_comm] using (div_le_iff₀ hM.1).mp hshape
+        rw [hdEq] at hdMr
+        nlinarith [hr.1]
+      have hMhalf : M = 1 / 2 := le_antisymm hM.2 hMlower
+      have hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ) := by
+        dsimp [p]
+        constructor <;> linarith [hr.1, hr.2]
+      have hstrict := bellmanEnvelope_lt_binaryEntropy
+        (alpha := (⟨alpha, halpha.1.le⟩ : ℝ≥0)) halpha hp
+      have hminus : M - d = p := by
+        dsimp [p]
+        rw [hMhalf, hdEq]
+        ring
+      have hplus : M + d = 1 - p := by
+        dsimp [p]
+        rw [hMhalf, hdEq]
+        ring
+      have heq : binaryEntropyBits p = bellmanEnvelope alpha p := by
+        rw [hceq, hminus, hplus, bellmanEnvelope_one_sub] at hcontact
+        simpa using hcontact
+      exact hstrict.ne heq.symm
   exact centeredEndpoint_top_bound_of_correctedTop
     halpha hr hM hc hcap hcontact
 
@@ -121,7 +151,7 @@ structure CenteredEndpointGeometryData
   c : ℝ → ℝ
   rstar : ℝ
   alpha_interior : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)
-  mean_interior : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)
+  mean_lowerHalf : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ)
   displacement_pos : 0 < d
   rstar_interior : rstar ∈ Ioo (0 : ℝ) 1
   phase_shape : d / M ≤ rstar
@@ -163,7 +193,7 @@ noncomputable def CenteredEndpointGeometryData.toPhaseData
         _ = (bellmanEnvelope (alpha : ℝ) (M - d) +
             bellmanEnvelope (alpha : ℝ) (M + d)) / 2 := h.threshold_eq
     exact centeredEndpoint_top_bound_of_phaseContact
-      h.alpha_interior h.rstar_interior h.mean_interior
+      h.alpha_interior h.rstar_interior h.mean_lowerHalf
       h.displacement_pos h.phase_shape hcontact
 
 end CourtadeKumar

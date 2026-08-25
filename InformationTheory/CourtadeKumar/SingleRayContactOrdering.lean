@@ -58,7 +58,7 @@ theorem bellmanEnvelope_le_binaryEntropy
     (radialTriangleChannelEntropy_le_binaryEntropy halpha hm)
 
 lemma singleRay_endpoint_mem_Icc
-    {M r : ℝ} (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    {M r : ℝ} (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hr : r ∈ Ioo (0 : ℝ) 1) :
     M * (1 - r) ∈ Icc (0 : ℝ) (1 / 2 : ℝ) ∧
       M * (1 + r) ∈ Icc (0 : ℝ) 1 := by
@@ -73,8 +73,8 @@ lemma singleRay_endpoint_mem_Icc
     · exact mul_nonneg hM.1.le (by linarith [hr.1])
     · apply le_of_lt
       calc
-        M * (1 + r) < (1 / 2) * (1 + r) :=
-          mul_lt_mul_of_pos_right hM.2 (by linarith [hr.1])
+        M * (1 + r) ≤ (1 / 2) * (1 + r) :=
+          mul_le_mul_of_nonneg_right hM.2 (by linarith [hr.1])
         _ < (1 / 2) * 2 :=
           mul_lt_mul_of_pos_left (by linarith [hr.2]) (by norm_num)
         _ = 1 := by ring
@@ -83,7 +83,7 @@ lemma singleRay_endpoint_mem_Icc
 theorem singleRay_mean_le_contact
     {alpha : ℝ≥0} {M r z : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hr : r ∈ Ioo (0 : ℝ) 1)
     (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
     (hcontact : M / z * radialTriangleEntropy r z =
@@ -139,8 +139,8 @@ theorem singleRay_mean_le_contact
     ⟨hM.1, by
       rw [inv_eq_one_div, lt_div_iff₀ (by linarith [hr.1] : 0 < 1 + r)]
       calc
-        M * (1 + r) < (1 / 2) * (1 + r) :=
-          mul_lt_mul_of_pos_right hM.2 (by linarith [hr.1])
+        M * (1 + r) ≤ (1 / 2) * (1 + r) :=
+          mul_le_mul_of_nonneg_right hM.2 (by linarith [hr.1])
         _ < (1 / 2) * 2 :=
           mul_lt_mul_of_pos_left (by linarith [hr.2]) (by norm_num)
         _ = 1 := by ring⟩ hzM

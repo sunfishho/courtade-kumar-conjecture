@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.PerspectiveClosure
+import InformationTheory.CourtadeKumar.RadialPerspective
 
 /-! Differential identity for the radial perspective quotient. -/
 

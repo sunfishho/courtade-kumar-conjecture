@@ -41,7 +41,7 @@ theorem orderedTriangle_interiorLowerHalf_geometricTwoPhase
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
     (n : ℕ) (M U : BitVec n → ℝ)
     (hdomain : ∀ y, 0 ≤ U y ∧ U y ≤ M y ∧ U y ≤ 1 - M y)
-    (hmeanM : cubeAverage n M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hmeanM : cubeAverage n M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hmeanU : 0 < cubeAverage n U)
     (hstrict : cubeAverage n U < cubeAverage n M) :
     let meanM := cubeAverage n M
@@ -78,7 +78,7 @@ theorem orderedTriangle_interiorLowerHalf_affineSupport
     (hlr : SingleRayLRTheorem alpha)
     (n : ℕ) (M U : BitVec n → ℝ)
     (hdomain : ∀ y, 0 ≤ U y ∧ U y ≤ M y ∧ U y ≤ 1 - M y)
-    (hmeanM : cubeAverage n M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hmeanM : cubeAverage n M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hmeanU : 0 < cubeAverage n U)
     (hstrict : cubeAverage n U < cubeAverage n M) :
     let E0 :=
@@ -109,7 +109,7 @@ def OrderedTriangleLowerHalfBoundaryAffineSupportTheorem
   ∀ (n : ℕ) (M U : BitVec n → ℝ),
     (∀ y, 0 ≤ U y ∧ U y ≤ M y ∧ U y ≤ 1 - M y) →
     cubeAverage n M ≤ 1 / 2 →
-    (¬ cubeAverage n M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) ∨
+    (¬ cubeAverage n M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ) ∨
       ¬ 0 < cubeAverage n U ∨
       ¬ cubeAverage n U < cubeAverage n M) →
     let E0 :=
@@ -123,15 +123,14 @@ def OrderedTriangleLowerHalfBoundaryAffineSupportTheorem
           theta * E0 + a * cubeAverage n M + b * cubeAverage n U
 
 /-- After the manuscript's mean-zero and zero-displacement cases are
-removed, the lower-half boundary consists only of the midpoint face
-`mean M = 1/2` and the full-width face `mean U = mean M`. -/
+removed, the only remaining lower-half boundary is the singular full-width
+face `mean U = mean M` (equivalently `r₀ = 1`). -/
 def OrderedTriangleLowerHalfHardBoundaryAffineSupportTheorem
     (alpha : ℝ≥0) : Prop :=
   ∀ (n : ℕ) (M U : BitVec n → ℝ),
     (∀ y, 0 ≤ U y ∧ U y ≤ M y ∧ U y ≤ 1 - M y) →
     cubeAverage n M ≤ 1 / 2 →
-    (cubeAverage n M = 1 / 2 ∨
-      cubeAverage n U = cubeAverage n M) →
+    cubeAverage n U = cubeAverage n M →
     let E0 :=
       (bellmanEnvelope (alpha : ℝ)
           (cubeAverage n M - cubeAverage n U) +
@@ -142,8 +141,9 @@ def OrderedTriangleLowerHalfHardBoundaryAffineSupportTheorem
         bellmanEnvelope (alpha : ℝ) (cubeAverage n M) ≤
           theta * E0 + a * cubeAverage n M + b * cubeAverage n U
 
-/-- The two easy perspective boundaries are now proved directly.  Thus only
-the midpoint and full-width faces need a limiting boundary certificate. -/
+/-- The two easy perspective boundaries and the formerly missing midpoint
+face are now proved.  Thus only the singular full-width face needs the
+manuscript's endpoint certificate. -/
 theorem lowerHalfBoundaryAffineSupport_of_hardBoundary
     {alpha : ℝ≥0} (halpha : (alpha : ℝ) ≤ 1 / 2)
     (hhard : OrderedTriangleLowerHalfHardBoundaryAffineSupportTheorem alpha) :
@@ -160,14 +160,12 @@ theorem lowerHalfBoundaryAffineSupport_of_hardBoundary
       alpha halpha n M U hUzero
   apply hhard n M U hdomain hmean
   rcases hboundary with hMboundary | hUboundary | hdiag
-  · left
-    simp only [mem_Ioo, not_and_or, not_lt] at hMboundary
-    rcases hMboundary with hMle | hhalfLe
+  · simp only [mem_Ioc, not_and_or, not_lt, not_le] at hMboundary
+    rcases hMboundary with hMle | hhalfLt
     · exact False.elim (hMzero (le_antisymm hMle hMIcc.1))
-    · exact le_antisymm hmean hhalfLe
+    · exact False.elim ((not_le_of_gt hhalfLt) hmean)
   · exact False.elim (hUzero (le_antisymm (le_of_not_gt hUboundary) hU0))
-  · right
-    exact le_antisymm hUM (le_of_not_gt hdiag)
+  · exact le_antisymm hUM (le_of_not_gt hdiag)
 
 /-- Interior perspective geometry, corrected TOP, LR, and the explicitly
 separated boundary certificates assemble to the full lower-half affine
@@ -181,7 +179,7 @@ theorem lowerHalfAffineSupport_of_interior_LR_and_boundary
   intro n M U hdomain hmean
   dsimp
   by_cases hinterior :
-      cubeAverage n M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) ∧
+      cubeAverage n M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ) ∧
         0 < cubeAverage n U ∧
         cubeAverage n U < cubeAverage n M
   · exact orderedTriangle_interiorLowerHalf_affineSupport

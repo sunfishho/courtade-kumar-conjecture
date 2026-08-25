@@ -2,6 +2,7 @@ import InformationTheory.CourtadeKumar.CanonicalCenteredGeometry
 import InformationTheory.CourtadeKumar.CanonicalSingleRayGeometry
 import InformationTheory.CourtadeKumar.RadialContactShape
 import InformationTheory.CourtadeKumar.RadialEntropyRatio
+import InformationTheory.CourtadeKumar.SingleRayContactOrdering
 
 /-! Direct scalar selection of the centered and single-ray geometries. -/
 
@@ -48,7 +49,7 @@ the canonical centered geometry record. -/
 noncomputable def canonicalCenteredGeometry_of_entropyContact
     {alpha : ℝ≥0} {M d E0 s : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hd : 0 < d)
     (hs : s ∈ Ioo (0 : ℝ) 1)
     (hshape : d / M ≤ s)
@@ -79,7 +80,7 @@ observed ray. -/
 noncomputable def canonicalSingleRayGeometry_of_entropyContact
     {alpha : ℝ≥0} {M d E0 r z : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hr : r ∈ Ioo (0 : ℝ) 1)
     (hz : z ∈ Ioo (0 : ℝ) (1 / 2))
     (hmoment : d = M * r)
@@ -98,6 +99,23 @@ noncomputable def canonicalSingleRayGeometry_of_entropyContact
     nlinarith [hr.2]
   have hzphys : z ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
     ⟨hz.1, hz.2.trans hhalfcap⟩
+  have hcontact : M / z * radialTriangleEntropy r z =
+      (bellmanEnvelope (alpha : ℝ) (M * (1 - r)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 := by
+    have hE : E0 = M / z * radialTriangleEntropy r z := by
+      calc
+        E0 = M * (E0 / M) := by field_simp [hM.1.ne']
+        _ = M * radialEntropyRatio r z := by rw [hentropy]
+        _ = M / z * radialTriangleEntropy r z := by
+          unfold radialEntropyRatio
+          ring
+    rw [← hE, hthreshold]
+    rw [show M - d = M * (1 - r) by linarith [hmoment],
+      show M + d = M * (1 + r) by linarith [hmoment]]
+  have hMle : M ≤ z :=
+    singleRay_mean_le_contact halpha hM hr hz hcontact
+  have hMopen : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) :=
+    ⟨hM.1, hMle.trans_lt hz.2⟩
   let theta : ℝ := radialEulerLogRatio rho r z
   have htheta : theta ∈ Ioo (0 : ℝ) 1 :=
     radialEulerLogRatio_mem_Ioo_physical hrho hr hzphys
@@ -138,7 +156,7 @@ noncomputable def canonicalSingleRayGeometry_of_entropyContact
         unfold radialEntropyRatio
         ring
   exact canonicalSingleRayGeometryData
-    halpha hM htheta hrstar hcenter ⟨hrstarr, hr.2⟩ hmoment hentropy' hthreshold
+    halpha hMopen htheta hrstar hcenter ⟨hrstarr, hr.2⟩ hmoment hentropy' hthreshold
 
 /-- The centered entropy root itself decides the geometric phase.  If the
 observed moment ray lies before it, use the centered chord.  Otherwise the
@@ -146,7 +164,7 @@ entropy level selects a unique pre-midpoint single-ray contact. -/
 theorem canonicalTwoPhaseGeometry_of_centeredEntropyContact
     {alpha : ℝ≥0} {M d E0 s r : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hd : 0 < d)
     (hs : s ∈ Ioo (0 : ℝ) 1)
     (hr : r ∈ Ioo (0 : ℝ) 1)
@@ -183,7 +201,7 @@ entropy level.  Both scalar contacts are constructed internally. -/
 theorem canonicalInteriorTwoPhaseGeometry
     {alpha : ℝ≥0} {M d E0 : ℝ}
     (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
-    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hd : 0 < d)
     (hdM : d < M)
     (hE0 : 0 < E0)
