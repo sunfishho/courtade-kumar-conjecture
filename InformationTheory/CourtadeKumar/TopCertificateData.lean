@@ -958,7 +958,7 @@ def topCertificatePowerData : Array (Array ℚ) :=
 theorem topCertificatePowerData_size :
     topCertificatePowerData.size = 48 ∧
       ∀ row ∈ topCertificatePowerData, row.size = 23 := by
-  native_decide
+  decide
 
 def topCertificatePowerCoeffRat (i : Fin 48) (j : Fin 61) : ℚ :=
   if hj : j.val < 23 then
