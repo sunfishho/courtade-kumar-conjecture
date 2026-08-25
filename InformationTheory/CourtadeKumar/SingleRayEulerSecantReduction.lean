@@ -3,6 +3,7 @@ import InformationTheory.CourtadeKumar.SingleRayEulerSecant
 /-! Exact reduction of the corrected reserve to an Euler-ratio secant budget. -/
 
 open Set
+open scoped NNReal
 
 namespace CourtadeKumar
 
@@ -35,6 +36,35 @@ lemma radialNatEntropyRatio_one_loss_pos
     radialNatEntropyRatio_one_eq_bits]
   simpa [mul_sub] using
     mul_pos (Real.log_pos one_lt_two) (sub_pos.mpr hbits)
+
+theorem singleRayEulerSlopeBudget_nonneg
+    {alpha : ℝ≥0} {M r z : ℝ}
+    (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hMz : M < z) :
+    0 ≤ singleRayEulerSlopeBudget
+      (channelRho (alpha : ℝ)) M r z := by
+  have hzupper := strictRayContact_upper hr hz
+  have hden := radialNatEntropyRatio_one_loss_pos
+    hr hM.1 hMz hzupper
+  have hbit := bellmanEnvelope_le_radialChannelEntropy
+    halpha ⟨hr.1.le, hr.2.le⟩ ⟨hM.1.le, hM.2.le⟩
+  have hnat : lowerRayNatEnvelope (channelRho (alpha : ℝ)) M ≤
+      radialNatEntropy (channelRho (alpha : ℝ)) r M := by
+    rw [lowerRayNatEnvelope_eq_bellman]
+    calc
+      Real.log 2 * bellmanEnvelope (alpha : ℝ) M ≤
+          Real.log 2 * radialTriangleChannelEntropy alpha r M :=
+        mul_le_mul_of_nonneg_left hbit (Real.log_pos one_lt_two).le
+      _ = radialNatEntropy (channelRho (alpha : ℝ)) r M := by
+        rw [radialTriangleChannelEntropy_eq_nat]
+        field_simp [log_two_ne_zero]
+  unfold singleRayEulerSlopeBudget radialNatEntropyRatio
+  exact div_nonneg
+    ((div_le_div_iff_of_pos_right hM.1).2 hnat |> sub_nonneg.mpr)
+    hden.le
 
 /-- At every strict physical contact there is an intermediate mass where
 the corrected reserve is nonnegative exactly when the Euler ratio lies
