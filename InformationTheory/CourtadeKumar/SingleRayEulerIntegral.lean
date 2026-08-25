@@ -134,6 +134,53 @@ theorem radialEulerWeightedAverage_eq_ratioLoss
       (show (1 : ℝ) ∈ Icc (0 : ℝ) 1 by simp) hr hM hMz hzupper]
   rfl
 
+theorem integral_radialEulerLogWeight_eq_ratio_mul_inputWeight
+    {rho r M z : ℝ}
+    (hrho : rho ∈ Icc (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M) (hMz : M < z)
+    (hzupper : z < (1 + r)⁻¹) :
+    (∫ t in M..z, radialEulerLogWeight rho r t) =
+      ∫ t in M..z,
+        radialEulerRatio rho r t * radialEulerLogWeight 1 r t := by
+  apply intervalIntegral.integral_congr
+  intro t ht
+  rw [uIcc_of_le hMz.le] at ht
+  obtain ⟨hRminus, hRplus, hminus, hplus⟩ :=
+    radialEntropyArgs_physical hrho hr
+      ⟨hM.trans_le ht.1, ht.2.trans_lt hzupper⟩
+  exact radialEulerLogWeight_factor hRminus hRplus hminus hplus
+
+theorem integral_radialEulerLogWeight_one_pos
+    {r M z : ℝ}
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M) (hMz : M < z)
+    (hzupper : z < (1 + r)⁻¹) :
+    0 < ∫ t in M..z, radialEulerLogWeight 1 r t := by
+  rw [← radialNatEntropyRatio_loss_eq_integral
+    (show (1 : ℝ) ∈ Icc (0 : ℝ) 1 by simp) hr hM hMz hzupper]
+  exact radialNatEntropyRatio_one_loss_pos hr hM hMz hzupper
+
+/-- Cumulative slack in the proposed Euler-average bound.  Through the
+pointwise factorization it is the input-Euler-weighted signed area between
+the budget and the Euler-ratio curve. -/
+noncomputable def radialEulerCumulativeSurplus
+    (rho r M z budget : ℝ) : ℝ :=
+  budget * (∫ t in M..z, radialEulerLogWeight 1 r t) -
+    ∫ t in M..z, radialEulerLogWeight rho r t
+
+theorem radialEulerWeightedAverage_le_iff_cumulativeSurplus_nonneg
+    {rho r M z budget : ℝ}
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M) (hMz : M < z)
+    (hzupper : z < (1 + r)⁻¹) :
+    radialEulerWeightedAverage rho r M z ≤ budget ↔
+      0 ≤ radialEulerCumulativeSurplus rho r M z budget := by
+  have hden := integral_radialEulerLogWeight_one_pos hr hM hMz hzupper
+  unfold radialEulerWeightedAverage radialEulerCumulativeSurplus
+  rw [div_le_iff₀ hden]
+  constructor <;> intro h <;> linarith
+
 /-- On a strict contact, corrected-reserve positivity is exactly an upper
 bound on the Euler ratio averaged with the intrinsic input Euler weight. -/
 theorem singleRayCorrectedReserve_nonneg_iff_weightedEulerAverage
@@ -166,5 +213,25 @@ theorem singleRayCorrectedReserve_nonneg_iff_weightedEulerAverage
   unfold singleRayEulerSlopeBudget
   rw [div_le_div_iff_of_pos_right hinput]
   constructor <;> intro h <;> linarith
+
+/-- Final cumulative form of the strict corrected reserve.  The remaining
+analytic task is exactly nonnegativity of this integrated Euler surplus. -/
+theorem singleRayCorrectedReserve_nonneg_iff_cumulativeEulerSurplus
+    {rho M r z : ℝ}
+    (hrho : rho ∈ Icc (0 : ℝ) 1)
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hMz : M < z)
+    (hcontact : M / z * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2) :
+    0 ≤ singleRayCorrectedReserve rho M r z (M / z) ↔
+      0 ≤ radialEulerCumulativeSurplus rho r M z
+        (singleRayClosedEulerSlopeBudget rho M r) := by
+  rw [singleRayCorrectedReserve_nonneg_iff_weightedEulerAverage
+    hrho hM hr hz hMz hcontact]
+  exact radialEulerWeightedAverage_le_iff_cumulativeSurplus_nonneg
+    hr hM.1 hMz (strictRayContact_upper hr hz)
 
 end CourtadeKumar
