@@ -136,4 +136,36 @@ theorem convexOn_lrPrefixEll
     rw [interior_Ioc] at hp
     exact lrFlowEllDeriv2_nonneg hR ⟨hp.1, hp.2.le⟩
 
+/-- Equation (lr-p-tangent): convexity places the target input to the
+right of the tangent-line predictor. -/
+theorem lrPrefix_tangent_lower_bound
+    {R p M g q₀ : ℝ}
+    (hR : R ∈ Icc (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hM : M ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hg : 0 ≤ g)
+    (hq₀ : 0 < q₀)
+    (hgap : g = lrPrefixEll R p - lrPrefixEll R M)
+    (hslopeValue : q₀ = -lrFlowEllDeriv R M) :
+    M - g / q₀ ≤ p := by
+  by_cases hpM : p < M
+  · have hM1 : M < 1 := lt_of_le_of_lt hM.2 (by norm_num)
+    have hslope := (convexOn_lrPrefixEll hR).slope_le_of_hasDerivAt
+      hp hM hpM (hasDerivAt_lrPrefixEll ⟨hM.1, hM1⟩)
+    have hdiff : lrPrefixEll R M - lrPrefixEll R p = -g := by
+      linarith [hgap]
+    have hqeq : lrFlowEllDeriv R M = -q₀ := by linarith [hslopeValue]
+    rw [slope_def_field, hdiff, hqeq] at hslope
+    have hPMpos : 0 < M - p := sub_pos.mpr hpM
+    have hmul : q₀ * (M - p) ≤ g := by
+      have hscaled := (div_le_iff₀ hPMpos).mp hslope
+      nlinarith
+    have hdiv : M - p ≤ g / q₀ := by
+      rw [le_div_iff₀ hq₀]
+      nlinarith [hmul]
+    linarith
+  · have hMp : M ≤ p := le_of_not_gt hpM
+    have hgdiv : 0 ≤ g / q₀ := div_nonneg hg hq₀.le
+    linarith
+
 end CourtadeKumar
