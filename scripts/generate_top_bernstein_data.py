@@ -3,7 +3,8 @@
 
 The source verifier reconstructs the polynomial from the formulas in the
 manuscript.  This generator repeats all of its exact checks before emitting a
-Lean `Vector Rat 2928`; it never uses floating-point arithmetic.
+48-by-61 Lean table of nonnegative rationals; it never uses floating-point
+arithmetic.
 """
 
 from __future__ import annotations
@@ -40,6 +41,13 @@ def lean_rat(q: Fraction) -> str:
         return str(q.numerator)
     numerator = f"({q.numerator})" if q.numerator < 0 else str(q.numerator)
     return f"mkRat {numerator} {q.denominator}"
+
+
+def lean_nnrat(q: Fraction) -> str:
+    assert q >= 0
+    if q.denominator == 1:
+        return str(q.numerator)
+    return f"mkNNRat {q.numerator} {q.denominator}"
 
 
 def lean_real_rat(q: Fraction) -> str:
@@ -95,10 +103,21 @@ def main() -> None:
         "b76496233d695c6ed280b96d18fd9fc5fb3fee5013cc0848fa87834956646144"
     )
 
-    rows = []
-    for start in range(0, len(flat), 4):
-        rows.append("    " + ", ".join(map(lean_rat, flat[start : start + 4])))
-    payload = ",\n".join(rows)
+    elevated_rows = []
+    for i in range(48):
+        row = flat[i * 61 : (i + 1) * 61]
+        row_lines = [
+            "    " + ", ".join(map(lean_nnrat, row[j : j + 4]))
+            for j in range(0, 61, 4)
+        ]
+        elevated_rows.append(
+            f"def topElevatedBernsteinRowData{i} : Array ℚ≥0 :=\n"
+            + "  #[\n" + ",\n".join(row_lines) + "\n  ]"
+        )
+    elevated_row_defs = "\n\n".join(elevated_rows)
+    elevated_payload = ",\n    ".join(
+        f"topElevatedBernsteinRowData{i}" for i in range(48)
+    )
 
     power_flat = []
     for i in range(48):
@@ -130,26 +149,31 @@ namespace CourtadeKumar
 
 set_option maxRecDepth 100000
 
-def topElevatedBernsteinData : Array ℚ :=
-  #[
-{payload}
-  ]
+def mkNNRat (n d : ℕ) : ℚ≥0 := n / d
+
+{elevated_row_defs}
+
+def topElevatedBernsteinData : Array (Array ℚ≥0) :=
+  #[{elevated_payload}]
 
 theorem topElevatedBernsteinData_size :
-    topElevatedBernsteinData.size = 2928 := by
-  native_decide
+    topElevatedBernsteinData.size = 48 ∧
+      ∀ row ∈ topElevatedBernsteinData, row.size = 61 := by
+  decide
 
 def topElevatedBernsteinCoeff (i : Fin 48) (j : Fin 61) : ℚ :=
-  (topElevatedBernsteinData[i.val * 61 + j.val]?).getD 0
+  (((topElevatedBernsteinData[i.val]?).getD #[])[j.val]?).getD 0
 
 theorem topElevatedBernsteinCoeff_nonneg :
     ∀ i j, 0 ≤ topElevatedBernsteinCoeff i j := by
-  native_decide
+  intro i j
+  exact NNRat.coe_nonneg _
 
 theorem topElevatedBernsteinCoeff_minimum_witness :
     topElevatedBernsteinCoeff ⟨47, by omega⟩ ⟨9, by omega⟩ =
       3174973 / 1518982002412875 := by
-  native_decide
+  norm_num [topElevatedBernsteinCoeff, topElevatedBernsteinData,
+    topElevatedBernsteinRowData47, mkNNRat]
 
 {power_row_defs}
 
