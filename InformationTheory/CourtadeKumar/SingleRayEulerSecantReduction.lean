@@ -12,6 +12,16 @@ noncomputable def singleRayEulerSlopeBudget
   (radialNatEntropyRatio rho r M - lowerRayNatEnvelope rho M / M) /
     (radialNatEntropyRatio 1 r M - radialNatEntropyRatio 1 r z)
 
+noncomputable def singleRayEulerSlopeDenom
+    (rho M r : ℝ) : ℝ :=
+  topR rho * radialNatEntropy 1 r M -
+    4 * topEll rho * M * singleRayContactDenom M r
+
+noncomputable def singleRayClosedEulerSlopeBudget
+    (rho M r : ℝ) : ℝ :=
+  (radialNatEntropy rho r M - lowerRayNatEnvelope rho M) /
+    singleRayEulerSlopeDenom rho M r
+
 lemma strictRayContact_upper
     {r z : ℝ} (hr : r ∈ Ioo (0 : ℝ) 1)
     (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)) :
@@ -36,6 +46,57 @@ lemma radialNatEntropyRatio_one_loss_pos
     radialNatEntropyRatio_one_eq_bits]
   simpa [mul_sub] using
     mul_pos (Real.log_pos one_lt_two) (sub_pos.mpr hbits)
+
+theorem singleRayEulerSlopeDenom_eq_mass_mul_inputLoss_of_contact
+    {rho M r z : ℝ} (hM : M ≠ 0) (hz : z ≠ 0)
+    (hcontact : M / z * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2) :
+    singleRayEulerSlopeDenom rho M r =
+      M * (radialNatEntropyRatio 1 r M -
+        radialNatEntropyRatio 1 r z) := by
+  have hexplicit := singleRayNatContact_explicit hcontact
+  unfold singleRayContactDenom topS topR at hexplicit
+  unfold singleRayEulerSlopeDenom radialNatEntropyRatio
+    singleRayContactDenom topR
+  field_simp [hz] at hexplicit
+  field_simp [hM, hz]
+  linear_combination hexplicit
+
+theorem singleRayEulerSlopeDenom_pos_of_contact
+    {rho M r z : ℝ}
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hMz : M < z)
+    (hcontact : M / z * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2) :
+    0 < singleRayEulerSlopeDenom rho M r := by
+  rw [singleRayEulerSlopeDenom_eq_mass_mul_inputLoss_of_contact
+    hM.1.ne' hz.1.ne' hcontact]
+  exact mul_pos hM.1 (radialNatEntropyRatio_one_loss_pos
+    hr hM.1 hMz (strictRayContact_upper hr hz))
+
+theorem singleRayEulerSlopeBudget_eq_closed_of_contact
+    {rho M r z : ℝ}
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hMz : M < z)
+    (hcontact : M / z * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2) :
+    singleRayEulerSlopeBudget rho M r z =
+      singleRayClosedEulerSlopeBudget rho M r := by
+  have hden := singleRayEulerSlopeDenom_pos_of_contact
+    hM hr hz hMz hcontact
+  have hdenEq := singleRayEulerSlopeDenom_eq_mass_mul_inputLoss_of_contact
+    hM.1.ne' hz.1.ne' hcontact
+  unfold singleRayEulerSlopeBudget singleRayClosedEulerSlopeBudget
+  rw [hdenEq]
+  unfold radialNatEntropyRatio
+  field_simp [hM.1.ne', hden.ne']
 
 theorem singleRayEulerSlopeBudget_nonneg
     {alpha : ℝ≥0} {M r z : ℝ}
