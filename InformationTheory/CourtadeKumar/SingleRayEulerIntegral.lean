@@ -295,4 +295,37 @@ theorem singleRayCorrectedReserve_nonneg_iff_cumulativeEulerSurplus
   exact radialEulerWeightedAverage_le_iff_cumulativeSurplus_nonneg
     hr hM.1 hMz (strictRayContact_upper hr hz)
 
+/-- Easy contact regime: if the explicit budget already dominates the
+Euler ratio at the left endpoint, strict decrease makes the whole weighted
+average admissible. -/
+theorem singleRayCorrectedReserve_nonneg_of_leftEndpointEulerRatio_le
+    {rho M r z : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hM : M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hMz : M < z)
+    (hcontact : M / z * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2)
+    (hleft : radialEulerRatio rho r M ≤
+      singleRayClosedEulerSlopeBudget rho M r) :
+    0 ≤ singleRayCorrectedReserve rho M r z (M / z) := by
+  have hzupper := strictRayContact_upper hr hz
+  obtain ⟨ξ, hξ, hratio⟩ := exists_radialEulerRatio_eq_ratioLoss
+    ⟨hrho.1, hrho.2.le⟩ hr hM.1 hMz hzupper
+  have havg := radialEulerWeightedAverage_eq_ratioLoss
+    ⟨hrho.1, hrho.2.le⟩ hr hM.1 hMz hzupper
+  have hMdom : M ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+    ⟨hM.1, hMz.trans hzupper⟩
+  have hξdom : ξ ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+    ⟨hM.1.trans hξ.1, hξ.2.trans hzupper⟩
+  have hdecrease : radialEulerRatio rho r ξ <
+      radialEulerRatio rho r M :=
+    radialEulerRatio_strictAntiOn_physical hrho hr hMdom hξdom hξ.1
+  apply (singleRayCorrectedReserve_nonneg_iff_weightedEulerAverage
+    ⟨hrho.1, hrho.2.le⟩ hM hr hz hMz hcontact).2
+  rw [havg, hratio]
+  exact hdecrease.le.trans hleft
+
 end CourtadeKumar
