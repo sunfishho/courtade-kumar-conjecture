@@ -169,6 +169,67 @@ noncomputable def radialEulerCumulativeSurplus
   budget * (∫ t in M..z, radialEulerLogWeight 1 r t) -
     ∫ t in M..z, radialEulerLogWeight rho r t
 
+noncomputable def radialEulerAlgebraicSurplus
+    (rho r M z budget : ℝ) : ℝ :=
+  budget * (radialNatEntropyRatio 1 r M -
+      radialNatEntropyRatio 1 r z) -
+    (radialNatEntropyRatio rho r M -
+      radialNatEntropyRatio rho r z)
+
+theorem radialEulerCumulativeSurplus_eq_algebraic
+    {rho r M z budget : ℝ}
+    (hrho : rho ∈ Icc (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M) (hMz : M < z)
+    (hzupper : z < (1 + r)⁻¹) :
+    radialEulerCumulativeSurplus rho r M z budget =
+      radialEulerAlgebraicSurplus rho r M z budget := by
+  unfold radialEulerCumulativeSurplus radialEulerAlgebraicSurplus
+  rw [radialNatEntropyRatio_loss_eq_integral hrho hr hM hMz hzupper,
+    radialNatEntropyRatio_loss_eq_integral
+      (show (1 : ℝ) ∈ Icc (0 : ℝ) 1 by simp) hr hM hMz hzupper]
+
+/-- The cumulative surplus grows exactly where the budget lies above the
+current Euler ratio.  This is the differential crossing law needed for a
+second-order area argument. -/
+theorem hasDerivAt_radialEulerAlgebraicSurplus
+    {rho r M z budget : ℝ}
+    (hz : z ≠ 0)
+    (hRminus : (1 - rho * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hRplus : (1 + rho * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hminus : (1 - r) * z ∈ Ioo (0 : ℝ) 1)
+    (hplus : (1 + r) * z ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (fun w ↦ radialEulerAlgebraicSurplus rho r M w budget)
+      ((budget - radialEulerRatio rho r z) *
+        radialEulerLogWeight 1 r z) z := by
+  have hRraw := hasDerivAt_radialNatEntropyRatio hz hRminus hRplus
+  have h1raw := hasDerivAt_radialNatEntropyRatio
+    (c := (1 : ℝ)) (r := r) hz
+    (by simpa using hminus) (by simpa using hplus)
+  have hR : HasDerivAt (radialNatEntropyRatio rho r)
+      (-radialEulerLogWeight rho r z) z := by
+    convert hRraw using 1
+    rw [← radialEulerWeight_eq_logWeight hRminus hRplus]
+    unfold radialEulerWeight
+    ring
+  have h1 : HasDerivAt (radialNatEntropyRatio 1 r)
+      (-radialEulerLogWeight 1 r z) z := by
+    convert h1raw using 1
+    rw [← radialEulerWeight_eq_logWeight (by simpa using hminus)
+      (by simpa using hplus)]
+    unfold radialEulerWeight
+    ring
+  have hinput := (hasDerivAt_const z (radialNatEntropyRatio 1 r M)).sub h1
+  have houtput :=
+    (hasDerivAt_const z (radialNatEntropyRatio rho r M)).sub hR
+  have htotal := hinput.const_mul budget |>.sub houtput
+  have hfactor := radialEulerLogWeight_factor
+    hRminus hRplus hminus hplus
+  unfold radialEulerAlgebraicSurplus
+  convert htotal using 1
+  rw [hfactor]
+  ring
+
 theorem radialEulerWeightedAverage_le_iff_cumulativeSurplus_nonneg
     {rho r M z budget : ℝ}
     (hr : r ∈ Ioo (0 : ℝ) 1)
