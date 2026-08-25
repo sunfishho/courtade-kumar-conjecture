@@ -58,6 +58,7 @@ import InformationTheory.CourtadeKumar.LRPrefixPhysicality
 import InformationTheory.CourtadeKumar.LRFlow
 import InformationTheory.CourtadeKumar.LRRootVelocity
 import InformationTheory.CourtadeKumar.LRFlowCharts
+import InformationTheory.CourtadeKumar.LRFlowEll
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
