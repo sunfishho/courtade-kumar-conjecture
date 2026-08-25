@@ -1,8 +1,9 @@
 import InformationTheory.CourtadeKumar.CanonicalRadialProfile
+import InformationTheory.CourtadeKumar.RadialEntropyRatio
 
 /-! The singular shape ray `r = 1`. -/
 
-open Set
+open Filter Set
 open scoped NNReal
 
 namespace CourtadeKumar
@@ -64,6 +65,139 @@ theorem radialEulerDefect_oneRay_pos
   apply radialEulerLog_pos_of_arg
   unfold radialEulerLogArg
   constructor <;> nlinarith [hz.1, hz.2]
+
+/-- Entropy per unit mass remains differentiable on the singular ray even
+though the vanished entropy summand is not differentiable by itself. -/
+theorem hasDerivAt_radialEntropyRatio_oneRay
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)) :
+    HasDerivAt (radialEntropyRatio 1)
+      (-radialEulerDefect 1 1 z / (Real.log 2 * z ^ 2)) z := by
+  have hnat := hasDerivAt_radialNatEntropy_oneRay (z := z)
+    (by constructor <;> nlinarith [hz.1, hz.2])
+  have hquot := hnat.div (hasDerivAt_id z) hz.1.ne'
+  have hscaled := hquot.div_const (Real.log 2)
+  convert hscaled using 1
+  · funext w
+    rw [radialEntropyRatio, radialTriangleEntropy_eq_nat]
+    change radialNatEntropy 1 1 w / Real.log 2 / w =
+      (radialNatEntropy 1 1 w / w) / Real.log 2
+    ring
+  · unfold radialEulerDefect
+    simp only [id_eq, mul_one]
+    field_simp [hz.1.ne', log_two_ne_zero]
+    ring
+
+theorem deriv_radialEntropyRatio_oneRay_neg
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)) :
+    deriv (radialEntropyRatio 1) z < 0 := by
+  rw [(hasDerivAt_radialEntropyRatio_oneRay hz).deriv]
+  exact div_neg_of_neg_of_pos (neg_neg_of_pos (radialEulerDefect_oneRay_pos hz))
+    (mul_pos (Real.log_pos (by norm_num)) (sq_pos_of_pos hz.1))
+
+/-- On `r = 1`, entropy per unit mass decreases strictly from the zero-mass
+limit up to the hard endpoint. -/
+theorem strictAntiOn_radialEntropyRatio_oneRay :
+    StrictAntiOn (radialEntropyRatio 1) (Ioo (0 : ℝ) (1 / 2 : ℝ)) := by
+  apply strictAntiOn_of_deriv_neg (convex_Ioo (0 : ℝ) (1 / 2))
+  · intro z hz
+    exact (hasDerivAt_radialEntropyRatio_oneRay hz).continuousAt.continuousWithinAt
+  · intro z hz
+    rw [interior_Ioo] at hz
+    exact deriv_radialEntropyRatio_oneRay_neg hz
+
+lemma radialEntropyRatio_oneRay_eq (z : ℝ) :
+    radialEntropyRatio 1 z = binaryEntropyBits (2 * z) / (2 * z) := by
+  unfold radialEntropyRatio radialTriangleEntropy
+  simp [binaryEntropyBits, Real.binEntropy]
+  ring
+
+theorem tendsto_radialEntropyRatio_oneRay_zero :
+    Tendsto (radialEntropyRatio 1)
+      (nhdsWithin (0 : ℝ) (Ioi 0)) atTop := by
+  rw [show radialEntropyRatio 1 =
+      fun z : ℝ ↦ binaryEntropyBits (2 * z) / (2 * z) by
+    funext z
+    exact radialEntropyRatio_oneRay_eq z]
+  exact tendsto_binaryEntropyBits_scaled_div_zero (by norm_num)
+
+/-- Every positive entropy-per-mass level has a unique singular-ray contact
+strictly before `1/2`. -/
+theorem existsUnique_radialEntropyRatio_oneRay_eq_before_half
+    {t : ℝ} (ht : 0 < t) :
+    ∃! z : ℝ, z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) ∧
+      radialEntropyRatio 1 z = t := by
+  let l : Filter ℝ := nhdsWithin (0 : ℝ) (Ioi 0)
+  have hlarge : ∀ᶠ z in l, t < radialEntropyRatio 1 z :=
+    tendsto_radialEntropyRatio_oneRay_zero.eventually (eventually_gt_atTop t)
+  have hsmall : ∀ᶠ z in l, z < (1 / 2 : ℝ) :=
+    (eventually_lt_nhds (by norm_num : (0 : ℝ) < 1 / 2)).filter_mono
+      nhdsWithin_le_nhds
+  have hpositive : ∀ᶠ z in l, 0 < z := self_mem_nhdsWithin
+  obtain ⟨a, ha0, hahalf, hat⟩ :=
+    (hpositive.and (hsmall.and hlarge)).exists
+  have hcont : ContinuousOn (radialEntropyRatio 1) (Icc a (1 / 2)) := by
+    intro z hz
+    rcases hz.2.eq_or_lt with rfl | hzhalf
+    · rw [show radialEntropyRatio 1 =
+          fun w : ℝ ↦ binaryEntropyBits (2 * w) / (2 * w) by
+        funext w
+        exact radialEntropyRatio_oneRay_eq w]
+      have hnum : ContinuousAt
+          (fun w : ℝ ↦ binaryEntropyBits (2 * w)) (1 / 2) := by
+        unfold binaryEntropyBits
+        fun_prop
+      have hden : ContinuousAt (fun w : ℝ ↦ 2 * w) (1 / 2) := by
+        fun_prop
+      exact (hnum.div hden (by norm_num)).continuousWithinAt
+    · exact (hasDerivAt_radialEntropyRatio_oneRay
+        ⟨ha0.trans_le hz.1, hzhalf⟩).continuousAt.continuousWithinAt
+  have hhalf : radialEntropyRatio 1 (1 / 2) = 0 := by
+    rw [radialEntropyRatio_oneRay_eq]
+    simp [binaryEntropyBits, Real.binEntropy]
+  have htmem : t ∈ Icc (radialEntropyRatio 1 (1 / 2))
+      (radialEntropyRatio 1 a) := by
+    rw [hhalf]
+    exact ⟨ht.le, hat.le⟩
+  obtain ⟨z, hzrange, hzeq⟩ :=
+    intermediate_value_Icc' hahalf.le hcont htmem
+  have hz0 : 0 < z := ha0.trans_le hzrange.1
+  have hzhalf : z < 1 / 2 := by
+    rcases hzrange.2.eq_or_lt with h | h
+    · rw [h, hhalf] at hzeq
+      linarith
+    · exact h
+  refine ⟨z, ⟨⟨hz0, hzhalf⟩, hzeq⟩, ?_⟩
+  intro w hw
+  exact strictAntiOn_radialEntropyRatio_oneRay.injOn
+    hw.1 ⟨hz0, hzhalf⟩ (hw.2.trans hzeq.symm)
+
+/-- A genuine contact on the singular ray still selects an interior entropy
+multiplier. -/
+theorem radialEulerLogRatio_mem_Ioo_oneRay
+    {rho z : ℝ} (hrho : rho ∈ Ioo (0 : ℝ) 1)
+    (hz : z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ)) :
+    radialEulerLogRatio rho 1 z ∈ Ioo (0 : ℝ) 1 := by
+  have hupper : (1 + (1 : ℝ)) * z < 1 := by linarith [hz.2]
+  obtain ⟨harg1, hargR, horder⟩ :=
+    radialEulerLogArg_order_physical
+      (show rho ∈ Ico (0 : ℝ) 1 from ⟨hrho.1.le, hrho.2⟩)
+      (by norm_num) hz.1 hupper
+  have harg1' : radialEulerLogArg 1 1 z ∈ Ioo (0 : ℝ) 1 :=
+    ⟨harg1.1, harg1.2.trans (by linarith [hz.1])⟩
+  have hargR' : radialEulerLogArg rho 1 z ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hargR.1, hargR.2.trans (by linarith [hz.1])⟩
+  have hden : 0 < radialEulerLog 1 1 z :=
+    radialEulerLog_pos_of_arg harg1'
+  have hnum : 0 < radialEulerLog rho 1 z :=
+    radialEulerLog_pos_of_arg hargR'
+  have hlogOrder : Real.log (radialEulerLogArg 1 1 z) <
+      Real.log (radialEulerLogArg rho 1 z) :=
+    Real.log_lt_log harg1.1 horder
+  have hnumden : radialEulerLog rho 1 z < radialEulerLog 1 1 z := by
+    unfold radialEulerLog
+    nlinarith
+  unfold radialEulerLogRatio
+  exact ⟨div_pos hnum hden, (div_lt_one hden).2 hnumden⟩
 
 theorem radial_stationary_iff_ratio_oneRay
     {rho theta z : ℝ}
