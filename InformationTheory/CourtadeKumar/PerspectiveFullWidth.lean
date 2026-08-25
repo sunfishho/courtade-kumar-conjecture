@@ -66,6 +66,44 @@ def FullWidthLRTheorem (alpha : ℝ≥0) : Prop :=
     bellmanEnvelope (alpha : ℝ) M ≤
       M / h.z * radialTriangleChannelEntropy alpha 1 h.z
 
+/-- The manuscript's LR statement on the full closed shape interval.  This
+single scalar formulation owns both the ordinary rays and the singular
+endpoint `r = 1`. -/
+def SingleRayClosedScalarContactTheorem (alpha : ℝ≥0) : Prop :=
+  (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+  ∀ (M r z : ℝ),
+    M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    r ∈ Ioc (0 : ℝ) 1 →
+    z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    M / z * radialTriangleEntropy r z =
+      (bellmanEnvelope (alpha : ℝ) (M * (1 - r)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 →
+    bellmanEnvelope (alpha : ℝ) M ≤
+      M / z * radialTriangleChannelEntropy alpha r z
+
+theorem singleRayScalarContact_of_closed
+    (alpha : ℝ≥0) (hclosed : SingleRayClosedScalarContactTheorem alpha) :
+    SingleRayScalarContactTheorem alpha := by
+  intro halpha M r z hM hr hz hcontact
+  exact hclosed halpha M r z hM ⟨hr.1, hr.2.le⟩ hz hcontact
+
+theorem fullWidthLR_of_closedScalarContact
+    (alpha : ℝ≥0) (hclosed : SingleRayClosedScalarContactTheorem alpha) :
+    FullWidthLRTheorem alpha := by
+  intro M E0 h
+  apply hclosed h.alpha_interior M 1 h.z h.mean_interior
+    (by norm_num) h.contact_before_half
+  calc
+    M / h.z * radialTriangleEntropy 1 h.z = E0 :=
+      h.entropy_contact.symm
+    _ = bellmanEnvelope (alpha : ℝ) (2 * M) / 2 := h.threshold_eq
+    _ = (bellmanEnvelope (alpha : ℝ) (M * (1 - 1)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + 1))) / 2 := by
+      rw [show M * (1 - (1 : ℝ)) = 0 by ring,
+        show M * (1 + (1 : ℝ)) = 2 * M by ring,
+        bellmanEnvelope_zero]
+      ring
+
 noncomputable def FullWidthGeometryData.toPhaseData
     {alpha : ℝ≥0} {M E0 : ℝ}
     (hlr : FullWidthLRTheorem alpha)
@@ -341,6 +379,18 @@ theorem lowerHalfBellmanStep_of_singleRayLR
   orderedTriangleLowerHalfBellmanStep_of_strictAffineSupport_and_fullWidth
     alpha (lowerHalfStrictAffineSupport_of_interior_LR halpha hlr)
       (fullWidthBellmanStep_of_LR halpha hlrOne)
+
+/-- Thus the complete interior-channel Bellman step is reduced to the one
+closed-ray scalar LR theorem stated in the audited manuscript. -/
+theorem lowerHalfBellmanStep_of_closedScalarContact
+    {alpha : ℝ≥0}
+    (halpha : (alpha : ℝ) ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hclosed : SingleRayClosedScalarContactTheorem alpha) :
+    OrderedTriangleLowerHalfBellmanStep alpha :=
+  lowerHalfBellmanStep_of_singleRayLR halpha
+    (singleRayLR_of_scalarContact alpha
+      (singleRayScalarContact_of_closed alpha hclosed))
+    (fullWidthLR_of_closedScalarContact alpha hclosed)
 
 /-- Exact endpoint phase output required from the remaining scalar contact
 selection and LR proof. -/
