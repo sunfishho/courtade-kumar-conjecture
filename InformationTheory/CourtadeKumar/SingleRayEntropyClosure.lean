@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.SingleRayContactAlgebra
+import InformationTheory.CourtadeKumar.SingleRayCorrectedReserve
 
 /-! Closure of LR from the pure-entropy strict residual. -/
 
@@ -20,6 +20,28 @@ def SingleRayEntropyResidualTheorem (alpha : ℝ≥0) : Prop :=
         bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 →
     0 ≤ singleRayEntropyResidual (channelRho (alpha : ℝ))
       M r z (M / z)
+
+/-- The sharpened scalar bottleneck after separating the proved quadratic
+entropy contraction from its nonnegative channel-curvature excess. -/
+def SingleRayCorrectedReserveTheorem (alpha : ℝ≥0) : Prop :=
+  ∀ (M r z : ℝ),
+    M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    r ∈ Ioo (0 : ℝ) 1 →
+    z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    M < z →
+    M / z * radialTriangleEntropy r z =
+      (bellmanEnvelope (alpha : ℝ) (M * (1 - r)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 →
+    0 ≤ singleRayCorrectedReserve (channelRho (alpha : ℝ))
+      M r z (M / z)
+
+theorem singleRayEntropyResidual_of_correctedReserve
+    (alpha : ℝ≥0) (hreserve : SingleRayCorrectedReserveTheorem alpha) :
+    SingleRayEntropyResidualTheorem alpha := by
+  intro M r z hM hr hz hMz hcontact
+  have hcontactNat := singleRayNatContact_of_bitContact hz.1 hcontact
+  exact singleRayEntropyResidual_nonneg_of_correctedReserve
+    hM hr hcontactNat (hreserve M r z hM hr hz hMz hcontact)
 
 theorem singleRayStrictReserve_of_entropyResidual
     (alpha : ℝ≥0) (hentropy : SingleRayEntropyResidualTheorem alpha) :
@@ -67,5 +89,17 @@ theorem courtadeKumar_of_perspectiveGeometry_and_entropyResidual
   courtadeKumar_of_perspectiveGeometry_and_LR hgeometry
     (fun alpha halpha ↦ singleRayLR_of_entropyResidual alpha
       (hentropy alpha halpha))
+
+/-- End-to-end closure from perspective geometry and the corrected strict
+reserve. -/
+theorem courtadeKumar_of_perspectiveGeometry_and_correctedReserve
+    (hgeometry : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      OrderedTriangleGeometricTwoPhaseTheorem alpha)
+    (hreserve : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      SingleRayCorrectedReserveTheorem alpha) :
+    Statement :=
+  courtadeKumar_of_perspectiveGeometry_and_entropyResidual hgeometry
+    (fun alpha halpha ↦ singleRayEntropyResidual_of_correctedReserve alpha
+      (hreserve alpha halpha))
 
 end CourtadeKumar
