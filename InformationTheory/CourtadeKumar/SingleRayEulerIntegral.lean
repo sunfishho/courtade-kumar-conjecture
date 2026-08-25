@@ -23,6 +23,18 @@ theorem radialEulerWeight_eq_logWeight
   unfold radialEulerWeight radialEulerLogWeight
   rw [radialEulerDefect_eq_log hminus hplus]
 
+lemma radialEulerLogArg_pos_physical
+    {c r z : ℝ}
+    (hminus : (1 - c * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hplus : (1 + c * r) * z ∈ Ioo (0 : ℝ) 1) :
+    0 < radialEulerLogArg c r z := by
+  have hleft : 0 < 1 - (1 - c * r) * z := by linarith [hminus.2]
+  have hright : 0 < 1 - (1 + c * r) * z := by linarith [hplus.2]
+  unfold radialEulerLogArg
+  rw [show (1 - z) ^ 2 - c ^ 2 * r ^ 2 * z ^ 2 =
+    (1 - (1 - c * r) * z) * (1 - (1 + c * r) * z) by ring]
+  exact mul_pos hleft hright
+
 lemma continuousAt_radialEulerLogWeight
     {c r z : ℝ}
     (hz : z ≠ 0)
@@ -44,6 +56,74 @@ lemma continuousAt_radialEulerLogWeight
     hpoly.log harg.ne'
   exact (continuousAt_const.mul hlog).div (continuousAt_id.pow 2)
     (pow_ne_zero 2 hz)
+
+theorem continuousOn_radialEulerRatio_physical
+    {rho r M z : ℝ}
+    (hrho : rho ∈ Icc (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M)
+    (hzupper : z < (1 + r)⁻¹) :
+    ContinuousOn (radialEulerRatio rho r) (Icc M z) := by
+  have hargs : ∀ x ∈ Icc M z,
+      (1 - rho * r) * x ∈ Ioo (0 : ℝ) 1 ∧
+        (1 + rho * r) * x ∈ Ioo (0 : ℝ) 1 ∧
+        (1 - r) * x ∈ Ioo (0 : ℝ) 1 ∧
+        (1 + r) * x ∈ Ioo (0 : ℝ) 1 := by
+    intro x hx
+    exact radialEntropyArgs_physical hrho hr
+      ⟨hM.trans_le hx.1, hx.2.trans_lt hzupper⟩
+  have hlog : ContinuousOn (radialEulerLogRatio rho r) (Icc M z) := by
+    intro x hx
+    obtain ⟨hRminus, hRplus, hminus, hplus⟩ := hargs x hx
+    have hargR := (radialEulerLogArg_pos_physical hRminus hRplus).ne'
+    have harg1 := (radialEulerLogArg_pos_physical
+      (c := (1 : ℝ)) (r := r) (z := x)
+      (by simpa using hminus) (by simpa using hplus)).ne'
+    have hden := (radialEulerLog_pos
+      (c := (1 : ℝ)) (r := r) (z := x)
+      (by simpa using hminus) (by simpa using hplus)).ne'
+    exact (hasDerivAt_radialEulerLogRatio hargR harg1 hden).continuousAt.continuousWithinAt
+  apply hlog.congr
+  intro x hx
+  obtain ⟨hRminus, hRplus, hminus, hplus⟩ := hargs x hx
+  exact radialEulerRatio_eq_logRatio hRminus hRplus hminus hplus
+
+theorem existsUnique_radialEulerRatio_eq_budget
+    {rho r M z budget : ℝ}
+    (hrho : rho ∈ Ico (0 : ℝ) 1)
+    (hr : r ∈ Ioo (0 : ℝ) 1)
+    (hM : 0 < M) (hMz : M < z)
+    (hzupper : z < (1 + r)⁻¹)
+    (hleft : budget < radialEulerRatio rho r M)
+    (hright : radialEulerRatio rho r z < budget) :
+    ∃! τ, τ ∈ Ioo M z ∧ radialEulerRatio rho r τ = budget := by
+  have hcont := continuousOn_radialEulerRatio_physical
+    (show rho ∈ Icc (0 : ℝ) 1 from ⟨hrho.1, hrho.2.le⟩)
+    hr hM hzupper
+  have hbudget : budget ∈ Icc
+      (radialEulerRatio rho r z) (radialEulerRatio rho r M) :=
+    ⟨hright.le, hleft.le⟩
+  obtain ⟨τ, hτIcc, hτeq⟩ :=
+    (intermediate_value_Icc' hMz.le hcont) hbudget
+  have hMτ : M < τ := by
+    apply lt_of_le_of_ne hτIcc.1
+    intro hEq
+    subst τ
+    linarith
+  have hτz : τ < z := by
+    apply lt_of_le_of_ne hτIcc.2
+    intro hEq
+    subst τ
+    linarith
+  refine ⟨τ, ⟨⟨hMτ, hτz⟩, hτeq⟩, ?_⟩
+  intro y hy
+  have hyDom : y ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+    ⟨hM.trans hy.1.1, hy.1.2.trans hzupper⟩
+  have hτDom : τ ∈ Ioo (0 : ℝ) (1 + r)⁻¹ :=
+    ⟨hM.trans hMτ, hτz.trans hzupper⟩
+  apply (radialEulerRatio_strictAntiOn_physical hrho hr).injOn
+    hyDom hτDom
+  rw [hy.2, hτeq]
 
 /-- The loss of radial entropy per unit mass is the interval integral of
 its positive Euler weight. -/
