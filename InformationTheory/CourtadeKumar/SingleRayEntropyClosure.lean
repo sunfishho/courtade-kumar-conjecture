@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.SingleRayCorrectedReserve
+import InformationTheory.CourtadeKumar.SingleRayGainRatioReduction
 
 /-! Closure of LR from the pure-entropy strict residual. -/
 
@@ -34,6 +34,26 @@ def SingleRayCorrectedReserveTheorem (alpha : ℝ≥0) : Prop :=
         bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 →
     0 ≤ singleRayCorrectedReserve (channelRho (alpha : ℝ))
       M r z (M / z)
+
+/-- Normalized one-variable form of the strict reserve theorem. -/
+def SingleRayGainRatioTheorem (alpha : ℝ≥0) : Prop :=
+  ∀ (M r z : ℝ),
+    M ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    r ∈ Ioo (0 : ℝ) 1 →
+    z ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) →
+    M < z →
+    M / z * radialTriangleEntropy r z =
+      (bellmanEnvelope (alpha : ℝ) (M * (1 - r)) +
+        bellmanEnvelope (alpha : ℝ) (M * (1 + r))) / 2 →
+    singleRayGainRatioThreshold (channelRho (alpha : ℝ)) M r ≤
+      radialNatChannelGainRatio (channelRho (alpha : ℝ)) r z
+
+theorem singleRayCorrectedReserve_of_gainRatio
+    (alpha : ℝ≥0) (hgain : SingleRayGainRatioTheorem alpha) :
+    SingleRayCorrectedReserveTheorem alpha := by
+  intro M r z hM hr hz hMz hcontact
+  exact (singleRayCorrectedReserve_nonneg_iff_gainRatio
+    hM.1 hz.1.ne').2 (hgain M r z hM hr hz hMz hcontact)
 
 theorem singleRayEntropyResidual_of_correctedReserve
     (alpha : ℝ≥0) (hreserve : SingleRayCorrectedReserveTheorem alpha) :
@@ -101,5 +121,17 @@ theorem courtadeKumar_of_perspectiveGeometry_and_correctedReserve
   courtadeKumar_of_perspectiveGeometry_and_entropyResidual hgeometry
     (fun alpha halpha ↦ singleRayEntropyResidual_of_correctedReserve alpha
       (hreserve alpha halpha))
+
+/-- End-to-end closure from perspective geometry and the normalized
+gain-ratio inequality. -/
+theorem courtadeKumar_of_perspectiveGeometry_and_gainRatio
+    (hgeometry : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      OrderedTriangleGeometricTwoPhaseTheorem alpha)
+    (hgain : ∀ (alpha : ℝ≥0), (alpha : ℝ) ≤ 1 / 2 →
+      SingleRayGainRatioTheorem alpha) :
+    Statement :=
+  courtadeKumar_of_perspectiveGeometry_and_correctedReserve hgeometry
+    (fun alpha halpha ↦ singleRayCorrectedReserve_of_gainRatio alpha
+      (hgain alpha halpha))
 
 end CourtadeKumar
