@@ -128,6 +128,33 @@ theorem orderedTriangleChannelEntropy_nonneg
     (binaryEntropyBits_nonneg_of_mem_Icc hminus)
     (binaryEntropyBits_nonneg_of_mem_Icc hplus)) (by norm_num)
 
+/-- With zero entropy multiplier, the zero affine functional is a global
+support because channel entropy is nonnegative on the ordered triangle. -/
+theorem orderedTriangle_nonnegative_affineSupport
+    (alpha : ℝ≥0) (halpha : (alpha : ℝ) ≤ 1 / 2) :
+    TriangleAffineSupport alpha 0 0 0 := by
+  intro m u hu0 hum hu1m
+  simpa using orderedTriangleChannelEntropy_nonneg halpha hu0 hum hu1m
+
+/-- The mean-zero boundary in the manuscript's perspective theorem has an
+immediate affine certificate: the target envelope vanishes. -/
+theorem exists_orderedTriangleAffineSupport_of_averageM_eq_zero
+    (alpha : ℝ≥0) (halpha : (alpha : ℝ) ≤ 1 / 2)
+    (n : ℕ) (M U : BitVec n → ℝ)
+    (hM : cubeAverage n M = 0) :
+    let E0 :=
+      (bellmanEnvelope (alpha : ℝ) (cubeAverage n M - cubeAverage n U) +
+        bellmanEnvelope (alpha : ℝ) (cubeAverage n M + cubeAverage n U)) / 2
+    ∃ theta a b : ℝ,
+      0 ≤ theta ∧ TriangleAffineSupport alpha theta a b ∧
+        bellmanEnvelope (alpha : ℝ) (cubeAverage n M) ≤
+          theta * E0 + a * cubeAverage n M + b * cubeAverage n U := by
+  dsimp
+  refine ⟨0, 0, 0, by norm_num,
+    orderedTriangle_nonnegative_affineSupport alpha halpha, ?_⟩
+  rw [hM, bellmanEnvelope_zero]
+  norm_num
+
 @[simp] lemma bellmanEnvelope_zero_channel (p : ℝ) :
     bellmanEnvelope 0 p = 0 := by
   simp [bellmanEnvelope, channelS, channelRho, bellmanLambda,
@@ -137,9 +164,7 @@ theorem orderedTriangleChannelEntropy_nonneg
 functional are a global support, since the target envelope vanishes. -/
 theorem orderedTriangle_zeroChannel_affineSupport :
     TriangleAffineSupport (0 : ℝ≥0) 0 0 0 := by
-  intro m u hu0 hum hu1m
-  simp only [zero_mul, zero_add, sub_zero]
-  exact orderedTriangleChannelEntropy_nonneg (by norm_num) hu0 hum hu1m
+  exact orderedTriangle_nonnegative_affineSupport 0 (by norm_num)
 
 /-- Complete affine-support theorem for the channel boundary `alpha = 0`. -/
 theorem orderedTriangleAffineSupportTheorem_zero :
