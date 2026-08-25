@@ -16,6 +16,23 @@ noncomputable def singleRayGainRatioThreshold (rho M r : ℝ) : ℝ :=
   topS rho * (Real.binEntropy M - radialNatEntropy 1 r M) / M +
     4 * topEll rho * M * r ^ 2
 
+theorem hasDerivAt_radialNatChannelGainRatio
+    {rho r z : ℝ} (hz : z ≠ 0)
+    (hRminus : (1 - rho * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hRplus : (1 + rho * r) * z ∈ Ioo (0 : ℝ) 1)
+    (hminus : (1 - r) * z ∈ Ioo (0 : ℝ) 1)
+    (hplus : (1 + r) * z ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (radialNatChannelGainRatio rho r)
+      ((radialEulerDefect 1 r z - radialEulerDefect rho r z) / z ^ 2) z := by
+  have hR := hasDerivAt_radialNatEntropy hRminus hRplus
+  have h1 := hasDerivAt_radialNatEntropy
+    (c := (1 : ℝ)) (by simpa using hminus) (by simpa using hplus)
+  have hgain := hR.sub h1
+  have hquot := hgain.div (hasDerivAt_id z) hz
+  unfold radialNatChannelGainRatio radialNatChannelGain radialEulerDefect
+  convert hquot using 1 <;> simp only [id_eq, Pi.sub_apply] <;>
+    field_simp [hz] <;> ring
+
 theorem singleRayCorrectedReserve_eq_gain_form (rho M r z c : ℝ) :
     singleRayCorrectedReserve rho M r z c =
       c * radialNatChannelGain rho r z -
@@ -45,6 +62,45 @@ theorem singleRayCorrectedReserve_nonneg_iff_gainRatio
   rw [singleRayCorrectedReserve_eq_mass_mul_gainRatioGap hM.ne' hz]
   rw [mul_nonneg_iff_of_pos_left hM]
   exact sub_nonneg
+
+/-- The contact equation identifies the threshold as the gap between the
+Bellman-envelope ratio at `M` and the input-entropy ratio at `z`. -/
+theorem singleRayGainRatioThreshold_eq_envelopeRatio_sub_inputRatio_of_contact
+    {rho M r z c : ℝ} (hM : M ≠ 0) (hz : z ≠ 0)
+    (hcz : M = c * z)
+    (hcontact : c * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2) :
+    singleRayGainRatioThreshold rho M r =
+      lowerRayNatEnvelope rho M / M - radialNatEntropy 1 r z / z := by
+  have hexplicit := singleRayNatContact_explicit hcontact
+  unfold singleRayContactDenom at hexplicit
+  unfold singleRayGainRatioThreshold lowerRayNatEnvelope
+  field_simp [hM, hz]
+  linear_combination z * hexplicit +
+    (radialNatEntropy 1 r z) * hcz
+
+/-- Thus the corrected reserve is exactly the mass-scaled gap between the
+output-entropy ratio and the Bellman-envelope ratio. -/
+theorem singleRayCorrectedReserve_eq_mass_mul_outputRatioGap_of_contact
+    {rho M r z c : ℝ} (hM : M ≠ 0) (hz : z ≠ 0)
+    (hcz : M = c * z)
+    (hcontact : c * radialNatEntropy 1 r z =
+      (lowerRayNatEnvelope rho (M * (1 - r)) +
+        lowerRayNatEnvelope rho (M * (1 + r))) / 2) :
+    singleRayCorrectedReserve rho M r z c =
+      M * (radialNatEntropy rho r z / z -
+        lowerRayNatEnvelope rho M / M) := by
+  have hc : c = M / z := by
+    rw [hcz]
+    field_simp [hz]
+  subst c
+  have hcz' : M = M / z * z := by field_simp [hz]
+  rw [singleRayCorrectedReserve_eq_mass_mul_gainRatioGap hM hz]
+  rw [singleRayGainRatioThreshold_eq_envelopeRatio_sub_inputRatio_of_contact
+    hM hz hcz' hcontact]
+  unfold radialNatChannelGainRatio radialNatChannelGain
+  ring
 
 /-- Radial channel gain per unit mass increases under outward scaling.
 This is the quotient form of entropy-scaling-surplus contraction. -/
