@@ -168,4 +168,37 @@ theorem lrPrefix_tangent_lower_bound
     have hgdiv : 0 ≤ g / q₀ := div_nonneg hg hq₀.le
     linarith
 
+noncomputable def lrFlowGap (R v t : ℝ) : ℝ :=
+  lrSquareTarget R v t - lrPrefixEll R (lrFlowM v)
+
+/-- The pointwise boundary theorem gives the nonnegative midpoint gap
+used in every flow chart. -/
+theorem lrFlowGap_nonneg
+    {R v t : ℝ}
+    (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1)
+    (ht : t ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ lrFlowGap R v t := by
+  have hden : 0 < 1 + v := by linarith [hv.1]
+  have hM : lrFlowM v ∈ Ioo (0 : ℝ) (1 / 2 : ℝ) := by
+    unfold lrFlowM
+    constructor
+    · exact div_pos hv.1 hden
+    · rw [div_lt_iff₀ hden]
+      linarith [hv.2]
+  have hx : t ^ 2 ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact sq_pos_of_pos ht.1
+    · nlinarith [ht.1, ht.2]
+  have hlower := lrPrefix_lowerBracket hM hx hR
+  have hodds : lrProbabilityToOdds (lrFlowM v) = v := by
+    unfold lrProbabilityToOdds lrFlowM
+    field_simp [hden.ne']
+    ring
+  have hsqrt : Real.sqrt (R * t ^ 2) = Real.sqrt R * t := by
+    rw [Real.sqrt_mul hR.1.le]
+    simp [Real.sqrt_sq_eq_abs, abs_of_pos ht.1]
+  rw [hodds, hsqrt] at hlower
+  exact sub_nonneg.mpr hlower
+
 end CourtadeKumar
