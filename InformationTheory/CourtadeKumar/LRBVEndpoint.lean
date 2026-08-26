@@ -160,4 +160,153 @@ theorem lrBH_sub_lrBH0_nonneg
       field_simp [show 1 + v ≠ 0 by linarith [hv.1]]
       ring
 
+noncomputable def lrLogCubicGap (r : ℝ) : ℝ :=
+  -Real.log (1 - r) - (r + r ^ 2 / 2 + r ^ 3 / 3)
+
+theorem hasDerivAt_lrLogCubicGap
+    {r : ℝ} (hr : r ≠ 1) :
+    HasDerivAt lrLogCubicGap (r ^ 3 / (1 - r)) r := by
+  have hid := hasDerivAt_id r
+  have harg : HasDerivAt (fun x : ℝ ↦ 1 - x) (-1) r := by
+    simpa using hid.const_sub 1
+  have hlog := harg.log (sub_ne_zero.mpr hr.symm)
+  have hpoly : HasDerivAt
+      (fun x : ℝ ↦ x + x ^ 2 / 2 + x ^ 3 / 3)
+      (1 + r + r ^ 2) r := by
+    convert (hid.add ((hid.pow 2).div_const 2)).add ((hid.pow 3).div_const 3)
+      using 1
+    norm_num
+  unfold lrLogCubicGap
+  convert hlog.neg.sub hpoly using 1
+  field_simp [sub_ne_zero.mpr hr.symm]
+  ring
+
+theorem lr_neg_log_one_sub_cubic_lower
+    {r : ℝ} (hr : r ∈ Icc (0 : ℝ) (1 / 2)) :
+    r + r ^ 2 / 2 + r ^ 3 / 3 ≤ -Real.log (1 - r) := by
+  have hmono : MonotoneOn lrLogCubicGap (Icc (0 : ℝ) (1 / 2)) := by
+    apply monotoneOn_of_deriv_nonneg (convex_Icc (0 : ℝ) (1 / 2))
+    · intro x hx
+      exact (hasDerivAt_lrLogCubicGap (by linarith [hx.2])).continuousAt.continuousWithinAt
+    · intro x hx
+      rw [interior_Icc] at hx
+      exact (hasDerivAt_lrLogCubicGap (by linarith [hx.2])).differentiableAt.differentiableWithinAt
+    · intro x hx
+      rw [interior_Icc] at hx
+      rw [(hasDerivAt_lrLogCubicGap (by linarith [hx.2])).deriv]
+      exact div_nonneg (pow_nonneg hx.1.le _) (sub_nonneg.mpr (by linarith [hx.2]))
+  have h := hmono (show (0 : ℝ) ∈ Icc 0 (1 / 2) by norm_num) hr hr.1
+  simpa [lrLogCubicGap] using h
+
+theorem hasDerivAt_lrBH0
+    {v : ℝ} (hv : v ≠ 0) (hv1 : v ≠ -1) :
+    HasDerivAt lrBH0
+      ((v / (1 + v) - 2 * Real.log (1 + v) +
+          8 * (Real.log 2 - 1 / 2) * (v / (1 + v)) ^ 3) / v ^ 3) v := by
+  have hid := hasDerivAt_id v
+  have hplus : HasDerivAt (fun x : ℝ ↦ 1 + x) 1 v := by
+    simpa using hid.const_add 1
+  have hplusne : 1 + v ≠ 0 := by
+    intro h
+    apply hv1
+    linarith
+  have hlog := hplus.log hplusne
+  have hsq : HasDerivAt (fun x : ℝ ↦ x ^ 2) (2 * v) v := by
+    convert hid.pow 2 using 1
+    norm_num
+  have hfirst := hlog.div hsq (pow_ne_zero 2 hv)
+  have hthirdDen : HasDerivAt (fun x : ℝ ↦ (1 + x) ^ 2)
+      (2 * (1 + v)) v := by
+    convert hplus.pow 2 using 1
+    norm_num
+  have hthird := (hasDerivAt_const v (4 * (Real.log 2 - 1 / 2))).div
+    hthirdDen (pow_ne_zero 2 hplusne)
+  unfold lrBH0
+  convert (hfirst.sub_const (1 / 2)).sub hthird using 1
+  field_simp [hv, hplusne]
+  ring
+
+theorem lrBH0_deriv_nonpos
+    {v : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1) :
+    ((v / (1 + v) - 2 * Real.log (1 + v) +
+        8 * (Real.log 2 - 1 / 2) * (v / (1 + v)) ^ 3) / v ^ 3) ≤ 0 := by
+  let r : ℝ := v / (1 + v)
+  have hden : 0 < 1 + v := by linarith [hv.1]
+  have hr : r ∈ Ioc (0 : ℝ) (1 / 2) := by
+    constructor
+    · exact div_pos hv.1 hden
+    · rw [div_le_iff₀ hden]
+      linarith [hv.2]
+  have hlogEq : -Real.log (1 - r) = Real.log (1 + v) := by
+    have hone : 1 - r = (1 + v)⁻¹ := by
+      dsimp [r]
+      field_simp [hden.ne']
+      ring
+    rw [hone, Real.log_inv]
+    ring
+  have hlog := lr_neg_log_one_sub_cubic_lower
+    (show r ∈ Icc (0 : ℝ) (1 / 2) from ⟨hr.1.le, hr.2⟩)
+  rw [hlogEq] at hlog
+  have hcoeff : 8 * (Real.log 2 - 1 / 2) - 2 / 3 < 4 / 3 := by
+    linarith [lr_log_two_lt_three_quarters]
+  have hr3 : r ^ 3 ≤ r ^ 2 / 2 := by
+    nlinarith [mul_nonneg (sq_nonneg r) (sub_nonneg.mpr hr.2)]
+  have hcoeffMul :
+      (8 * (Real.log 2 - 1 / 2) - 2 / 3) * r ^ 3 ≤
+        (4 / 3) * r ^ 3 :=
+    mul_le_mul_of_nonneg_right hcoeff.le (pow_nonneg hr.1.le _)
+  have h43 : (4 / 3) * r ^ 3 ≤ (2 / 3) * r ^ 2 := by
+    nlinarith
+  have htail :
+      (8 * (Real.log 2 - 1 / 2) - 2 / 3) * r ^ 3 ≤
+        (2 / 3) * r ^ 2 := hcoeffMul.trans h43
+  have hlogGap : 0 ≤
+      2 * Real.log (1 + v) -
+        2 * (r + r ^ 2 / 2 + r ^ 3 / 3) := by
+    linarith
+  have hnum :
+      r - 2 * Real.log (1 + v) +
+        8 * (Real.log 2 - 1 / 2) * r ^ 3 ≤ 0 := by
+    calc
+      r - 2 * Real.log (1 + v) +
+          8 * (Real.log 2 - 1 / 2) * r ^ 3 =
+        -(2 * Real.log (1 + v) -
+            2 * (r + r ^ 2 / 2 + r ^ 3 / 3)) - r - r ^ 2 +
+          (8 * (Real.log 2 - 1 / 2) - 2 / 3) * r ^ 3 := by
+            ring
+      _ ≤ 0 := by linarith [hr.1.le, sq_nonneg r]
+  dsimp [r] at hnum ⊢
+  exact div_nonpos_of_nonpos_of_nonneg hnum (pow_nonneg hv.1.le _)
+
+theorem lrBH0_nonneg
+    {v : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1) :
+    0 ≤ lrBH0 v := by
+  have hanti : AntitoneOn lrBH0 (Icc v 1) := by
+    apply antitoneOn_of_deriv_nonpos (convex_Icc v 1)
+    · intro x hx
+      exact (hasDerivAt_lrBH0 (by linarith [hv.1, hx.1])
+        (by linarith [hv.1, hx.1])).continuousAt.continuousWithinAt
+    · intro x hx
+      rw [interior_Icc] at hx
+      exact (hasDerivAt_lrBH0 (by linarith [hv.1, hx.1])
+        (by linarith [hv.1, hx.1])).differentiableAt.differentiableWithinAt
+    · intro x hx
+      rw [interior_Icc] at hx
+      have hxPhysical : x ∈ Ioc (0 : ℝ) 1 :=
+        ⟨by linarith [hv.1, hx.1], hx.2.le⟩
+      rw [(hasDerivAt_lrBH0 hxPhysical.1.ne' (by linarith [hxPhysical.1])).deriv]
+      exact lrBH0_deriv_nonpos hxPhysical
+  have h := hanti ⟨le_rfl, hv.2⟩ ⟨hv.2, le_rfl⟩ hv.2
+  have hOne : lrBH0 1 = 0 := by
+    unfold lrBH0
+    norm_num
+  rw [hOne] at h
+  exact h
+
+theorem lrBH_nonneg
+    {R v : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioc (0 : ℝ) 1) :
+    0 ≤ lrBH R v := by
+  linarith [lrBH_sub_lrBH0_nonneg hR hv, lrBH0_nonneg hv]
+
 end CourtadeKumar
