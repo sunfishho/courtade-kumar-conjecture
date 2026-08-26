@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRLowShapeVH1Certificate
+import InformationTheory.CourtadeKumar.LRLowShapeVH2Certificate
 
 /-! Analytic dominance of the certified finite low-shape `V` heads. -/
 
@@ -48,6 +49,20 @@ theorem lrLowVConvolutionCoeff_one_nonneg
   have hminorant := lrLowVHeadMinorant_two_nonneg hvIoc hxIcc
   have hle := lrLowVHeadMinorant_le_coefficient hv ht
     (n := 2) (by norm_num) (by norm_num) hGlow
+  norm_num at hle
+  exact hminorant.trans hle
+
+theorem lrLowVConvolutionCoeff_two_nonneg
+    {v t : ℝ} (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htSq : t ^ 2 ≤ 17 / 20) :
+    0 ≤ lrLowVConvolutionCoeff v t 2 := by
+  have hvIoc : v ∈ Ioc (0 : ℝ) 1 := ⟨hv.1, hv.2.le⟩
+  have hxIcc : t ^ 2 ∈ Icc (0 : ℝ) (17 / 20) :=
+    ⟨sq_nonneg t, htSq⟩
+  have hGlow := lrLowGShapeLower_nonneg hvIoc hxIcc
+  have hminorant := lrLowVHeadMinorant_three_nonneg hvIoc hxIcc
+  have hle := lrLowVHeadMinorant_le_coefficient hv ht
+    (n := 3) (by norm_num) (by norm_num) hGlow
   norm_num at hle
   exact hminorant.trans hle
 
