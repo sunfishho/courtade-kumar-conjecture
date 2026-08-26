@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRLowShapeUW1Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW2Power
+import InformationTheory.CourtadeKumar.LRLowShapeUW3Power
 
 /-! A reusable denominator-clearing bridge for the five finite low-shape
 `𝓦ₙ` certificates.  The definitions below are polynomial in `v` and `x`;
@@ -346,6 +347,59 @@ theorem lrLowSecondScalar_two_nonneg
     (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
   have hbridge := lrLowWMinorant_le_second_scalar hv ht
     (n := 2) (by norm_num)
+  norm_num at hbridge ⊢
+  exact hminorant.trans hbridge
+
+set_option maxHeartbeats 12000000 in
+set_option maxRecDepth 100000 in
+lemma lrLowWPolynomial_three_eq_power (v z : ℝ) :
+    lrLowWPolynomial v ((17 / 20 : ℝ) * z) 3 =
+      lrLowW3PowerEval v z := by
+  unfold lrLowWPolynomial
+  unfold lrLowWGRadialNumerator lrLowWALowerRadialNumerator
+    lrLowWAUpperScaledNumerator lrLowWBetaUpperNumerator
+  unfold lrLowWBetaDivVNumerator lrLowWMinusLogNumerator
+    lrLowWBetaNumerator lrLowWRadialBase lrLowWXiDenominator
+  unfold lrLowH lrLowPhiPrefix lrLowBnUpper
+    lrLowPnLower lrLowL12 lrLowT lrLowA lrLowW3PowerEval
+  unfold lrLowW3VPowerEvalCol0 lrLowW3VPowerEvalCol1 lrLowW3VPowerEvalCol2 lrLowW3VPowerEvalCol3 lrLowW3VPowerEvalCol4 lrLowW3VPowerEvalCol5 lrLowW3VPowerEvalCol6 lrLowW3VPowerEvalCol7 lrLowW3VPowerEvalCol8 lrLowW3VPowerEvalCol9 lrLowW3VPowerEvalCol10 lrLowW3VPowerEvalCol11 lrLowW3VPowerEvalCol12 lrLowW3VPowerEvalCol13 lrLowW3VPowerEvalCol14 lrLowW3VPowerEvalCol15 lrLowW3VPowerEvalCol16 lrLowW3VPowerEvalCol17 lrLowW3VPowerEvalCol18 lrLowW3VPowerEvalCol19 lrLowW3VPowerEvalCol20 lrLowW3VPowerEvalCol21 lrLowW3VPowerEvalCol22 lrLowW3VPowerEvalCol23 lrLowW3VPowerEvalCol24 lrLowW3VPowerEvalCol25
+  norm_num [Finset.sum_range_succ]
+  ring
+
+theorem lrLowWMinorant_three_nonneg
+    {v z : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1) (hz : z ∈ Icc (0 : ℝ) 1) :
+    0 ≤ lrLowWMinorant v ((17 / 20 : ℝ) * z) 3 := by
+  apply lrLowWMinorant_nonneg_of_polynomial_certificate hv hz
+    (lrLowWPolynomial_three_eq_power v z)
+  rw [← lrLowW3Bernstein_eq_power]
+  exact lrLowW3Bernstein_nonneg
+    (show v ∈ Icc (0 : ℝ) 1 from ⟨hv.1.le, hv.2⟩) hz
+
+theorem lrLowWMinorant_three_nonneg_of_sq_le
+    {v t : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1)
+    (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowWMinorant v (t ^ 2) 3 := by
+  have hz : (20 / 17 : ℝ) * t ^ 2 ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · positivity
+    · nlinarith
+  have h := lrLowWMinorant_three_nonneg hv hz
+  have hscale : (17 / 20 : ℝ) * ((20 / 17 : ℝ) * t ^ 2) = t ^ 2 := by
+    ring
+  rw [hscale] at h
+  exact h
+
+theorem lrLowSecondScalar_three_nonneg
+    {v t : ℝ} (hv : v ∈ Ioo (0 : ℝ) 1)
+    (ht : t ∈ Ioo (0 : ℝ) 1) (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowH (v ^ 2 * t ^ 2) 3 *
+          lrLowR v (t ^ 2) (lrGShape t v) 3 +
+        2 * (3 : ℝ) * (lrFlowBeta v + lrL (v * t)) *
+          lrLowEta v (t ^ 2) 3 := by
+  have hminorant := lrLowWMinorant_three_nonneg_of_sq_le
+    (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
+  have hbridge := lrLowWMinorant_le_second_scalar hv ht
+    (n := 3) (by norm_num)
   norm_num at hbridge ⊢
   exact hminorant.trans hbridge
 
