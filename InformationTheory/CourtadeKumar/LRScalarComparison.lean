@@ -635,4 +635,109 @@ theorem lrBGamma_ge_log_two
       lrBGamma R * lrBKernelK R 1 := by linarith
   exact le_of_mul_le_mul_right hmul hK
 
+/-- The audited coefficients of the scalar reserve as a power series in
+`X = y²`. -/
+noncomputable def lrBScalarCoeff (R : ℝ) (n : ℕ) : ℝ :=
+  if n = 0 then lrBGamma R - Real.log 2
+  else if n = 1 then lrBGamma R * R * (2 - R) / 3
+  else
+    R ^ n *
+      (lrBGamma R / 2 *
+          ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+        1 / (2 * (n : ℝ)) - (1 - R) / (2 * R))
+
+@[simp] lemma lrBScalarCoeff_zero (R : ℝ) :
+    lrBScalarCoeff R 0 = lrBGamma R - Real.log 2 := by
+  simp [lrBScalarCoeff]
+
+@[simp] lemma lrBScalarCoeff_one (R : ℝ) :
+    lrBScalarCoeff R 1 = lrBGamma R * R * (2 - R) / 3 := by
+  simp [lrBScalarCoeff]
+
+lemma lrBScalarCoeff_of_two_le
+    {R : ℝ} {n : ℕ} (hn : 2 ≤ n) :
+    lrBScalarCoeff R n =
+      R ^ n *
+        (lrBGamma R / 2 *
+            ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+          1 / (2 * (n : ℝ)) - (1 - R) / (2 * R)) := by
+  have hn0 : n ≠ 0 := by omega
+  have hn1 : n ≠ 1 := by omega
+  simp [lrBScalarCoeff, hn0, hn1]
+
+theorem lrBScalarCoeff_zero_nonneg
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ lrBScalarCoeff R 0 := by
+  simp only [lrBScalarCoeff_zero, sub_nonneg]
+  exact lrBGamma_ge_log_two hR
+
+theorem lrBScalarCoeff_one_nonneg
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ lrBScalarCoeff R 1 := by
+  rw [lrBScalarCoeff_one]
+  have hgamma := (lrBGamma_pos hR).le
+  have htwo : 0 ≤ 2 - R := by linarith [hR.2]
+  exact div_nonneg (mul_nonneg (mul_nonneg hgamma hR.1.le) htwo) (by norm_num)
+
+lemma lrBScalar_tail_brace_at_one
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    {n : ℕ} (hn : 2 ≤ n) :
+    ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+          1 / (n : ℝ) - (1 - R) / R =
+      -(((n : ℝ) * (1 - R) + 1) /
+          ((n : ℝ) * (2 * (n : ℝ) + 1))) -
+        (1 - R) ^ 2 / R := by
+  have hnpos : 0 < (n : ℝ) := by exact_mod_cast (lt_of_lt_of_le (by omega) hn)
+  have hodd : 0 < 2 * (n : ℝ) + 1 := by positivity
+  field_simp [hnpos.ne', hodd.ne', hR.1.ne']
+  ring
+
+theorem lrBScalarCoeff_nonpos_of_two_le
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    {n : ℕ} (hn : 2 ≤ n) :
+    lrBScalarCoeff R n ≤ 0 := by
+  rw [lrBScalarCoeff_of_two_le hn]
+  have hnpos : 0 < (n : ℝ) := by exact_mod_cast (lt_of_lt_of_le (by omega) hn)
+  have hodd : 0 < 2 * (n : ℝ) + 1 := by positivity
+  have hshape : 0 <
+      (1 + R) / (2 * (n : ℝ) + 1) + (1 - R) := by
+    exact add_pos (div_pos (by linarith [hR.1]) hodd) (sub_pos.mpr hR.2)
+  have hgammaTerm :
+      lrBGamma R *
+          ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) ≤
+        ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) :=
+    mul_le_of_le_one_left hshape.le (lrBGamma_le_one hR)
+  have hnegative :
+      ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+          1 / (n : ℝ) - (1 - R) / R < 0 := by
+    rw [lrBScalar_tail_brace_at_one hR hn]
+    have hfirst : 0 <
+        ((n : ℝ) * (1 - R) + 1) /
+          ((n : ℝ) * (2 * (n : ℝ) + 1)) := by
+      exact div_pos (by nlinarith [hnpos, sub_pos.mpr hR.2])
+        (mul_pos hnpos hodd)
+    have hsecond : 0 ≤ (1 - R) ^ 2 / R :=
+      div_nonneg (sq_nonneg _) hR.1.le
+    linarith
+  have hbrace :
+      lrBGamma R / 2 *
+          ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+        1 / (2 * (n : ℝ)) - (1 - R) / (2 * R) ≤ 0 := by
+    have hdouble : 2 *
+        (lrBGamma R / 2 *
+            ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+          1 / (2 * (n : ℝ)) - (1 - R) / (2 * R)) =
+        lrBGamma R *
+            ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+          1 / (n : ℝ) - (1 - R) / R := by
+      field_simp [hnpos.ne', hR.1.ne']
+    have htwononpos : 2 *
+        (lrBGamma R / 2 *
+            ((1 + R) / (2 * (n : ℝ) + 1) + (1 - R)) -
+          1 / (2 * (n : ℝ)) - (1 - R) / (2 * R)) ≤ 0 := by
+      rw [hdouble]
+      linarith
+    nlinarith
+  exact mul_nonpos_of_nonneg_of_nonpos (pow_nonneg hR.1.le _) hbrace
+
 end CourtadeKumar
