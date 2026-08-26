@@ -517,4 +517,122 @@ theorem lrBScalarReserve_one_nonneg
   exact div_nonneg (lrScalarEndpointF_log_nonneg (lrBEndpointZ_mem_Ioo hR))
     (mul_nonneg (by norm_num) (lrBDelta_pos hR).le)
 
+noncomputable def lrBKernelOneCoeff (m : ℕ) : ℝ :=
+  2 * (m : ℝ) / (4 * (m : ℝ) ^ 2 - 1)
+
+lemma lrBKernelOneCoeff_succ_eq (n : ℕ) :
+    lrBKernelOneCoeff (n + 1) =
+      1 / (2 * (2 * (n : ℝ) + 3)) +
+        1 / (2 * (2 * (n : ℝ) + 1)) := by
+  unfold lrBKernelOneCoeff
+  norm_num only [Nat.cast_add, Nat.cast_one]
+  rw [show 4 * ((n : ℝ) + 1) ^ 2 - 1 =
+      (2 * (n : ℝ) + 1) * (2 * (n : ℝ) + 3) by ring]
+  have hodd1 : 2 * (n : ℝ) + 1 ≠ 0 := by positivity
+  have hodd3 : 2 * (n : ℝ) + 3 ≠ 0 := by positivity
+  field_simp [hodd1, hodd3]
+  ring
+
+theorem lrBKernelK_one_tail_hasSum
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    HasSum (fun n : ℕ ↦ lrBKernelOneCoeff (n + 1) * R ^ (n + 1))
+      (lrBKernelK R 1 - 1) := by
+  have hPsi := topPsiDeriv_hasSum hR
+  have hTail : HasSum
+      (fun n : ℕ ↦ R ^ (n + 1) / (2 * (2 * ((n + 1 : ℕ) : ℝ) + 1)))
+      (topPsiDeriv R - 1 / 2) := by
+    simpa using (hasSum_nat_add_iff' 1).2 hPsi
+  have hCombined := hTail.add (hPsi.mul_left R)
+  convert hCombined using 1
+  · funext n
+    rw [lrBKernelOneCoeff_succ_eq]
+    rw [pow_succ R n]
+    norm_num only [Nat.cast_add, Nat.cast_one]
+    ring
+  · have hsqrt := lrB_sqrt_mem_Ioo hR
+    have hRden : 1 - R ≠ 0 := by linarith [hR.2]
+    unfold lrBKernelK topPsiDeriv
+    norm_num only [mul_one, div_one, one_pow]
+    field_simp [hsqrt.1.ne', hRden]
+    ring
+
+lemma lrB_log_coefficient_nonneg (m : ℕ) (hm : 1 ≤ m) :
+    0 ≤ 1 / (2 * (m : ℝ)) -
+      Real.log 2 * lrBKernelOneCoeff m := by
+  have hmR : 1 ≤ (m : ℝ) := by exact_mod_cast hm
+  have hmpos : 0 < (m : ℝ) := lt_of_lt_of_le (by norm_num) hmR
+  have hden : 0 < 4 * (m : ℝ) ^ 2 - 1 := by nlinarith [sq_nonneg ((m : ℝ) - 1)]
+  have hquarter : 3 / 4 ≤ 1 - 1 / (4 * (m : ℝ) ^ 2) := by
+    have hsq : 1 ≤ (m : ℝ) ^ 2 := by nlinarith
+    have hfour : 0 < 4 * (m : ℝ) ^ 2 := by positivity
+    have hrecip : 1 / (4 * (m : ℝ) ^ 2) ≤ 1 / 4 := by
+      rw [div_le_iff₀ hfour]
+      nlinarith
+    nlinarith
+  have hlog : Real.log 2 ≤ 1 - 1 / (4 * (m : ℝ) ^ 2) :=
+    (lr_log_two_lt_three_quarters.le.trans hquarter)
+  unfold lrBKernelOneCoeff
+  have hid : 1 / (2 * (m : ℝ)) -
+      Real.log 2 * (2 * (m : ℝ) / (4 * (m : ℝ) ^ 2 - 1)) =
+      (2 * (m : ℝ) / (4 * (m : ℝ) ^ 2 - 1)) *
+        (1 - 1 / (4 * (m : ℝ) ^ 2) - Real.log 2) := by
+    have hm1 : 2 * (m : ℝ) - 1 ≠ 0 := by nlinarith
+    have hp1 : 2 * (m : ℝ) + 1 ≠ 0 := by positivity
+    rw [show 4 * (m : ℝ) ^ 2 - 1 =
+      (2 * (m : ℝ) - 1) * (2 * (m : ℝ) + 1) by ring]
+    field_simp [hmpos.ne', hm1, hp1]
+    ring
+  rw [hid]
+  exact mul_nonneg (div_nonneg (by positivity) hden.le) (sub_nonneg.mpr hlog)
+
+theorem lrB_log_two_mul_K_le_b
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    Real.log 2 * lrBKernelK R 1 ≤
+      lrL (Real.sqrt R) + Real.log 2 := by
+  have hsqrt := lrB_sqrt_mem_Ioo hR
+  have hL := lrL_hasSum
+    (show Real.sqrt R ∈ Ioo (-1 : ℝ) 1 from
+      ⟨by linarith [hsqrt.1], hsqrt.2⟩)
+  have hK := (lrBKernelK_one_tail_hasSum hR).mul_left (Real.log 2)
+  have hDiff := hL.sub hK
+  have hSeries : HasSum (fun n : ℕ ↦
+      (1 / (2 * ((n + 1 : ℕ) : ℝ)) -
+        Real.log 2 * lrBKernelOneCoeff (n + 1)) * R ^ (n + 1))
+      (lrL (Real.sqrt R) - Real.log 2 * (lrBKernelK R 1 - 1)) := by
+    convert hDiff using 1
+    funext n
+    rw [show Real.sqrt R ^ (2 * (n + 1)) = R ^ (n + 1) by
+      rw [pow_mul, Real.sq_sqrt hR.1.le]]
+    norm_num only [Nat.cast_add, Nat.cast_one]
+    ring
+  have hnonneg : 0 ≤
+      lrL (Real.sqrt R) - Real.log 2 * (lrBKernelK R 1 - 1) :=
+    hSeries.nonneg (fun n ↦ mul_nonneg
+      (lrB_log_coefficient_nonneg (n + 1) (by omega))
+      (pow_nonneg hR.1.le _))
+  linarith
+
+lemma lrBKernelK_one_pos
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    0 < lrBKernelK R 1 := by
+  rw [lrBKernelK_one_eq_endpoint_coordinates hR]
+  have hz := lrBEndpointZ_mem_Ioo hR
+  have hell : 0 < -Real.log (lrBEndpointZ R) :=
+    neg_pos.mpr (Real.log_neg hz.1 hz.2)
+  have hden : 0 < 1 - (lrBEndpointZ R) ^ 2 := by nlinarith [hz.1, hz.2]
+  positivity
+
+/-- The other scalar endpoint: `gamma_R ≥ log 2`. -/
+theorem lrBGamma_ge_log_two
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    Real.log 2 ≤ lrBGamma R := by
+  have hS := lrBScalarReserve_one_nonneg hR
+  have hb := lrB_log_two_mul_K_le_b hR
+  have hK := lrBKernelK_one_pos hR
+  unfold lrBScalarReserve at hS
+  norm_num at hS
+  have hmul : Real.log 2 * lrBKernelK R 1 ≤
+      lrBGamma R * lrBKernelK R 1 := by linarith
+  exact le_of_mul_le_mul_right hmul hK
+
 end CourtadeKumar
