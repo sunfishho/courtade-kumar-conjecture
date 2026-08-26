@@ -70,6 +70,7 @@ import InformationTheory.CourtadeKumar.LRAbelPrefixCanonical
 import InformationTheory.CourtadeKumar.LRAbelPrefixDerivativeBound
 import InformationTheory.CourtadeKumar.LRAbelPrefixIntegration
 import InformationTheory.CourtadeKumar.LRAbelPrefixEndpoint
+import InformationTheory.CourtadeKumar.LRAbelTailIntegral
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
