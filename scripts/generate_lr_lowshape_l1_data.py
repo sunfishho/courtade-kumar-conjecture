@@ -130,6 +130,91 @@ def reconstruct_l1_numerator():
     return numerator
 
 
+def low_shape_components():
+    """Exact polynomial pieces shared by the five W-head certificates."""
+    vp2 = v + 2
+    vp1 = v + 1
+    beta_num = sum(
+        F(2, 2 * k + 1) * v ** (2 * k + 1) * vp2 ** (8 - 2 * k)
+        for k in range(5)
+    )
+    beta_num_div_v = Poly(
+        {(i - 1, j): q for (i, j), q in beta_num.terms.items()}
+    )
+    minus_log_num = sum(
+        F(2, 2 * k + 1) * (one - v) ** (2 * k + 1) * vp1 ** (8 - 2 * k)
+        for k in range(5)
+    )
+    beta_upper_num = beta_num * vp1 + F(1, 22) * v ** 11
+    radial = vp1**9 * vp2**9
+    g_radial_num = beta_num_div_v * vp1**10 + minus_log_num * vp2**9
+    x = X * z
+    xi = v**2 * x
+    denominator_xi = 20 - 17 * v**2 * z
+    l_lower = sum(xi**r * F(1, 2 * r) for r in range(1, 13))
+    a_lower_radial_num = beta_num * vp1**9 + l_lower * radial
+    return {
+        "vp1": vp1,
+        "vp2": vp2,
+        "beta_upper_num": beta_upper_num,
+        "radial": radial,
+        "g_radial_num": g_radial_num,
+        "x": x,
+        "xi": xi,
+        "denominator_xi": denominator_xi,
+        "l_lower": l_lower,
+        "a_lower_radial_num": a_lower_radial_num,
+    }
+
+
+def reconstruct_w_numerator(n):
+    """Numerator of W_n over the verifier's positive common base."""
+    assert 1 <= n <= 5
+    c = low_shape_components()
+    vp1 = c["vp1"]
+    vp2 = c["vp2"]
+    radial = c["radial"]
+    x = c["x"]
+    xi = c["xi"]
+    denominator_xi = c["denominator_xi"]
+    l_lower = c["l_lower"]
+
+    b_upper = F(693148, 10**6) - sum(a(m) for m in range(1, n + 1))
+    prefix = sum(
+        a(m) * x**m * (one + v ** (2 * m - 1))
+        for m in range(1, n + 1)
+    )
+    p_lower = sum(
+        a(m) * x**m * (one + v ** (2 * m - 1))
+        for m in range(n + 1, 13)
+    )
+    h_head = sum(xi**j for j in range(1, n + 1))
+
+    brace_radial_num = (
+        c["g_radial_num"]
+        - prefix * radial
+        - b_upper * (4 + 2 * v) * vp1**8 * vp2**9
+    )
+    positive_num = 2 * n * c["a_lower_radial_num"] * p_lower
+
+    # Expand A_+ * d directly against radial*(20-17*v^2*z).
+    beta_d_num = (
+        2 * v * x * c["beta_upper_num"] * vp1**7 * denominator_xi
+    )
+    l_head_d_num = 2 * v * x * l_lower * vp1**8 * vp2**9 * denominator_xi
+    # xi^13/(26(1-xi)) = (10/13)*xi^13/(20-17*v^2*z).
+    l_tail_d_num = F(20, 13) * v * x * xi**13 * vp1**8 * vp2**9
+    negative_num = 2 * n * b_upper * (
+        beta_d_num + l_head_d_num + l_tail_d_num
+    )
+
+    return (
+        h_head * brace_radial_num * denominator_xi
+        + positive_num * denominator_xi
+        - negative_num
+    )
+
+
 def tensor_bernstein(poly):
     degree_v, degree_z = poly.degree
     rows = []
@@ -202,6 +287,88 @@ def lean_rat(q):
     return f"({q.numerator}/{q.denominator})"
 
 
+def balanced_sum(terms):
+    if not terms:
+        return "0"
+    current = terms
+    while len(current) > 1:
+        current = [
+            f"({current[i]} + {current[i + 1]})"
+            if i + 1 < len(current) else current[i]
+            for i in range(0, len(current), 2)
+        ]
+    return current[0]
+
+
+def emit_w_rows_patch(n, start, stop, target):
+    rows = tensor_bernstein(reconstruct_w_numerator(n))
+    definitions = []
+    for i in range(start, stop):
+        terms = [
+            f"{lean_rat(q)} * bernsteinBasis 25 {j} z"
+            for j, q in enumerate(rows[i]) if q
+        ]
+        value = balanced_sum(terms)
+        if terms:
+            proof = f"""by
+  unfold lrLowW{n}BernsteinRow{i}
+  repeat' apply add_nonneg
+  all_goals exact mul_nonneg (by norm_num) (bernsteinBasis_nonneg hz)"""
+        else:
+            proof = f"by simp [lrLowW{n}BernsteinRow{i}]"
+        definitions.append(
+            f"noncomputable def lrLowW{n}BernsteinRow{i} (z : ℝ) : ℝ :=\n"
+            f"  {value}\n\n"
+            f"lemma lrLowW{n}BernsteinRow{i}_nonneg\n"
+            f"    {{z : ℝ}} (hz : z ∈ Icc (0 : ℝ) 1) :\n"
+            f"    0 ≤ lrLowW{n}BernsteinRow{i} z := {proof}"
+        )
+    payload = "\n\n".join(definitions)
+    print("*** Begin Patch")
+    print(f"*** Update File: {target}")
+    print("@@")
+    print("--- ROW_DEFINITIONS_END")
+    for line in payload.splitlines():
+        print("+" + line)
+    print("+")
+    print("+-- ROW_DEFINITIONS_END")
+    print("*** End Patch")
+
+
+def emit_w_total_patch(n, target):
+    terms = [
+        f"lrLowW{n}BernsteinRow{i} z * bernsteinBasis 67 {i} v"
+        for i in range(68)
+    ]
+    value = balanced_sum(terms)
+    nonneg = "\n".join(
+        f"  have h{i} : 0 ≤ lrLowW{n}BernsteinRow{i} z * "
+        f"bernsteinBasis 67 {i} v := "
+        f"mul_nonneg (lrLowW{n}BernsteinRow{i}_nonneg hz) "
+        f"(bernsteinBasis_nonneg hv)"
+        for i in range(68)
+    )
+    all_names = ", ".join(f"h{i}" for i in range(68))
+    payload = f"""noncomputable def lrLowW{n}Bernstein (v z : ℝ) : ℝ :=
+  {value}
+
+lemma lrLowW{n}Bernstein_nonneg
+    {{v z : ℝ}} (hv : v ∈ Icc (0 : ℝ) 1) (hz : z ∈ Icc (0 : ℝ) 1) :
+    0 ≤ lrLowW{n}Bernstein v z := by
+{nonneg}
+  unfold lrLowW{n}Bernstein
+  positivity [{all_names}]"""
+    print("*** Begin Patch")
+    print(f"*** Update File: {target}")
+    print("@@")
+    print("--- TOTAL_DEFINITION_END")
+    for line in payload.splitlines():
+        print("+" + line)
+    print("+")
+    print("+-- TOTAL_DEFINITION_END")
+    print("*** End Patch")
+
+
 def emit_endpoint_lean(poly):
     quotient = endpoint_quotient(poly)
     bernstein = univariate_bernstein(quotient)
@@ -215,7 +382,22 @@ def emit_endpoint_lean(poly):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--emit-endpoint-lean", action="store_true")
+    parser.add_argument("--w-head", type=int, choices=range(1, 6))
+    parser.add_argument("--emit-w-rows", nargs=3, metavar=("N", "START", "STOP"))
+    parser.add_argument("--emit-w-total", type=int, choices=range(1, 6))
+    parser.add_argument("--target")
     args = parser.parse_args()
+    if args.emit_w_rows is not None:
+        if args.target is None:
+            parser.error("--emit-w-rows requires --target")
+        n, start, stop = map(int, args.emit_w_rows)
+        emit_w_rows_patch(n, start, stop, args.target)
+        return
+    if args.emit_w_total is not None:
+        if args.target is None:
+            parser.error("--emit-w-total requires --target")
+        emit_w_total_patch(args.emit_w_total, args.target)
+        return
     poly = reconstruct_l1_numerator()
     assert poly.degree == (41, 12)
     assert len(poly.terms) == 371
@@ -244,6 +426,18 @@ def main():
     print("scale matching audited numerator", expected / minimum_raw)
     if args.emit_endpoint_lean:
         emit_endpoint_lean(poly)
+    if args.w_head is not None:
+        w_poly = reconstruct_w_numerator(args.w_head)
+        rows = tensor_bernstein(w_poly)
+        flat = [q for row in rows for q in row]
+        print(f"W{args.w_head} degree", w_poly.degree)
+        print(f"W{args.w_head} monomials", len(w_poly.terms))
+        print(f"W{args.w_head} coefficients", len(flat))
+        print(f"W{args.w_head} zeros", sum(q == 0 for q in flat))
+        print(f"W{args.w_head} negatives", sum(q < 0 for q in flat))
+        positive = [(q, i, j) for i, row in enumerate(rows)
+                    for j, q in enumerate(row) if q > 0]
+        print(f"W{args.w_head} minimum raw", min(positive))
 
 
 if __name__ == "__main__":
