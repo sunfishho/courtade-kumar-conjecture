@@ -329,4 +329,192 @@ theorem lrScalarEndpointF_log_nonneg
     exact lrScalarEndpoint_value_nonneg hz
   exact hvalue.trans (hellStep.trans hUstep)
 
+noncomputable def lrBEndpointZ (R : ℝ) : ℝ :=
+  lrScalarLogRatio (Real.sqrt R)
+
+lemma lrBEndpointZ_mem_Ioo
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrBEndpointZ R ∈ Ioo (0 : ℝ) 1 := by
+  exact lrScalarLogRatio_mem_Ioo (lrB_sqrt_mem_Ioo hR)
+
+lemma neg_log_lrBEndpointZ
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    -Real.log (lrBEndpointZ R) =
+      2 * Real.artanh (Real.sqrt R) := by
+  have hrho := lrB_sqrt_mem_Ioo hR
+  have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+  have hminus : 1 - Real.sqrt R ≠ 0 := by linarith [hrho.2]
+  rw [Real.artanh_eq_half_log
+    (show Real.sqrt R ∈ Icc (-1 : ℝ) 1 from
+      ⟨by linarith [hrho.1], hrho.2.le⟩)]
+  have hratio :
+      (1 + Real.sqrt R) / (1 - Real.sqrt R) = (lrBEndpointZ R)⁻¹ := by
+    unfold lrBEndpointZ lrScalarLogRatio
+    field_simp [hplus, hminus]
+  rw [hratio, Real.log_inv]
+  ring
+
+lemma log_one_add_lrBEndpointZ
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    Real.log (1 + lrBEndpointZ R) =
+      Real.log 2 - Real.log (1 + Real.sqrt R) := by
+  have hrho := lrB_sqrt_mem_Ioo hR
+  have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+  have hid : 1 + lrBEndpointZ R = 2 / (1 + Real.sqrt R) := by
+    unfold lrBEndpointZ lrScalarLogRatio
+    field_simp [hplus]
+    ring
+  rw [hid, Real.log_div (by norm_num : (2 : ℝ) ≠ 0) hplus]
+
+lemma log_one_sub_sqrt_sq_half
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    Real.log (1 - (Real.sqrt R) ^ 2) / 2 =
+      Real.log (1 + Real.sqrt R) - Real.artanh (Real.sqrt R) := by
+  have hrho := lrB_sqrt_mem_Ioo hR
+  have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+  have hminus : 1 - Real.sqrt R ≠ 0 := by linarith [hrho.2]
+  rw [show 1 - (Real.sqrt R) ^ 2 =
+      (1 + Real.sqrt R) * (1 - Real.sqrt R) by ring,
+    Real.log_mul hplus hminus,
+    Real.artanh_eq_half_log
+      (show Real.sqrt R ∈ Icc (-1 : ℝ) 1 from
+        ⟨by linarith [hrho.1], hrho.2.le⟩),
+    Real.log_div hplus hminus]
+  ring
+
+lemma lrBDelta_eq_endpoint_coordinates
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrBDelta R =
+      Real.log (1 + lrBEndpointZ R) +
+        lrBEndpointZ R * (-Real.log (lrBEndpointZ R)) /
+          (1 + lrBEndpointZ R) := by
+  have hrho := lrB_sqrt_mem_Ioo hR
+  have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+  have hzplus : 1 + lrBEndpointZ R ≠ 0 := by
+    have hz := lrBEndpointZ_mem_Ioo hR
+    exact ne_of_gt (by linarith [hz.1])
+  rw [log_one_add_lrBEndpointZ hR, neg_log_lrBEndpointZ hR]
+  unfold lrBDelta
+  rw [topPhi_eq_mul_artanh_add_log
+    (show Real.sqrt R ∈ Ioo (-1 : ℝ) 1 from
+      ⟨by linarith [hrho.1], hrho.2⟩),
+    log_one_sub_sqrt_sq_half hR]
+  unfold lrBEndpointZ lrScalarLogRatio
+  field_simp [hplus, hzplus]
+  ring
+
+lemma lrBEndpointN_eq_coordinates
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    (1 - R) * Real.artanh (Real.sqrt R) / (2 * Real.sqrt R) =
+      lrBEndpointZ R * (-Real.log (lrBEndpointZ R)) /
+        (1 - (lrBEndpointZ R) ^ 2) := by
+  have hrho := lrB_sqrt_mem_Ioo hR
+  have hsqrtSq : (Real.sqrt R) ^ 2 = R := Real.sq_sqrt hR.1.le
+  have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+  have hminus : 1 - Real.sqrt R ≠ 0 := by linarith [hrho.2]
+  have hz := lrBEndpointZ_mem_Ioo hR
+  have hzden : 1 - (lrBEndpointZ R) ^ 2 ≠ 0 := by nlinarith [hz.1, hz.2]
+  rw [neg_log_lrBEndpointZ hR]
+  unfold lrBEndpointZ lrScalarLogRatio
+  rw [show 1 - R = 1 - (Real.sqrt R) ^ 2 by rw [hsqrtSq]]
+  field_simp [hrho.1.ne', hplus, hminus, hzden]
+  have hdiff : (1 + Real.sqrt R) ^ 2 - (1 - Real.sqrt R) ^ 2 ≠ 0 := by
+    nlinarith [hrho.1]
+  field_simp [hdiff]
+  ring
+
+lemma lrL_sqrt_add_log_two_eq_endpoint_coordinates
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrL (Real.sqrt R) + Real.log 2 =
+      Real.log (1 + lrBEndpointZ R) -
+        Real.log (lrBEndpointZ R) / 2 := by
+  have hell := neg_log_lrBEndpointZ hR
+  have hhalf := log_one_sub_sqrt_sq_half hR
+  rw [log_one_add_lrBEndpointZ hR]
+  unfold lrL
+  linarith
+
+lemma lrBKernelK_one_eq_endpoint_coordinates
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrBKernelK R 1 =
+      1 / 2 +
+        (1 + (lrBEndpointZ R) ^ 2) *
+          (-Real.log (lrBEndpointZ R)) /
+            (2 * (1 - (lrBEndpointZ R) ^ 2)) := by
+  have hrho := lrB_sqrt_mem_Ioo hR
+  have hsqrtSq : (Real.sqrt R) ^ 2 = R := Real.sq_sqrt hR.1.le
+  have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+  have hminus : 1 - Real.sqrt R ≠ 0 := by linarith [hrho.2]
+  have hz := lrBEndpointZ_mem_Ioo hR
+  have hzden : 1 - (lrBEndpointZ R) ^ 2 ≠ 0 := by nlinarith [hz.1, hz.2]
+  have hRden : 1 - R ≠ 0 := by linarith [hR.2]
+  rw [neg_log_lrBEndpointZ hR]
+  unfold lrBKernelK lrBEndpointZ lrScalarLogRatio
+  norm_num only [mul_one, div_one, one_pow]
+  rw [show 1 + R = 1 + (Real.sqrt R) ^ 2 by rw [hsqrtSq],
+    show 1 - R = 1 - (Real.sqrt R) ^ 2 by rw [hsqrtSq]]
+  field_simp [hrho.1.ne', hplus, hminus, hzden, hRden]
+  field_simp [hrho.1.ne', show 1 - (Real.sqrt R) ^ 2 ≠ 0 by
+    nlinarith [hrho.1, hrho.2]]
+  have hdiff : (1 + Real.sqrt R) ^ 2 - (1 - Real.sqrt R) ^ 2 ≠ 0 := by
+    nlinarith [hrho.1]
+  field_simp [hdiff]
+  ring
+
+lemma lrScalarEndpointF_eq_two_determinant
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrScalarEndpointF (lrBEndpointZ R)
+        (Real.log (1 + lrBEndpointZ R))
+        (-Real.log (lrBEndpointZ R)) =
+      2 *
+        (lrBEndpointZ R * (-Real.log (lrBEndpointZ R)) /
+              (1 - (lrBEndpointZ R) ^ 2) *
+            (1 / 2 +
+              (1 + (lrBEndpointZ R) ^ 2) *
+                (-Real.log (lrBEndpointZ R)) /
+                  (2 * (1 - (lrBEndpointZ R) ^ 2))) -
+          (Real.log (1 + lrBEndpointZ R) -
+              Real.log (lrBEndpointZ R) / 2) * lrBDelta R) := by
+  have hz := lrBEndpointZ_mem_Ioo hR
+  have hzplus : 1 + lrBEndpointZ R ≠ 0 :=
+    ne_of_gt (by linarith [hz.1])
+  have hzden : 1 - (lrBEndpointZ R) ^ 2 ≠ 0 := by
+    nlinarith [hz.1, hz.2]
+  rw [lrBDelta_eq_endpoint_coordinates hR]
+  unfold lrScalarEndpointF
+  dsimp only
+  field_simp [hzplus, hzden]
+  ring
+
+/-- Exact bridge from the elementary `z` certificate to the actual scalar
+reserve at `y = 1`. -/
+theorem lrBScalarReserve_one_eq_endpointF
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrBScalarReserve R 1 =
+      lrScalarEndpointF (lrBEndpointZ R)
+        (Real.log (1 + lrBEndpointZ R))
+        (-Real.log (lrBEndpointZ R)) / (2 * lrBDelta R) := by
+  have hdelta := lrBDelta_pos hR
+  rw [show lrBScalarReserve R 1 =
+      lrBGamma R * lrBKernelK R 1 -
+        (lrL (Real.sqrt R) + Real.log 2) by
+      unfold lrBScalarReserve
+      norm_num
+      ring]
+  rw [lrL_sqrt_add_log_two_eq_endpoint_coordinates hR,
+    show lrBGamma R =
+      ((1 - R) * Real.artanh (Real.sqrt R) / (2 * Real.sqrt R)) /
+        lrBDelta R by unfold lrBGamma; ring,
+    lrBEndpointN_eq_coordinates hR,
+    lrBKernelK_one_eq_endpoint_coordinates hR]
+  rw [lrScalarEndpointF_eq_two_determinant hR]
+  field_simp [hdelta.ne']
+
+theorem lrBScalarReserve_one_nonneg
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ lrBScalarReserve R 1 := by
+  rw [lrBScalarReserve_one_eq_endpointF hR]
+  exact div_nonneg (lrScalarEndpointF_log_nonneg (lrBEndpointZ_mem_Ioo hR))
+    (mul_nonneg (by norm_num) (lrBDelta_pos hR).le)
+
 end CourtadeKumar
