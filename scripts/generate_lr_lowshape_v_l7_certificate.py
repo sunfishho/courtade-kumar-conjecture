@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the exact Lean tensor-Bernstein certificate for low-shape `L_7`."""
+"""Generate exact Lean tensor-Bernstein certificates for the low-shape `V` proof."""
 
 from math import comb
 from pathlib import Path
@@ -62,20 +62,35 @@ def main():
     verifier.install_bounds()
     base = verifier.base
     v, z = verifier.v, verifier.z
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 7
-    if not 2 <= n <= 7:
-        raise ValueError("expected a head index between 2 and 7")
-    tag = "L7" if n == 7 else f"H{n - 1}"
-    description = "L_7" if n == 7 else f"V_{n - 1}"
-    expression = (base.lower_comparison(7) if n == 7
-                  else verifier.v_head_minorant(n))
+    selector = sys.argv[1] if len(sys.argv) > 1 else "7"
     radial = (1 + v) ** 9 * (2 + v) ** 9
-    positive_base = radial * (20 - 17 * z) * (20 - 17 * v**2 * z)
+    if selector == "f1":
+        tag = "F1"
+        description = "f_1"
+        expression = base.f1_lower_expression()
+        positive_base = radial
+        expected_degree = (19, 1)
+    elif selector == "v0":
+        tag = "Zero"
+        description = "V_0"
+        expression = base.zeroth_coefficient_minorant()
+        positive_base = radial
+        expected_degree = (43, 13)
+    else:
+        n = int(selector)
+        if not 2 <= n <= 7:
+            raise ValueError("expected f1, v0, or a head index between 2 and 7")
+        tag = "L7" if n == 7 else f"H{n - 1}"
+        description = "L_7" if n == 7 else f"V_{n - 1}"
+        expression = (base.lower_comparison(7) if n == 7
+                      else verifier.v_head_minorant(n))
+        positive_base = radial * (20 - 17 * z) * (20 - 17 * v**2 * z)
+        expected_degree = (67, 26)
     numerator = base.positive_numerator(expression, positive_base)
     rows = tensor_rows(numerator)
     degree_v = len(rows) - 1
     degree_z = len(rows[0]) - 1
-    assert (degree_v, degree_z) == (67, 26)
+    assert (degree_v, degree_z) == expected_degree
     assert all(q >= 0 for row in rows for q in row)
 
     out = [
