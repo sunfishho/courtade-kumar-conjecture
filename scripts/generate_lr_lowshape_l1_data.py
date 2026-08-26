@@ -281,6 +281,19 @@ def univariate_bernstein(power):
     ]
 
 
+def bernstein_to_power(row):
+    """Expand a one-variable Bernstein row exactly in the power basis."""
+    degree = len(row) - 1
+    return [
+        sum(
+            row[j] * comb(degree, j) * comb(degree - j, s - j)
+            * (-1) ** (s - j)
+            for j in range(s + 1)
+        )
+        for s in range(degree + 1)
+    ]
+
+
 def lean_rat(q):
     if q.denominator == 1:
         return str(q.numerator)
@@ -369,6 +382,250 @@ lemma lrLowW{n}Bernstein_nonneg
     print("*** End Patch")
 
 
+def emit_w_power_data_patch(n, target):
+    """Emit the exact intermediate and target power coefficients.
+
+    Splitting the tensor identity into 68 degree-25 row identities and 26
+    degree-67 column identities keeps Lean's algebraic normalization bounded.
+    """
+    poly = reconstruct_w_numerator(n)
+    bernstein_rows = tensor_bernstein(poly)
+    q_rows = [bernstein_to_power(row) for row in bernstein_rows]
+    for i, row in enumerate(q_rows):
+        for s, value in enumerate(row):
+            assert value == sum(
+                bernstein_rows[i][j] * comb(25, j) * comb(25 - j, s - j)
+                * (-1) ** (s - j)
+                for j in range(s + 1)
+            )
+
+    blocks = [
+        "import InformationTheory.CourtadeKumar.LRLowShapeUW1Certificate",
+        "",
+        "/-! Exact power-basis data for the separable reconstruction of the "
+        f"`𝓦_{n}` tensor certificate. -/",
+        "",
+        "namespace CourtadeKumar",
+    ]
+    for i, row in enumerate(q_rows):
+        values = ", ".join(lean_rat(value) for value in row)
+        proof = (
+            f"  simp [lrLowW{n}BernsteinRow{i}, lrLowW{n}ZPowerEvalRow{i}]"
+            if not terms else
+            f"  unfold lrLowW{n}BernsteinRow{i} lrLowW{n}ZPowerEvalRow{i} bernsteinBasis\n"
+            "  norm_num [Nat.choose]\n"
+            "  ring"
+        )
+        blocks.extend([
+            "",
+            f"def lrLowW{n}ZPowerRow{i} : Fin 26 → ℚ :=",
+            f"  ![{values}]",
+        ])
+    row_names = ", ".join(f"lrLowW{n}ZPowerRow{i}" for i in range(68))
+    blocks.extend([
+        "",
+        f"def lrLowW{n}ZPowerCoeff (i : Fin 68) : Fin 26 → ℚ :=",
+        f"  ![{row_names}] i",
+    ])
+
+    # A transposed view prevents Lean from unfolding 68 length-26 vectors
+    # while checking a single column identity.
+    for s in range(26):
+        values = ", ".join(lean_rat(q_rows[i][s]) for i in range(68))
+        blocks.extend([
+            "",
+            f"def lrLowW{n}ZPowerCol{s} : Fin 68 → ℚ :=",
+            f"  ![{values}]",
+        ])
+    z_col_names = ", ".join(f"lrLowW{n}ZPowerCol{s}" for s in range(26))
+    blocks.extend([
+        "",
+        f"def lrLowW{n}ZPowerCoeffT (s : Fin 26) : Fin 68 → ℚ :=",
+        f"  ![{z_col_names}] s",
+    ])
+
+    for s in range(26):
+        values = ", ".join(lean_rat(poly.coefficient(r, s)) for r in range(68))
+        blocks.extend([
+            "",
+            f"def lrLowW{n}VPowerCol{s} : Fin 68 → ℚ :=",
+            f"  ![{values}]",
+        ])
+    col_names = ", ".join(f"lrLowW{n}VPowerCol{s}" for s in range(26))
+    blocks.extend([
+        "",
+        f"def lrLowW{n}PowerCoeff (s : Fin 26) : Fin 68 → ℚ :=",
+        f"  ![{col_names}] s",
+        "",
+        "end CourtadeKumar",
+    ])
+
+    print("*** Begin Patch")
+    print(f"*** Add File: {target}")
+    for line in blocks:
+        print("+" + line)
+    print("*** End Patch")
+
+
+def emit_w_power_proof_patch(n, target):
+    """Emit the separable Lean reconstruction of one W-head polynomial."""
+    poly = reconstruct_w_numerator(n)
+    bernstein_rows = tensor_bernstein(poly)
+    q_rows = [bernstein_to_power(row) for row in bernstein_rows]
+
+    blocks = [
+        f"import InformationTheory.CourtadeKumar.LRLowShapeUW{n}PowerData",
+        "",
+        "/-! Separable reconstruction of the tensor-Bernstein certificate.",
+        "Each algebraic normalization is univariate; the transpose step treats",
+        "the Bernstein factors as atoms and therefore stays memory-bounded. -/",
+        "",
+        "namespace CourtadeKumar",
+    ]
+
+    for i, row in enumerate(q_rows):
+        terms = [
+            f"{lean_rat(value)} * z ^ {s}"
+            for s, value in enumerate(row) if value
+        ]
+        blocks.extend([
+            "",
+            f"noncomputable def lrLowW{n}ZPowerEvalRow{i} (z : ℝ) : ℝ :=",
+            f"  {balanced_sum(terms)}",
+            "",
+            "set_option maxHeartbeats 2000000 in",
+            f"lemma lrLowW{n}BernsteinRow{i}_eq_power (z : ℝ) :",
+            f"    lrLowW{n}BernsteinRow{i} z = lrLowW{n}ZPowerEvalRow{i} z := by",
+        ])
+        if not terms:
+            blocks.append(
+                f"  simp [lrLowW{n}BernsteinRow{i}, lrLowW{n}ZPowerEvalRow{i}]"
+            )
+        else:
+            blocks.extend([
+                f"  unfold lrLowW{n}BernsteinRow{i} lrLowW{n}ZPowerEvalRow{i} bernsteinBasis",
+                "  norm_num [Nat.choose]",
+                "  ring",
+            ])
+
+    row_terms = [
+        f"lrLowW{n}ZPowerEvalRow{i} z * bernsteinBasis 67 {i} v"
+        for i in range(68)
+    ]
+    blocks.extend([
+        "",
+        f"noncomputable def lrLowW{n}ZPowerRowsEval (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(row_terms)}",
+        "",
+        f"lemma lrLowW{n}Bernstein_eq_zPowerRows (v z : ℝ) :",
+        f"    lrLowW{n}Bernstein v z = lrLowW{n}ZPowerRowsEval v z := by",
+        f"  unfold lrLowW{n}Bernstein lrLowW{n}ZPowerRowsEval",
+    ])
+    for start in range(0, 68, 8):
+        names = " ".join(
+            f"lrLowW{n}BernsteinRow{i}_eq_power"
+            for i in range(start, min(start + 8, 68))
+        )
+        blocks.append(f"  rw [{names.replace(' ', ', ')}]")
+
+    for s in range(26):
+        q_terms = [
+            f"{lean_rat(q_rows[i][s])} * bernsteinBasis 67 {i} v"
+            for i in range(68) if q_rows[i][s]
+        ]
+        p_terms = [
+            f"{lean_rat(poly.coefficient(r, s))} * v ^ {r}"
+            for r in range(68) if poly.coefficient(r, s)
+        ]
+        blocks.extend([
+            "",
+            f"noncomputable def lrLowW{n}ZPowerEvalCol{s} (v : ℝ) : ℝ :=",
+            f"  {balanced_sum(q_terms)}",
+            "",
+            f"noncomputable def lrLowW{n}VPowerEvalCol{s} (v : ℝ) : ℝ :=",
+            f"  {balanced_sum(p_terms)}",
+        ])
+
+    column_terms = [
+        f"lrLowW{n}ZPowerEvalCol{s} v * z ^ {s}" for s in range(26)
+    ]
+    target_terms = [
+        f"lrLowW{n}VPowerEvalCol{s} v * z ^ {s}" for s in range(26)
+    ]
+    blocks.extend([
+        "",
+        f"noncomputable def lrLowW{n}ZPowerColsEval (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(column_terms)}",
+        "",
+        f"noncomputable def lrLowW{n}PowerEval (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(target_terms)}",
+        "",
+        "set_option maxHeartbeats 8000000 in",
+        f"lemma lrLowW{n}ZPowerRows_eq_cols (v z : ℝ) :",
+        f"    lrLowW{n}ZPowerRowsEval v z = lrLowW{n}ZPowerColsEval v z := by",
+        f"  unfold lrLowW{n}ZPowerRowsEval lrLowW{n}ZPowerColsEval",
+    ])
+    blocks.extend(
+        f"  unfold lrLowW{n}ZPowerEvalRow{i}" for i in range(68)
+    )
+    blocks.extend(
+        f"  unfold lrLowW{n}ZPowerEvalCol{s}" for s in range(26)
+    )
+    blocks.append("  ring")
+
+    for s in range(26):
+        q_terms = [q_rows[i][s] for i in range(68) if q_rows[i][s]]
+        p_terms = [
+            poly.coefficient(r, s) for r in range(68)
+            if poly.coefficient(r, s)
+        ]
+        blocks.extend([
+            "",
+            "set_option maxHeartbeats 8000000 in",
+            f"lemma lrLowW{n}ZPowerEvalCol{s}_eq_power (v : ℝ) :",
+            f"    lrLowW{n}ZPowerEvalCol{s} v = lrLowW{n}VPowerEvalCol{s} v := by",
+        ])
+        if not q_terms and not p_terms:
+            blocks.append(
+                f"  simp [lrLowW{n}ZPowerEvalCol{s}, lrLowW{n}VPowerEvalCol{s}]"
+            )
+        else:
+            blocks.extend([
+                f"  unfold lrLowW{n}ZPowerEvalCol{s} lrLowW{n}VPowerEvalCol{s} bernsteinBasis",
+                "  norm_num [Nat.choose]",
+                "  ring",
+            ])
+
+    blocks.extend([
+        "",
+        f"lemma lrLowW{n}ZPowerCols_eq_power (v z : ℝ) :",
+        f"    lrLowW{n}ZPowerColsEval v z = lrLowW{n}PowerEval v z := by",
+        f"  unfold lrLowW{n}ZPowerColsEval lrLowW{n}PowerEval",
+    ])
+    for start in range(0, 26, 8):
+        names = " ".join(
+            f"lrLowW{n}ZPowerEvalCol{s}_eq_power"
+            for s in range(start, min(start + 8, 26))
+        )
+        blocks.append(f"  rw [{names.replace(' ', ', ')}]")
+
+    blocks.extend([
+        "",
+        f"theorem lrLowW{n}Bernstein_eq_power (v z : ℝ) :",
+        f"    lrLowW{n}Bernstein v z = lrLowW{n}PowerEval v z := by",
+        f"  rw [lrLowW{n}Bernstein_eq_zPowerRows, lrLowW{n}ZPowerRows_eq_cols,",
+        f"    lrLowW{n}ZPowerCols_eq_power]",
+        "",
+        "end CourtadeKumar",
+    ])
+
+    print("*** Begin Patch")
+    print(f"*** Add File: {target}")
+    for line in blocks:
+        print("+" + line)
+    print("*** End Patch")
+
+
 def emit_endpoint_lean(poly):
     quotient = endpoint_quotient(poly)
     bernstein = univariate_bernstein(quotient)
@@ -385,6 +642,8 @@ def main():
     parser.add_argument("--w-head", type=int, choices=range(1, 6))
     parser.add_argument("--emit-w-rows", nargs=3, metavar=("N", "START", "STOP"))
     parser.add_argument("--emit-w-total", type=int, choices=range(1, 6))
+    parser.add_argument("--emit-w-power-data", type=int, choices=range(1, 6))
+    parser.add_argument("--emit-w-power-proof", type=int, choices=range(1, 6))
     parser.add_argument("--target")
     args = parser.parse_args()
     if args.emit_w_rows is not None:
@@ -397,6 +656,16 @@ def main():
         if args.target is None:
             parser.error("--emit-w-total requires --target")
         emit_w_total_patch(args.emit_w_total, args.target)
+        return
+    if args.emit_w_power_data is not None:
+        if args.target is None:
+            parser.error("--emit-w-power-data requires --target")
+        emit_w_power_data_patch(args.emit_w_power_data, args.target)
+        return
+    if args.emit_w_power_proof is not None:
+        if args.target is None:
+            parser.error("--emit-w-power-proof requires --target")
+        emit_w_power_proof_patch(args.emit_w_power_proof, args.target)
         return
     poly = reconstruct_l1_numerator()
     assert poly.degree == (41, 12)
