@@ -344,4 +344,20 @@ theorem lrFlowNumeratorP_nonneg_of_J_pos_target_of_U_T
       mul_nonneg hk.le (sub_nonneg.mpr hpπ)
     nlinarith
 
+/-- Once `(U)` and `(T)` are certified, all three sign charts combine into
+one pointwise flow-numerator theorem. -/
+theorem lrFlowNumeratorP_nonneg_target_of_U_T
+    {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t)
+    (hU : 0 ≤ lrFlowUReserve R v t)
+    (hT : 0 ≤ lrFlowTReserve R v t) :
+    0 ≤ lrFlowNumeratorP R p v t := by
+  rcases lt_trichotomy (lrFlowJ R v t) 0 with hJneg | hJzero | hJpos
+  · exact lrFlowNumeratorP_nonneg_of_J_neg_target hR hp hv ht htarget hJneg
+  · exact lrFlowNumeratorP_nonneg_of_J_eq_zero_physical hR hv ht hJzero
+  · exact lrFlowNumeratorP_nonneg_of_J_pos_target_of_U_T
+      hR hp hv ht htarget hJpos hU hT
+
 end CourtadeKumar
