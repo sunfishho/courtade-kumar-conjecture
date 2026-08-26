@@ -215,8 +215,8 @@ def reconstruct_w_numerator(n):
     )
 
 
-def reconstruct_u_tail_numerator():
-    """Numerator of the uniform U-tail minorant over its audited base."""
+def reconstruct_u_tail_components():
+    """Five semantic pieces of the uniform U-tail numerator."""
     c = low_shape_components()
     vp1 = c["vp1"]
     vp2 = c["vp2"]
@@ -231,10 +231,8 @@ def reconstruct_u_tail_numerator():
 
     phi_head = sum(a(m) * x**m for m in range(1, 13))
     log_two_lower = F(693147, 10**6)
-    j_terms = (
-        2 * (log_two_lower - phi_head) * base
-        - 40 * a(13) * x**13 * vp1**2 * vp2**9 * dxi * geometric_num
-    )
+    j_head = 2 * (log_two_lower - phi_head) * base
+    j_tail = -40 * a(13) * x**13 * vp1**2 * vp2**9 * dxi * geometric_num
 
     beta_num = sum(
         F(2, 2 * k + 1) * v ** (2 * k + 1) * vp2 ** (8 - 2 * k)
@@ -258,7 +256,13 @@ def reconstruct_u_tail_numerator():
         + vp1 * vp2**9 * dx * dxi * l_div_v
         + F(20, 26) * vp1 * vp2**9 * dx * v**25 * x**13
     )
-    return j_terms + lower_a_terms + h_term + upper_a_term
+    return (j_head, j_tail, lower_a_terms, h_term, upper_a_term)
+
+
+def reconstruct_u_tail_numerator():
+    """Numerator of the uniform U-tail minorant over its audited base."""
+    j_head, j_tail, lower_a_terms, h_term, upper_a_term = reconstruct_u_tail_components()
+    return j_head + j_tail + lower_a_terms + h_term + upper_a_term
 
 
 def tensor_bernstein(poly):
@@ -893,6 +897,102 @@ def emit_u_tail_power_patch(target):
     print("*** End Patch")
 
 
+def emit_u_tail_semantic_power_patch(target):
+    """Emit a componentwise kernel bridge from the semantic numerator."""
+    components = reconstruct_u_tail_components()
+    names = ["JHead", "JTail", "ALower", "H", "AUpper"]
+    blocks = [
+        "import InformationTheory.CourtadeKumar.LRLowShapeUTailPower",
+        "", "/-! Componentwise power reconstruction of the semantic U-tail numerator. -/",
+        "", "open scoped BigOperators", "", "namespace CourtadeKumar", "",
+        "noncomputable def lrLowUTailGeometricNumerator (v z : ℝ) : ℝ :=",
+        "  ∑ j ∈ Finset.range 6, (17 * v ^ 2 * z) ^ j * 20 ^ (5 - j)", "",
+        "noncomputable def lrLowWLDivVNumerator (v x : ℝ) : ℝ :=",
+        "  ∑ k ∈ Finset.range 12,",
+        "    v ^ (2 * (k + 1) - 1) * x ^ (k + 1) / (2 * (k + 1))", "",
+        "noncomputable def lrLowWBetaUpperDivVNumerator (v : ℝ) : ℝ :=",
+        "  lrLowWBetaDivVNumerator v * (1 + v) + v ^ 10 / 22", "",
+        "noncomputable def lrLowUTailJHeadPolynomial (v z : ℝ) : ℝ :=",
+        "  let x := (17 / 20 : ℝ) * z",
+        "  let dx := 20 - 17 * z",
+        "  let dxi := 20 - 17 * v ^ 2 * z",
+        "  let geom := lrLowUTailGeometricNumerator v z",
+        "  let base := (1 + v) ^ 2 * (2 + v) ^ 9 * dx * dxi * geom",
+        "  2 * ((693147 : ℝ) / 1000000 -",
+        "    ∑ k ∈ Finset.range 12, lrLowA (k + 1) * x ^ (k + 1)) * base", "",
+        "noncomputable def lrLowUTailJTailPolynomial (v z : ℝ) : ℝ :=",
+        "  let x := (17 / 20 : ℝ) * z",
+        "  let dxi := 20 - 17 * v ^ 2 * z",
+        "  let geom := lrLowUTailGeometricNumerator v z",
+        "  (-40 : ℝ) * lrLowA 13 * x ^ 13 * (1 + v) ^ 2 * (2 + v) ^ 9 * dxi * geom", "",
+        "noncomputable def lrLowUTailALowerPolynomial (v z : ℝ) : ℝ :=",
+        "  let x := (17 / 20 : ℝ) * z",
+        "  let dx := 20 - 17 * z",
+        "  let dxi := 20 - 17 * v ^ 2 * z",
+        "  let geom := lrLowUTailGeometricNumerator v z",
+        "  (1 - v) * (lrLowWBetaDivVNumerator v +",
+        "    lrLowWLDivVNumerator v x * (2 + v) ^ 9) *",
+        "    ((1 + v) ^ 2 * dx * dxi * geom)", "",
+        "noncomputable def lrLowUTailHPolynomial (v z : ℝ) : ℝ :=",
+        "  let dx := 20 - 17 * z",
+        "  let dxi := 20 - 17 * v ^ 2 * z",
+        "  let geom := lrLowUTailGeometricNumerator v z",
+        "  (-(4 + 2 * v)) * lrLowBnUpper 6 * (1 + v) * (2 + v) ^ 9 *",
+        "    dx * dxi * geom", "",
+        "noncomputable def lrLowUTailAUpperPolynomial (v z : ℝ) : ℝ :=",
+        "  let x := (17 / 20 : ℝ) * z",
+        "  let dx := 20 - 17 * z",
+        "  let dxi := 20 - 17 * v ^ 2 * z",
+        "  (-(20 : ℝ) ^ 5) * (lrLowWBetaUpperDivVNumerator v * dx * dxi +",
+        "    (1 + v) * (2 + v) ^ 9 * dx * dxi * lrLowWLDivVNumerator v x +",
+        "    (20 / 26 : ℝ) * (1 + v) * (2 + v) ^ 9 * dx * v ^ 25 * x ^ 13)", "",
+        "noncomputable def lrLowUTailPolynomial (v z : ℝ) : ℝ :=",
+        "  lrLowUTailJHeadPolynomial v z + lrLowUTailJTailPolynomial v z +",
+        "    lrLowUTailALowerPolynomial v z + lrLowUTailHPolynomial v z +",
+        "    lrLowUTailAUpperPolynomial v z",
+    ]
+    for name, poly in zip(names, components):
+        terms = [
+            f"{lean_rat(q)} * v ^ {i} * z ^ {j}"
+            for (i, j), q in sorted(poly.terms.items())
+        ]
+        blocks.extend([
+            "", "set_option maxHeartbeats 12000000 in",
+            "set_option maxRecDepth 100000 in",
+            f"noncomputable def lrLowUTail{name}PowerEval (v z : ℝ) : ℝ :=",
+            f"  {balanced_sum(terms)}", "", "set_option maxHeartbeats 12000000 in",
+            "set_option maxRecDepth 100000 in",
+            f"lemma lrLowUTail{name}Polynomial_eq_power (v z : ℝ) :",
+            f"    lrLowUTail{name}Polynomial v z = lrLowUTail{name}PowerEval v z := by",
+            f"  unfold lrLowUTail{name}PowerEval",
+            f"  simp only [lrLowUTail{name}Polynomial, lrLowUTailGeometricNumerator,",
+            "    lrLowWBetaUpperDivVNumerator, lrLowWBetaDivVNumerator,",
+            "    lrLowWLDivVNumerator, lrLowBnUpper, lrLowA, Finset.sum_range_succ]",
+            "  norm_num [Finset.sum_range_succ]", "  ring",
+        ])
+    blocks.extend([
+        "", "set_option maxHeartbeats 12000000 in", "set_option maxRecDepth 100000 in",
+        "lemma lrLowUTailPolynomial_eq_power (v z : ℝ) :",
+        "    lrLowUTailPolynomial v z = lrLowUTailPowerEval v z := by",
+        "  unfold lrLowUTailPolynomial lrLowUTailPowerEval",
+        "  rw [lrLowUTailJHeadPolynomial_eq_power, lrLowUTailJTailPolynomial_eq_power,",
+        "    lrLowUTailALowerPolynomial_eq_power, lrLowUTailHPolynomial_eq_power,",
+        "    lrLowUTailAUpperPolynomial_eq_power]",
+        "  unfold lrLowUTailJHeadPowerEval lrLowUTailJTailPowerEval",
+        "    lrLowUTailALowerPowerEval lrLowUTailHPowerEval lrLowUTailAUpperPowerEval",
+    ])
+    blocks.extend(
+        "    " + " ".join(f"lrLowUTailVPowerEvalCol{j}" for j in range(start, min(start + 5, 20)))
+        for start in range(0, 20, 5)
+    )
+    blocks.extend(["  ring", "", "end CourtadeKumar"])
+    print("*** Begin Patch")
+    print(f"*** Add File: {target}")
+    for line in blocks:
+        print("+" + line)
+    print("*** End Patch")
+
+
 def emit_endpoint_lean(poly):
     quotient = endpoint_quotient(poly)
     bernstein = univariate_bernstein(quotient)
@@ -916,6 +1016,7 @@ def main():
     parser.add_argument("--u-tail", action="store_true")
     parser.add_argument("--emit-u-tail-certificate", action="store_true")
     parser.add_argument("--emit-u-tail-power", action="store_true")
+    parser.add_argument("--emit-u-tail-semantic-power", action="store_true")
     args = parser.parse_args()
     if args.emit_w_rows is not None:
         if args.target is None:
@@ -965,6 +1066,11 @@ def main():
         if args.target is None:
             parser.error("--emit-u-tail-power requires --target")
         emit_u_tail_power_patch(args.target)
+        return
+    if args.emit_u_tail_semantic_power:
+        if args.target is None:
+            parser.error("--emit-u-tail-semantic-power requires --target")
+        emit_u_tail_semantic_power_patch(args.target)
         return
     poly = reconstruct_l1_numerator()
     assert poly.degree == (41, 12)
