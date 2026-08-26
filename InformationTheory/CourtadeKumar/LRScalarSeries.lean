@@ -36,7 +36,7 @@ lemma lrBScalarCoeff_eq_components
 
 theorem lrBKernelCoeff_hasSum
     {R y : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
-    (hy : y ∈ Ioo (0 : ℝ) 1) :
+    (hy : y ∈ Ioc (0 : ℝ) 1) :
     HasSum (fun n : ℕ ↦ lrBKernelCoeff R n * (y ^ 2) ^ n)
       (lrBKernelK R y) := by
   let Q : ℝ := R * y ^ 2
@@ -45,9 +45,9 @@ theorem lrBKernelCoeff_hasSum
     · dsimp [Q]
       exact mul_pos hR.1 (sq_pos_of_pos hy.1)
     · dsimp [Q]
-      have hySq : y ^ 2 < 1 := by nlinarith [hy.1, hy.2]
-      nlinarith [mul_lt_mul_of_pos_left hySq hR.1,
-        mul_lt_mul_of_pos_right hR.2 (sq_pos_of_pos hy.1)]
+      have hySq : y ^ 2 ≤ 1 := pow_le_one₀ hy.1.le hy.2
+      exact lt_of_le_of_lt (mul_le_mul_of_nonneg_left hySq hR.1.le)
+        (by simpa using hR.2)
   have hPsi := (topPsiDeriv_hasSum hQ).mul_left (1 + R)
   have hGeom := (hasSum_geometric_of_lt_one hQ.1.le hQ.2).mul_left ((1 - R) / 2)
   have hCombined := hPsi.add hGeom
@@ -75,15 +75,17 @@ theorem lrBKernelCoeff_hasSum
 
 theorem lrBLFullCoeff_hasSum
     {R y : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
-    (hy : y ∈ Ioo (0 : ℝ) 1) :
+    (hy : y ∈ Ioc (0 : ℝ) 1) :
     HasSum (fun n : ℕ ↦ lrBLFullCoeff R n * (y ^ 2) ^ n)
       (lrL (Real.sqrt R * y)) := by
   have hsqrtR := lrB_sqrt_mem_Ioo hR
   have hz : Real.sqrt R * y ∈ Ioo (-1 : ℝ) 1 := by
     constructor
     · nlinarith [mul_pos hsqrtR.1 hy.1]
-    · nlinarith [mul_lt_mul_of_pos_right hsqrtR.2 hy.1,
-        mul_lt_mul_of_pos_left hy.2 hsqrtR.1]
+    · calc
+        Real.sqrt R * y ≤ Real.sqrt R * 1 :=
+          mul_le_mul_of_nonneg_left hy.2 hsqrtR.1.le
+        _ < 1 := by simpa using hsqrtR.2
   have hL := lrL_hasSum hz
   rw [← hasSum_nat_add_iff' 1]
   convert hL using 1
@@ -96,7 +98,7 @@ theorem lrBLFullCoeff_hasSum
 
 theorem lrBCorrectionCoeff_hasSum
     {R X : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
-    (hX : X ∈ Ioo (0 : ℝ) 1) :
+    (hX : X ∈ Ioc (0 : ℝ) 1) :
     HasSum (fun n : ℕ ↦ lrBCorrectionCoeff R n * X ^ n)
       (R * X * (1 - X) / (2 * (1 - R * X))) := by
   let Q : ℝ := R * X
@@ -105,8 +107,8 @@ theorem lrBCorrectionCoeff_hasSum
     · dsimp [Q]
       exact mul_pos hR.1 hX.1
     · dsimp [Q]
-      nlinarith [mul_lt_mul_of_pos_right hR.2 hX.1,
-        mul_lt_mul_of_pos_left hX.2 hR.1]
+      exact lt_of_le_of_lt
+        (mul_le_mul_of_nonneg_left hX.2 hR.1.le) (by simpa using hR.2)
   have hGeom := hasSum_geometric_of_lt_one hQ.1.le hQ.2
   let a : ℕ → ℝ := fun n ↦ R ^ (n + 1) * X ^ (n + 1) / 2
   let b : ℕ → ℝ := fun n ↦ R ^ (n + 1) * X ^ (n + 2) / 2
@@ -150,13 +152,13 @@ theorem lrBCorrectionCoeff_hasSum
 
 theorem lrBScalarCoeff_hasSum
     {R y : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
-    (hy : y ∈ Ioo (0 : ℝ) 1) :
+    (hy : y ∈ Ioc (0 : ℝ) 1) :
     HasSum (fun n : ℕ ↦ lrBScalarCoeff R n * (y ^ 2) ^ n)
       (lrBScalarReserve R y) := by
   have hK := (lrBKernelCoeff_hasSum hR hy).mul_left (lrBGamma R)
   have hL := lrBLFullCoeff_hasSum hR hy
-  have hX : y ^ 2 ∈ Ioo (0 : ℝ) 1 :=
-    ⟨sq_pos_of_pos hy.1, by nlinarith [hy.1, hy.2]⟩
+  have hX : y ^ 2 ∈ Ioc (0 : ℝ) 1 :=
+    ⟨sq_pos_of_pos hy.1, pow_le_one₀ hy.1.le hy.2⟩
   have hC := lrBCorrectionCoeff_hasSum hR hX
   have hLog : HasSum (fun n : ℕ ↦
       (if n = 0 then Real.log 2 else 0) * (y ^ 2) ^ n) (Real.log 2) := by
@@ -171,5 +173,58 @@ theorem lrBScalarCoeff_hasSum
   · funext n
     rw [lrBScalarCoeff_eq_components hR.1.ne' n]
     ring
+
+/-- The scalar reserve is nonnegative throughout the closed comparison interval.
+
+The coefficient signs say that the constant and linear coefficients are
+nonnegative while every coefficient of degree at least two is nonpositive.
+Consequently the series lies above the chord joining its values at `X = 0`
+and `X = 1`, where `X = y²`. -/
+theorem lrBScalarReserve_nonneg
+    {R y : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hy : y ∈ Ioc (0 : ℝ) 1) :
+    0 ≤ lrBScalarReserve R y := by
+  let X : ℝ := y ^ 2
+  have hX : X ∈ Ioc (0 : ℝ) 1 := by
+    exact ⟨sq_pos_of_pos hy.1, pow_le_one₀ hy.1.le hy.2⟩
+  have hY : HasSum (fun n : ℕ ↦ lrBScalarCoeff R n * X ^ n)
+      (lrBScalarReserve R y) := by
+    simpa [X] using lrBScalarCoeff_hasSum hR hy
+  have hOne : HasSum (fun n : ℕ ↦ lrBScalarCoeff R n)
+      (lrBScalarReserve R 1) := by
+    simpa using lrBScalarCoeff_hasSum hR
+      (show (1 : ℝ) ∈ Ioc (0 : ℝ) 1 by norm_num)
+  have hDiff := hY.sub (hOne.mul_left X)
+  have hTail : HasSum
+      (fun n : ℕ ↦
+        (lrBScalarCoeff R (n + 1) * X ^ (n + 1) -
+          X * lrBScalarCoeff R (n + 1)))
+      ((lrBScalarReserve R y - X * lrBScalarReserve R 1) -
+        (lrBScalarCoeff R 0 - X * lrBScalarCoeff R 0)) := by
+    simpa using (hasSum_nat_add_iff' 1).2 hDiff
+  have hTailNonneg :
+      0 ≤ (lrBScalarReserve R y - X * lrBScalarReserve R 1) -
+        (lrBScalarCoeff R 0 - X * lrBScalarCoeff R 0) := by
+    apply hTail.nonneg
+    intro n
+    rcases n with _ | n
+    · simp [mul_assoc, mul_comm]
+    · have hcoeff : lrBScalarCoeff R (n + 2) ≤ 0 :=
+        lrBScalarCoeff_nonpos_of_two_le hR (by omega)
+      have hpow : X ^ (n + 2) ≤ X := by
+        simpa using
+          (pow_le_pow_of_le_one hX.1.le hX.2 (show 1 ≤ n + 2 by omega))
+      have hprod : 0 ≤ lrBScalarCoeff R (n + 2) * (X ^ (n + 2) - X) :=
+        mul_nonneg_of_nonpos_of_nonpos hcoeff (sub_nonpos.mpr hpow)
+      convert hprod using 1
+      ring
+  have hChordNonneg :
+      0 ≤ X * lrBScalarReserve R 1 +
+        lrBScalarCoeff R 0 * (1 - X) := by
+    exact add_nonneg
+      (mul_nonneg hX.1.le (lrBScalarReserve_one_nonneg hR))
+      (mul_nonneg (lrBScalarCoeff_zero_nonneg hR)
+        (sub_nonneg.mpr hX.2))
+  nlinarith
 
 end CourtadeKumar
