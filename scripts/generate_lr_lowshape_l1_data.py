@@ -215,6 +215,52 @@ def reconstruct_w_numerator(n):
     )
 
 
+def reconstruct_u_tail_numerator():
+    """Numerator of the uniform U-tail minorant over its audited base."""
+    c = low_shape_components()
+    vp1 = c["vp1"]
+    vp2 = c["vp2"]
+    x = c["x"]
+    xi = c["xi"]
+    dx = 20 - 17 * z
+    dxi = c["denominator_xi"]
+    geometric_num = sum(
+        (17 * v**2 * z) ** j * 20 ** (5 - j) for j in range(6)
+    )
+    base = vp1**2 * vp2**9 * dx * dxi * geometric_num
+
+    phi_head = sum(a(m) * x**m for m in range(1, 13))
+    log_two_lower = F(693147, 10**6)
+    j_terms = (
+        2 * (log_two_lower - phi_head) * base
+        - 40 * a(13) * x**13 * vp1**2 * vp2**9 * dxi * geometric_num
+    )
+
+    beta_num = sum(
+        F(2, 2 * k + 1) * v ** (2 * k + 1) * vp2 ** (8 - 2 * k)
+        for k in range(5)
+    )
+    beta_div_v = Poly({(i - 1, j): value for (i, j), value in beta_num.terms.items()})
+    l_div_v = sum(F(1, 2 * r) * v ** (2 * r - 1) * x**r
+                  for r in range(1, 13))
+    lower_a_terms = (one - v) * (beta_div_v + l_div_v * vp2**9) * (
+        vp1**2 * dx * dxi * geometric_num
+    )
+
+    b6_upper = F(693148, 10**6) - sum(a(m) for m in range(1, 7))
+    h_term = -(4 + 2 * v) * b6_upper * vp1 * vp2**9 * dx * dxi * geometric_num
+
+    beta_upper_div_v = Poly({
+        (i - 1, j): value for (i, j), value in c["beta_upper_num"].terms.items()
+    })
+    upper_a_term = -20**5 * (
+        beta_upper_div_v * dx * dxi
+        + vp1 * vp2**9 * dx * dxi * l_div_v
+        + F(20, 26) * vp1 * vp2**9 * dx * v**25 * x**13
+    )
+    return j_terms + lower_a_terms + h_term + upper_a_term
+
+
 def tensor_bernstein(poly):
     degree_v, degree_z = poly.degree
     rows = []
@@ -691,6 +737,162 @@ def emit_w_certificate_patch(n, target):
     print("*** End Patch")
 
 
+def emit_u_tail_certificate_patch(target):
+    poly = reconstruct_u_tail_numerator()
+    degree_v, degree_z = poly.degree
+    rows = tensor_bernstein(poly)
+    blocks = [
+        "import InformationTheory.CourtadeKumar.LRLowShapeUTail",
+        "",
+        "/-! Exact tensor-Bernstein certificate for the uniform `n ≥ 6`",
+        "low-shape U-tail minorant. -/",
+        "",
+        "open Set",
+        "namespace CourtadeKumar",
+    ]
+    for i, row in enumerate(rows):
+        terms = [
+            f"{lean_rat(q)} * bernsteinBasis {degree_z} {j} z"
+            for j, q in enumerate(row) if q
+        ]
+        blocks.extend([
+            "", f"noncomputable def lrLowUTailBernsteinRow{i} (z : ℝ) : ℝ :=",
+            f"  {balanced_sum(terms)}", "",
+            f"lemma lrLowUTailBernsteinRow{i}_nonneg",
+            "    {z : ℝ} (hz : z ∈ Icc (0 : ℝ) 1) :",
+            f"    0 ≤ lrLowUTailBernsteinRow{i} z := by",
+            f"  unfold lrLowUTailBernsteinRow{i}",
+            "  repeat' apply add_nonneg",
+            "  all_goals exact mul_nonneg (by norm_num) (bernsteinBasis_nonneg hz)",
+        ])
+    total_terms = [
+        f"lrLowUTailBernsteinRow{i} z * bernsteinBasis {degree_v} {i} v"
+        for i in range(degree_v + 1)
+    ]
+    blocks.extend([
+        "", "noncomputable def lrLowUTailBernstein (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(total_terms)}", "",
+        "set_option maxHeartbeats 2000000 in",
+        "lemma lrLowUTailBernstein_nonneg",
+        "    {v z : ℝ} (hv : v ∈ Icc (0 : ℝ) 1) (hz : z ∈ Icc (0 : ℝ) 1) :",
+        "    0 ≤ lrLowUTailBernstein v z := by",
+    ])
+    for i in range(degree_v + 1):
+        blocks.append(
+            f"  have h{i} : 0 ≤ lrLowUTailBernsteinRow{i} z * "
+            f"bernsteinBasis {degree_v} {i} v := mul_nonneg "
+            f"(lrLowUTailBernsteinRow{i}_nonneg hz) (bernsteinBasis_nonneg hv)"
+        )
+    names = ", ".join(f"h{i}" for i in range(degree_v + 1))
+    blocks.extend([
+        "  unfold lrLowUTailBernstein",
+        f"  positivity [{names}]", "", "end CourtadeKumar",
+    ])
+    print("*** Begin Patch")
+    print(f"*** Add File: {target}")
+    for line in blocks:
+        print("+" + line)
+    print("*** End Patch")
+
+
+def emit_u_tail_power_patch(target):
+    poly = reconstruct_u_tail_numerator()
+    degree_v, degree_z = poly.degree
+    bernstein_rows = tensor_bernstein(poly)
+    q_rows = [bernstein_to_power(row) for row in bernstein_rows]
+    blocks = [
+        "import InformationTheory.CourtadeKumar.LRLowShapeUTailCertificate",
+        "", "/-! Separable exact reconstruction of the U-tail tensor certificate. -/",
+        "", "namespace CourtadeKumar",
+    ]
+    for i, row in enumerate(q_rows):
+        terms = [f"{lean_rat(q)} * z ^ {s}" for s, q in enumerate(row) if q]
+        blocks.extend([
+            "", f"noncomputable def lrLowUTailZPowerEvalRow{i} (z : ℝ) : ℝ :=",
+            f"  {balanced_sum(terms)}", "", "set_option maxHeartbeats 2000000 in",
+            f"lemma lrLowUTailBernsteinRow{i}_eq_power (z : ℝ) :",
+            f"    lrLowUTailBernsteinRow{i} z = lrLowUTailZPowerEvalRow{i} z := by",
+            f"  unfold lrLowUTailBernsteinRow{i} lrLowUTailZPowerEvalRow{i} bernsteinBasis",
+            "  norm_num [Nat.choose]", "  ring",
+        ])
+    row_terms = [
+        f"lrLowUTailZPowerEvalRow{i} z * bernsteinBasis {degree_v} {i} v"
+        for i in range(degree_v + 1)
+    ]
+    blocks.extend([
+        "", "noncomputable def lrLowUTailZPowerRowsEval (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(row_terms)}", "",
+        "lemma lrLowUTailBernstein_eq_zPowerRows (v z : ℝ) :",
+        "    lrLowUTailBernstein v z = lrLowUTailZPowerRowsEval v z := by",
+        "  unfold lrLowUTailBernstein lrLowUTailZPowerRowsEval",
+    ])
+    for start in range(0, degree_v + 1, 8):
+        names = ", ".join(
+            f"lrLowUTailBernsteinRow{i}_eq_power"
+            for i in range(start, min(start + 8, degree_v + 1))
+        )
+        blocks.append(f"  rw [{names}]")
+    for s in range(degree_z + 1):
+        q_terms = [
+            f"{lean_rat(q_rows[i][s])} * bernsteinBasis {degree_v} {i} v"
+            for i in range(degree_v + 1) if q_rows[i][s]
+        ]
+        p_terms = [
+            f"{lean_rat(poly.coefficient(r, s))} * v ^ {r}"
+            for r in range(degree_v + 1) if poly.coefficient(r, s)
+        ]
+        blocks.extend([
+            "", f"noncomputable def lrLowUTailZPowerEvalCol{s} (v : ℝ) : ℝ :=",
+            f"  {balanced_sum(q_terms)}", "",
+            f"noncomputable def lrLowUTailVPowerEvalCol{s} (v : ℝ) : ℝ :=",
+            f"  {balanced_sum(p_terms)}",
+        ])
+    zcols = [f"lrLowUTailZPowerEvalCol{s} v * z ^ {s}" for s in range(degree_z + 1)]
+    pcols = [f"lrLowUTailVPowerEvalCol{s} v * z ^ {s}" for s in range(degree_z + 1)]
+    blocks.extend([
+        "", "noncomputable def lrLowUTailZPowerColsEval (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(zcols)}", "",
+        "noncomputable def lrLowUTailPowerEval (v z : ℝ) : ℝ :=",
+        f"  {balanced_sum(pcols)}", "", "set_option maxHeartbeats 8000000 in",
+        "lemma lrLowUTailZPowerRows_eq_cols (v z : ℝ) :",
+        "    lrLowUTailZPowerRowsEval v z = lrLowUTailZPowerColsEval v z := by",
+        "  unfold lrLowUTailZPowerRowsEval lrLowUTailZPowerColsEval",
+    ])
+    blocks.extend(f"  unfold lrLowUTailZPowerEvalRow{i}" for i in range(degree_v + 1))
+    blocks.extend(f"  unfold lrLowUTailZPowerEvalCol{s}" for s in range(degree_z + 1))
+    blocks.append("  ring")
+    for s in range(degree_z + 1):
+        blocks.extend([
+            "", "set_option maxHeartbeats 8000000 in",
+            f"lemma lrLowUTailZPowerEvalCol{s}_eq_power (v : ℝ) :",
+            f"    lrLowUTailZPowerEvalCol{s} v = lrLowUTailVPowerEvalCol{s} v := by",
+            f"  unfold lrLowUTailZPowerEvalCol{s} lrLowUTailVPowerEvalCol{s} bernsteinBasis",
+            "  norm_num [Nat.choose]", "  ring",
+        ])
+    blocks.extend([
+        "", "lemma lrLowUTailZPowerCols_eq_power (v z : ℝ) :",
+        "    lrLowUTailZPowerColsEval v z = lrLowUTailPowerEval v z := by",
+        "  unfold lrLowUTailZPowerColsEval lrLowUTailPowerEval",
+    ])
+    for start in range(0, degree_z + 1, 8):
+        names = ", ".join(
+            f"lrLowUTailZPowerEvalCol{s}_eq_power"
+            for s in range(start, min(start + 8, degree_z + 1))
+        )
+        blocks.append(f"  rw [{names}]")
+    blocks.extend([
+        "", "theorem lrLowUTailBernstein_eq_power (v z : ℝ) :",
+        "    lrLowUTailBernstein v z = lrLowUTailPowerEval v z := by",
+        "  rw [lrLowUTailBernstein_eq_zPowerRows, lrLowUTailZPowerRows_eq_cols,",
+        "    lrLowUTailZPowerCols_eq_power]", "", "end CourtadeKumar",
+    ])
+    print("*** Begin Patch")
+    print(f"*** Add File: {target}")
+    for line in blocks:
+        print("+" + line)
+    print("*** End Patch")
+
+
 def emit_endpoint_lean(poly):
     quotient = endpoint_quotient(poly)
     bernstein = univariate_bernstein(quotient)
@@ -711,6 +913,9 @@ def main():
     parser.add_argument("--emit-w-power-proof", type=int, choices=range(1, 6))
     parser.add_argument("--emit-w-certificate", type=int, choices=range(1, 6))
     parser.add_argument("--target")
+    parser.add_argument("--u-tail", action="store_true")
+    parser.add_argument("--emit-u-tail-certificate", action="store_true")
+    parser.add_argument("--emit-u-tail-power", action="store_true")
     args = parser.parse_args()
     if args.emit_w_rows is not None:
         if args.target is None:
@@ -737,6 +942,29 @@ def main():
         if args.target is None:
             parser.error("--emit-w-certificate requires --target")
         emit_w_certificate_patch(args.emit_w_certificate, args.target)
+        return
+    if args.u_tail:
+        tail_poly = reconstruct_u_tail_numerator()
+        rows = tensor_bernstein(tail_poly)
+        flat = [q for row in rows for q in row]
+        print("U tail degree", tail_poly.degree)
+        print("U tail monomials", len(tail_poly.terms))
+        print("U tail coefficients", len(flat))
+        print("U tail zeros", sum(q == 0 for q in flat))
+        print("U tail negatives", sum(q < 0 for q in flat))
+        positive = [(q, i, j) for i, row in enumerate(rows)
+                    for j, q in enumerate(row) if q > 0]
+        print("U tail minimum raw", min(positive))
+        return
+    if args.emit_u_tail_certificate:
+        if args.target is None:
+            parser.error("--emit-u-tail-certificate requires --target")
+        emit_u_tail_certificate_patch(args.target)
+        return
+    if args.emit_u_tail_power:
+        if args.target is None:
+            parser.error("--emit-u-tail-power requires --target")
+        emit_u_tail_power_patch(args.target)
         return
     poly = reconstruct_l1_numerator()
     assert poly.degree == (41, 12)
