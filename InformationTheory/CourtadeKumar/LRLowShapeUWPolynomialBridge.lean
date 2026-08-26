@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRLowShapeUW1Power
+import InformationTheory.CourtadeKumar.LRLowShapeUW2Power
 
 /-! A reusable denominator-clearing bridge for the five finite low-shape
 `𝓦ₙ` certificates.  The definitions below are polynomial in `v` and `x`;
@@ -259,6 +260,92 @@ theorem lrLowSecondScalar_one_nonneg
     (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
   have hbridge := lrLowWMinorant_le_second_scalar hv ht
     (n := 1) (by norm_num)
+  norm_num at hbridge ⊢
+  exact hminorant.trans hbridge
+
+set_option maxHeartbeats 12000000 in
+set_option maxRecDepth 100000 in
+lemma lrLowWPolynomial_two_eq_power (v z : ℝ) :
+    lrLowWPolynomial v ((17 / 20 : ℝ) * z) 2 =
+      lrLowW2PowerEval v z := by
+  unfold lrLowWPolynomial
+  unfold lrLowWGRadialNumerator lrLowWALowerRadialNumerator
+    lrLowWAUpperScaledNumerator lrLowWBetaUpperNumerator
+  unfold lrLowWBetaDivVNumerator lrLowWMinusLogNumerator
+    lrLowWBetaNumerator lrLowWRadialBase lrLowWXiDenominator
+  unfold lrLowH lrLowPhiPrefix lrLowBnUpper
+    lrLowPnLower lrLowL12 lrLowT lrLowA lrLowW2PowerEval
+  unfold lrLowW2VPowerEvalCol0 lrLowW2VPowerEvalCol1 lrLowW2VPowerEvalCol2 lrLowW2VPowerEvalCol3 lrLowW2VPowerEvalCol4 lrLowW2VPowerEvalCol5 lrLowW2VPowerEvalCol6 lrLowW2VPowerEvalCol7 lrLowW2VPowerEvalCol8 lrLowW2VPowerEvalCol9 lrLowW2VPowerEvalCol10 lrLowW2VPowerEvalCol11 lrLowW2VPowerEvalCol12 lrLowW2VPowerEvalCol13 lrLowW2VPowerEvalCol14 lrLowW2VPowerEvalCol15 lrLowW2VPowerEvalCol16 lrLowW2VPowerEvalCol17 lrLowW2VPowerEvalCol18 lrLowW2VPowerEvalCol19 lrLowW2VPowerEvalCol20 lrLowW2VPowerEvalCol21 lrLowW2VPowerEvalCol22 lrLowW2VPowerEvalCol23 lrLowW2VPowerEvalCol24 lrLowW2VPowerEvalCol25
+  norm_num [Finset.sum_range_succ]
+  ring
+
+lemma lrLowWMinorant_nonneg_of_polynomial_certificate
+    {v z P : ℝ} {n : ℕ} (hv : v ∈ Ioc (0 : ℝ) 1)
+    (hz : z ∈ Icc (0 : ℝ) 1)
+    (hpoly : lrLowWPolynomial v ((17 / 20 : ℝ) * z) n = P)
+    (hcertificate : 0 ≤ P) :
+    0 ≤ lrLowWMinorant v ((17 / 20 : ℝ) * z) n := by
+  have h1 : 1 + v ≠ 0 := by linarith [hv.1]
+  have h2 : 2 + v ≠ 0 := by linarith [hv.1]
+  have hvSq : v ^ 2 ≤ 1 := by
+    nlinarith [mul_nonneg hv.1.le (sub_nonneg.mpr hv.2)]
+  have hvz : v ^ 2 * z ≤ 1 := by
+    calc
+      v ^ 2 * z ≤ 1 * 1 := mul_le_mul hvSq hz.2 hz.1 (by norm_num)
+      _ = 1 := by norm_num
+  have hxiPos : 0 < 1 - v ^ 2 * ((17 / 20 : ℝ) * z) := by
+    nlinarith
+  have hxi : 1 - v ^ 2 * ((17 / 20 : ℝ) * z) ≠ 0 := hxiPos.ne'
+  have hproduct :
+      0 ≤ lrLowWMinorant v ((17 / 20 : ℝ) * z) n *
+        (lrLowWRadialBase v *
+          lrLowWXiDenominator v ((17 / 20 : ℝ) * z)) := by
+    rw [lrLowWMinorant_mul_base_eq_polynomial hv.1.ne' h1 h2 hxi,
+      hpoly]
+    exact hcertificate
+  have hradial : 0 < lrLowWRadialBase v := by
+    unfold lrLowWRadialBase
+    exact mul_pos (pow_pos (by linarith [hv.1]) _)
+      (pow_pos (by linarith [hv.1]) _)
+  have hden : 0 < lrLowWXiDenominator v ((17 / 20 : ℝ) * z) := by
+    unfold lrLowWXiDenominator
+    nlinarith
+  exact nonneg_of_mul_nonneg_left hproduct (mul_pos hradial hden)
+
+theorem lrLowWMinorant_two_nonneg
+    {v z : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1) (hz : z ∈ Icc (0 : ℝ) 1) :
+    0 ≤ lrLowWMinorant v ((17 / 20 : ℝ) * z) 2 := by
+  apply lrLowWMinorant_nonneg_of_polynomial_certificate hv hz
+    (lrLowWPolynomial_two_eq_power v z)
+  rw [← lrLowW2Bernstein_eq_power]
+  exact lrLowW2Bernstein_nonneg
+    (show v ∈ Icc (0 : ℝ) 1 from ⟨hv.1.le, hv.2⟩) hz
+
+theorem lrLowWMinorant_two_nonneg_of_sq_le
+    {v t : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1)
+    (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowWMinorant v (t ^ 2) 2 := by
+  have hz : (20 / 17 : ℝ) * t ^ 2 ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · positivity
+    · nlinarith
+  have h := lrLowWMinorant_two_nonneg hv hz
+  have hscale : (17 / 20 : ℝ) * ((20 / 17 : ℝ) * t ^ 2) = t ^ 2 := by
+    ring
+  rw [hscale] at h
+  exact h
+
+theorem lrLowSecondScalar_two_nonneg
+    {v t : ℝ} (hv : v ∈ Ioo (0 : ℝ) 1)
+    (ht : t ∈ Ioo (0 : ℝ) 1) (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowH (v ^ 2 * t ^ 2) 2 *
+          lrLowR v (t ^ 2) (lrGShape t v) 2 +
+        2 * (2 : ℝ) * (lrFlowBeta v + lrL (v * t)) *
+          lrLowEta v (t ^ 2) 2 := by
+  have hminorant := lrLowWMinorant_two_nonneg_of_sq_le
+    (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
+  have hbridge := lrLowWMinorant_le_second_scalar hv ht
+    (n := 2) (by norm_num)
   norm_num at hbridge ⊢
   exact hminorant.trans hbridge
 
