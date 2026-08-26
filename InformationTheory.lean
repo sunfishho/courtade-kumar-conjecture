@@ -72,6 +72,7 @@ import InformationTheory.CourtadeKumar.LRAbelPrefixIntegration
 import InformationTheory.CourtadeKumar.LRAbelPrefixEndpoint
 import InformationTheory.CourtadeKumar.LRAbelTailIntegral
 import InformationTheory.CourtadeKumar.LRAbelTailBound
+import InformationTheory.CourtadeKumar.LRAbelFirstPrefix
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
