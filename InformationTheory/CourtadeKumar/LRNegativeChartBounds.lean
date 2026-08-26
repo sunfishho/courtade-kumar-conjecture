@@ -119,4 +119,97 @@ theorem four_delta_le_lrFlowQ₀
   have hscaled := mul_le_mul_of_nonneg_left hfactor (sub_nonneg.mpr hR.2.le)
   nlinarith
 
+/-! The manuscript bounds the endpoint kernel by estimating every series
+coefficient.  That coefficient estimate is stronger than necessary.  The
+following endpoint-coordinate argument proves the required aggregate bound
+directly. -/
+
+lemma lrScalarEndpointUpper_le_quarter_aux
+    {z : ℝ} (hz : z ∈ Icc (0 : ℝ) 1) :
+    lrScalarEndpointUpper z ≤ z * (1 + 2 * z) / (1 + z) ^ 2 := by
+  have hz1 : 0 < 1 + z := by linarith [hz.1]
+  have hz2 : 0 < 2 + z := by linarith [hz.1]
+  unfold lrScalarEndpointUpper
+  rw [div_le_div_iff₀
+    (mul_pos (mul_pos (by norm_num) (by linarith : 0 < z + 1))
+      (by linarith : 0 < z + 2))
+    (sq_pos_of_pos hz1)]
+  have hfac : 0 ≤ z ^ 2 * (z + 1) * (6 - z - z ^ 2) :=
+    mul_nonneg (mul_nonneg (sq_nonneg z) (by linarith [hz.1]))
+      (by nlinarith [hz.1, hz.2])
+  ring_nf at hfac ⊢
+  nlinarith
+
+lemma two_mul_lrScalarLogRatio_le_neg_log
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    2 * lrScalarLogRatio z ≤ -Real.log z := by
+  have h := lrScalarLogLower_le_neg_log hz
+  have hr := (lrScalarLogRatio_mem_Ioo hz).1.le
+  unfold lrScalarLogLower at h
+  dsimp only at h
+  nlinarith [pow_nonneg hr 3]
+
+lemma lrWKernel_one_eq_endpoint_coordinates
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    lrWKernel R 1 =
+      Real.log (1 + lrBEndpointZ R) -
+        (lrBEndpointZ R) ^ 2 * (-Real.log (lrBEndpointZ R)) /
+          (1 - (lrBEndpointZ R) ^ 2) := by
+  have hz := lrBEndpointZ_mem_Ioo hR
+  have hzden : 1 - (lrBEndpointZ R) ^ 2 ≠ 0 := by
+    nlinarith [hz.1, hz.2]
+  have hsqrt := lrB_sqrt_mem_Ioo hR
+  rw [show lrWKernel R 1 = lrBDelta R -
+      (1 - R) * Real.artanh (Real.sqrt R) / (2 * Real.sqrt R) by
+    unfold lrWKernel lrBDelta
+    simp only [topPhi_one, mul_one]
+    ring]
+  rw [lrBDelta_eq_endpoint_coordinates hR,
+    lrBEndpointN_eq_coordinates hR]
+  have hzplus : 1 + lrBEndpointZ R ≠ 0 := by linarith [hz.1]
+  field_simp [hzden, hzplus]
+  ring
+
+/-- The endpoint kernel bound needed by the negative chart. -/
+theorem four_mul_lrWKernel_one_le_one_sub
+    {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
+    4 * lrWKernel R 1 ≤ 1 - R := by
+  let z := lrBEndpointZ R
+  have hz : z ∈ Ioo (0 : ℝ) 1 := lrBEndpointZ_mem_Ioo hR
+  have hzClosed : z ∈ Icc (0 : ℝ) 1 := ⟨hz.1.le, hz.2.le⟩
+  have hz1 : 0 < 1 + z := by linarith [hz.1]
+  have hzden : 0 < 1 - z ^ 2 := by nlinarith [hz.1, hz.2]
+  have hlog := log_one_add_le_lrScalarEndpointUpper hzClosed
+  have hupper := lrScalarEndpointUpper_le_quarter_aux hzClosed
+  have hell := two_mul_lrScalarLogRatio_le_neg_log hz
+  have hratio : lrScalarLogRatio z = (1 - z) / (1 + z) := rfl
+  have hterm : 2 * z ^ 2 / (1 + z) ^ 2 ≤
+      z ^ 2 * (-Real.log z) / (1 - z ^ 2) := by
+    rw [div_le_div_iff₀ (sq_pos_of_pos hz1) hzden]
+    rw [hratio] at hell
+    have hscaled := mul_le_mul_of_nonneg_left hell
+      (mul_nonneg (sq_nonneg z) (sq_nonneg (1 + z)))
+    convert hscaled using 1 <;> field_simp [hz1.ne'] <;> ring
+  have hW : lrWKernel R 1 ≤ z / (1 + z) ^ 2 := by
+    rw [lrWKernel_one_eq_endpoint_coordinates hR]
+    change Real.log (1 + z) - z ^ 2 * (-Real.log z) / (1 - z ^ 2) ≤ _
+    calc
+      Real.log (1 + z) - z ^ 2 * (-Real.log z) / (1 - z ^ 2) ≤
+          lrScalarEndpointUpper z - 2 * z ^ 2 / (1 + z) ^ 2 :=
+        sub_le_sub hlog hterm
+      _ ≤ z * (1 + 2 * z) / (1 + z) ^ 2 -
+          2 * z ^ 2 / (1 + z) ^ 2 := sub_le_sub_right hupper _
+      _ = z / (1 + z) ^ 2 := by
+        field_simp [hz1.ne']
+        ring
+  have hsCoord : 1 - R = 4 * z / (1 + z) ^ 2 := by
+    have hsqrtSq : (Real.sqrt R) ^ 2 = R := Real.sq_sqrt hR.1.le
+    have hplus : 1 + Real.sqrt R ≠ 0 := by positivity
+    unfold z lrBEndpointZ lrScalarLogRatio
+    field_simp [hplus]
+    nlinarith [hsqrtSq]
+  rw [hsCoord]
+  have hh := mul_le_mul_of_nonneg_left hW (show 0 ≤ (4 : ℝ) by norm_num)
+  convert hh using 1 <;> field_simp [hz1.ne'] <;> ring
+
 end CourtadeKumar
