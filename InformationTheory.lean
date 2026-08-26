@@ -32,6 +32,7 @@ import InformationTheory.CourtadeKumar.CapAuxDerivative
 import InformationTheory.CourtadeKumar.CapAuxConcavity
 import InformationTheory.CourtadeKumar.CapClosure
 import InformationTheory.CourtadeKumar.BernsteinCertificate
+import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
