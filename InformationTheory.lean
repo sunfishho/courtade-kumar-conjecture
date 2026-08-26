@@ -68,6 +68,7 @@ import InformationTheory.CourtadeKumar.LRAbelElementaryBounds
 import InformationTheory.CourtadeKumar.LRAbelPrefixDerivative
 import InformationTheory.CourtadeKumar.LRAbelPrefixCanonical
 import InformationTheory.CourtadeKumar.LRAbelPrefixDerivativeBound
+import InformationTheory.CourtadeKumar.LRAbelPrefixIntegration
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
