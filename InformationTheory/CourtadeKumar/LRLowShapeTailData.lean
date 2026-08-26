@@ -176,6 +176,25 @@ noncomputable def lrLowLHead (xi : ℝ) (n : ℕ) : ℝ :=
   ∑ k ∈ Finset.range (n - 1),
     xi ^ (n - (k + 1)) / (2 * ((n - (k + 1) : ℕ) : ℝ))
 
+lemma lrLowLHead_eq_prefix (xi : ℝ) (n : ℕ) :
+    lrLowLHead xi n =
+      ∑ k ∈ Finset.range (n - 1),
+        xi ^ (k + 1) / (2 * (k + 1)) := by
+  unfold lrLowLHead
+  rw [← Finset.sum_range_reflect
+    (fun k : ℕ ↦ xi ^ (k + 1) / (2 * (k + 1))) (n - 1)]
+  apply Finset.sum_congr rfl
+  intro k hk
+  have hklt := Finset.mem_range.mp hk
+  rw [show n - (k + 1) = (n - 1 - 1 - k) + 1 by omega]
+  norm_num only [Nat.cast_add, Nat.cast_one]
+
+lemma lrLowLHead_le_lrL_sqrt
+    {xi : ℝ} (hxi : xi ∈ Ioo (0 : ℝ) 1) (n : ℕ) :
+    lrLowLHead xi n ≤ lrL (Real.sqrt xi) := by
+  rw [lrLowLHead_eq_prefix]
+  exact lrL_sqrt_partial_sum_le hxi (n - 1)
+
 lemma lrLowH_le_nat
     {xi : ℝ} (hxi : xi ∈ Icc (0 : ℝ) 1) (n : ℕ) :
     lrLowH xi n ≤ n := by
@@ -255,5 +274,36 @@ lemma lrLowK_upper_by_LHead
           xi ^ (n - (k + 1)) /
             (2 * ((n - (k + 1) : ℕ) : ℝ))) := by ring
     _ ≤ (n : ℝ) * A := mul_le_mul_of_nonneg_left hA hn0
+
+/-- The two `Kₙ` bounds instantiated with the analytic
+`A = log(1+v) + L(vt)`. -/
+theorem lrLowK_actual_bounds
+    {v t : ℝ} (hv : v ∈ Ioo (0 : ℝ) 1)
+    (ht : t ∈ Ioo (0 : ℝ) 1) (n : ℕ) :
+    lrFlowBeta v * lrLowH (v ^ 2 * t ^ 2) n ≤
+        lrLowK (lrFlowBeta v) (v ^ 2 * t ^ 2) lrLowB n ∧
+      lrLowK (lrFlowBeta v) (v ^ 2 * t ^ 2) lrLowB n ≤
+        (n : ℝ) * (lrFlowBeta v + lrL (v * t)) := by
+  have hvt : 0 < v * t := mul_pos hv.1 ht.1
+  have hvtLt : v * t < 1 := by
+    calc
+      v * t < 1 * t := mul_lt_mul_of_pos_right hv.2 ht.1
+      _ < 1 := by simpa using ht.2
+  have hxi : v ^ 2 * t ^ 2 ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · nlinarith [sq_pos_of_pos hvt]
+    · have hs : (v * t) ^ 2 < 1 := (sq_lt_one_iff₀ hvt.le).2 hvtLt
+      simpa [mul_pow] using hs
+  have hbeta : 0 ≤ lrFlowBeta v := by
+    unfold lrFlowBeta
+    exact Real.log_nonneg (by linarith [hv.1])
+  constructor
+  · exact lrLowK_lower hbeta ⟨hxi.1.le, hxi.2.le⟩
+  · apply lrLowK_upper_by_LHead ⟨hxi.1.le, hxi.2.le⟩
+    have hhead := lrLowLHead_le_lrL_sqrt hxi n
+    have hsqrt : Real.sqrt (v ^ 2 * t ^ 2) = v * t := by
+      rw [← mul_pow, Real.sqrt_sq_eq_abs, abs_of_pos hvt]
+    rw [hsqrt] at hhead
+    linarith
 
 end CourtadeKumar
