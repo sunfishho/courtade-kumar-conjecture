@@ -34,6 +34,7 @@ import InformationTheory.CourtadeKumar.CapClosure
 import InformationTheory.CourtadeKumar.BernsteinCertificate
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
 import InformationTheory.CourtadeKumar.ExactIntervalArithmetic
+import InformationTheory.CourtadeKumar.ExactLogEnclosure
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
