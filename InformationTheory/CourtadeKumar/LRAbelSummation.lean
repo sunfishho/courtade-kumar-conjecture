@@ -21,6 +21,21 @@ lemma lrSeriesPrefix_succ_sub (c : ℕ → ℝ) (n : ℕ) :
   rw [show n + 1 + 1 = (n + 1) + 1 by omega, Finset.sum_range_succ]
   ring
 
+/-- Prepending a zero and multiplying a convergent series by one power of
+`x` preserves its sum after multiplying the value by `x`. -/
+theorem lr_hasSum_power_shift
+    (f : ℕ → ℝ) (x A : ℝ) (h : HasSum f A) :
+    HasSum (fun n : ℕ ↦ match n with
+      | 0 => 0
+      | k + 1 => x * f k) (x * A) := by
+  let b : ℕ → ℝ := fun n ↦ match n with
+    | 0 => 0
+    | k + 1 => x * f k
+  have htail : HasSum (fun n : ℕ ↦ b (n + 1)) (x * A) := by
+    convert h.mul_left x using 1
+  have hb := (hasSum_nat_add_iff (f := b) 1).mp htail
+  simpa [b] using hb
+
 /-- Infinite Abel summation, indexed so that `c n` is the coefficient of
 `x^(n+1)`.  Summability of the weighted prefix series supplies exactly the
 boundary-term convergence needed by the classical argument. -/
