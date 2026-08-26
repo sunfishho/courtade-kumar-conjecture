@@ -185,4 +185,84 @@ theorem lrFlowAbelReserveExtended_nonneg
   rw [lrFlowAbelReserveExtended_eq_liftSeries hR hv ht]
   exact lrAbelLiftSeries_nonneg hR hv ht
 
+theorem lrFlowHLSeries_hasSum
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    HasSum (fun n : ℕ ↦
+      v ^ (2 * (n + 1)) * (t ^ 2) ^ (n + 1) /
+        (2 * ((n + 1 : ℕ) : ℝ)) * R ^ (n + 1))
+      (lrL (Real.sqrt R * v * t)) := by
+  have hsqrt0 : 0 < Real.sqrt R := Real.sqrt_pos.2 hR.1
+  have hsqrt1 : Real.sqrt R < 1 := by
+    simpa using (Real.sqrt_lt_sqrt_iff hR.1.le).2 hR.2
+  have hz : Real.sqrt R * v * t ∈ Ioo (-1 : ℝ) 1 := by
+    constructor
+    · nlinarith [mul_pos (mul_pos hsqrt0 hv.1) ht.1]
+    · have h₁ : Real.sqrt R * v < 1 := by
+        nlinarith [mul_lt_mul_of_pos_right hsqrt1 hv.1,
+          mul_lt_mul_of_pos_left hv.2 hsqrt0]
+      nlinarith [mul_lt_mul_of_pos_right h₁ ht.1, ht.2]
+  have h := lrL_hasSum hz
+  convert h using 1
+  funext n
+  rw [mul_pow, mul_pow]
+  rw [show Real.sqrt R ^ (2 * (n + 1)) = R ^ (n + 1) by
+    rw [pow_mul, Real.sq_sqrt hR.1.le],
+    show t ^ (2 * (n + 1)) = (t ^ 2) ^ (n + 1) by rw [pow_mul]]
+  norm_num only [Nat.cast_add, Nat.cast_one]
+  have hn : (n : ℝ) + 1 ≠ 0 := by positivity
+  field_simp [hn]
+
+theorem lrFlowHExtended_eq_lrFlowH
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    lrFlowHExtended R v t = lrFlowH R v t := by
+  have hL := lrFlowHLSeries_hasSum hR hv ht
+  unfold lrFlowHExtended
+  dsimp only
+  rw [hL.tsum_eq]
+  unfold lrFlowH lrFlowD lrFlowA lrFlowB lrFlowBeta lrAbelBaseE
+  ring
+
+theorem lrFlowPWExtended_eq_lrFlowPW
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    lrFlowPWExtended R v t = lrFlowPW R v t := by
+  have hvt : v * t ∈ Ioc (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos hv.1 ht.1
+    · nlinarith [mul_le_mul hv.2.le ht.2.le ht.1.le
+        (by norm_num : (0 : ℝ) ≤ 1)]
+  unfold lrFlowPWExtended lrFlowPW
+  rw [lrWExtended_eq_lrWKernel hR
+      (show t ∈ Ioc (0 : ℝ) 1 from ⟨ht.1, ht.2.le⟩),
+    lrWExtended_eq_lrWKernel hR hvt]
+
+theorem lrFlowZExtended_eq_lrFlowZ
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    lrFlowZExtended R v t = lrFlowZ R v t := by
+  unfold lrFlowZExtended lrFlowZ
+  rw [lrFlowPWExtended_eq_lrFlowPW hR hv ht,
+    lrWExtended_eq_lrWKernel hR (show (1 : ℝ) ∈ Ioc 0 1 by norm_num)]
+
+theorem lrFlowAbelReserveExtended_eq_actual
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    lrFlowAbelReserveExtended R v t =
+      lrFlowZ R v t + lrFlowQWeight v t * lrFlowH R v t := by
+  unfold lrFlowAbelReserveExtended
+  rw [lrFlowZExtended_eq_lrFlowZ hR hv ht,
+    lrFlowHExtended_eq_lrFlowH hR hv ht]
+
+/-- The coefficientwise Abel-lift inequality for the actual LR flow on the
+regular physical interior. -/
+theorem lrFlow_noise_lift_nonneg
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ lrFlowZ R v t + lrFlowQWeight v t * lrFlowH R v t := by
+  rw [← lrFlowAbelReserveExtended_eq_actual hR hv ht]
+  exact lrFlowAbelReserveExtended_nonneg
+    (show R ∈ Ico (0 : ℝ) 1 from ⟨hR.1.le, hR.2⟩) hv ht
+
 end CourtadeKumar
