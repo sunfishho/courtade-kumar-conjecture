@@ -167,4 +167,166 @@ theorem lrScalarLogLower_le_neg_log
   dsimp only
   linarith
 
+noncomputable def lrScalarEndpointF (z U ell : ℝ) : ℝ :=
+  let Delta := 1 - z ^ 2
+  z * ell / Delta -
+    2 * (U - z ^ 2 * ell / Delta) *
+      (U + (1 + 2 * z - z ^ 2) * ell / (2 * Delta))
+
+noncomputable def lrScalarEndpointFEllDeriv (z U ell : ℝ) : ℝ :=
+  let Delta := 1 - z ^ 2
+  z / Delta - 2 *
+    ((-z ^ 2 / Delta) *
+        (U + (1 + 2 * z - z ^ 2) * ell / (2 * Delta)) +
+      (U - z ^ 2 * ell / Delta) *
+        ((1 + 2 * z - z ^ 2) / (2 * Delta)))
+
+lemma lrScalarEndpoint_b_minus_a_nonneg
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ (1 + 2 * z - z ^ 2) / (2 * (1 - z ^ 2)) -
+      z ^ 2 / (1 - z ^ 2) := by
+  have hden : 0 < 1 - z ^ 2 := by nlinarith [hz.1, hz.2]
+  rw [show (1 + 2 * z - z ^ 2) / (2 * (1 - z ^ 2)) -
+      z ^ 2 / (1 - z ^ 2) =
+      (1 + 2 * z - 3 * z ^ 2) / (2 * (1 - z ^ 2)) by
+        field_simp [hden.ne']; ring]
+  exact div_nonneg
+    (by nlinarith [mul_pos (sub_pos.mpr hz.2) (by nlinarith [hz.1] : 0 < 1 + 3 * z)])
+    (by positivity)
+
+theorem lrScalarEndpointF_antitone_U
+    {z U₀ U ell : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1)
+    (hU₀ : 0 ≤ U₀) (hU : 0 ≤ U) (hUle : U₀ ≤ U) (hell : 0 ≤ ell) :
+    lrScalarEndpointF z U ell ≤ lrScalarEndpointF z U₀ ell := by
+  have hden : 1 - z ^ 2 ≠ 0 := by nlinarith [hz.1, hz.2]
+  have hba := lrScalarEndpoint_b_minus_a_nonneg hz
+  have hfactor : 0 ≤
+      U + U₀ +
+        ((1 + 2 * z - z ^ 2) / (2 * (1 - z ^ 2)) -
+          z ^ 2 / (1 - z ^ 2)) * ell := by positivity
+  have hid :
+      lrScalarEndpointF z U₀ ell - lrScalarEndpointF z U ell =
+        2 * (U - U₀) *
+          (U + U₀ +
+            ((1 + 2 * z - z ^ 2) / (2 * (1 - z ^ 2)) -
+              z ^ 2 / (1 - z ^ 2)) * ell) := by
+    unfold lrScalarEndpointF
+    dsimp only
+    field_simp [hden]
+    ring
+  rw [← sub_nonneg, hid]
+  exact mul_nonneg (mul_nonneg (by norm_num) (sub_nonneg.mpr hUle)) hfactor
+
+lemma lrScalarEndpoint_quadraticCoeff_nonneg
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ 2 * (z ^ 2 / (1 - z ^ 2)) *
+      ((1 + 2 * z - z ^ 2) / (2 * (1 - z ^ 2))) := by
+  have hden : 0 < 1 - z ^ 2 := by nlinarith [hz.1, hz.2]
+  have hc : 0 < 1 + 2 * z - z ^ 2 := by nlinarith [hz.1, hz.2]
+  positivity
+
+lemma lrScalarEndpointF_ell_sub
+    {z U ell₀ ell : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    lrScalarEndpointF z U ell - lrScalarEndpointF z U ell₀ =
+      (ell - ell₀) *
+        (lrScalarEndpointFEllDeriv z U ell₀ +
+          2 * (z ^ 2 / (1 - z ^ 2)) *
+            ((1 + 2 * z - z ^ 2) / (2 * (1 - z ^ 2))) *
+              (ell - ell₀)) := by
+  have hden : 1 - z ^ 2 ≠ 0 := by nlinarith [hz.1, hz.2]
+  unfold lrScalarEndpointF lrScalarEndpointFEllDeriv
+  dsimp only
+  field_simp [hden]
+  ring
+
+theorem lrScalarEndpointF_mono_ell_of_deriv
+    {z U ell₀ ell : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1)
+    (hle : ell₀ ≤ ell) (hderiv : 0 ≤ lrScalarEndpointFEllDeriv z U ell₀) :
+    lrScalarEndpointF z U ell₀ ≤ lrScalarEndpointF z U ell := by
+  rw [← sub_nonneg, lrScalarEndpointF_ell_sub hz]
+  exact mul_nonneg (sub_nonneg.mpr hle)
+    (add_nonneg hderiv
+      (mul_nonneg (lrScalarEndpoint_quadraticCoeff_nonneg hz)
+        (sub_nonneg.mpr hle)))
+
+/-- Exact denominator clearing for the derivative certificate `Q(z)`. -/
+theorem lrScalarEndpointFEllDeriv_upper_lower_eq
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    lrScalarEndpointFEllDeriv z (lrScalarEndpointUpper z)
+        (lrScalarLogLower z) =
+      -z ^ 2 * lrScalarEndpointQ z /
+        (6 * (z - 1) * (z + 1) ^ 5 * (z + 2)) := by
+  have hz1 : z - 1 ≠ 0 := sub_ne_zero.mpr hz.2.ne
+  have hp1 : z + 1 ≠ 0 := by nlinarith [hz.1]
+  have hplus : 1 + z ≠ 0 := by simpa [add_comm] using hp1
+  have hp2 : z + 2 ≠ 0 := by nlinarith [hz.1]
+  have hDelta : 1 - z ^ 2 ≠ 0 := by nlinarith [hz.1, hz.2]
+  have hcomp :
+      1 + z * 3 + (z ^ 2 * 2 - z ^ 3 * 2) +
+          (-(z ^ 4 * 3) - z ^ 5) ≠ 0 := by
+    rw [show 1 + z * 3 + (z ^ 2 * 2 - z ^ 3 * 2) +
+        (-(z ^ 4 * 3) - z ^ 5) = (1 - z ^ 2) * (1 + z) ^ 3 by ring]
+    exact mul_ne_zero hDelta (pow_ne_zero 3 (by nlinarith [hz.1]))
+  have hcube : 1 + z * 3 + z ^ 2 * 3 + z ^ 3 ≠ 0 := by
+    rw [show 1 + z * 3 + z ^ 2 * 3 + z ^ 3 = (1 + z) ^ 3 by ring]
+    exact pow_ne_zero 3 (by nlinarith [hz.1])
+  unfold lrScalarEndpointFEllDeriv lrScalarEndpointUpper
+    lrScalarLogLower lrScalarLogRatio lrScalarEndpointQ
+  dsimp only
+  field_simp [hz1, hp1, hp2, hDelta, hcomp, hcube]
+  field_simp [hplus]
+  ring
+
+/-- Exact denominator clearing for the endpoint value certificate `P(z)`. -/
+theorem lrScalarEndpointF_upper_lower_eq
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    lrScalarEndpointF z (lrScalarEndpointUpper z)
+        (lrScalarLogLower z) =
+      -z ^ 2 * lrScalarEndpointP z /
+        (18 * (z + 1) ^ 8 * (z + 2) ^ 2) := by
+  have hz1 : z - 1 ≠ 0 := sub_ne_zero.mpr hz.2.ne
+  have hp1 : z + 1 ≠ 0 := by nlinarith [hz.1]
+  have hplus : 1 + z ≠ 0 := by simpa [add_comm] using hp1
+  have hp2 : z + 2 ≠ 0 := by nlinarith [hz.1]
+  have hDelta : 1 - z ^ 2 ≠ 0 := by nlinarith [hz.1, hz.2]
+  have hcomp :
+      1 + z * 3 + (z ^ 2 * 2 - z ^ 3 * 2) +
+          (-(z ^ 4 * 3) - z ^ 5) ≠ 0 := by
+    rw [show 1 + z * 3 + (z ^ 2 * 2 - z ^ 3 * 2) +
+        (-(z ^ 4 * 3) - z ^ 5) = (1 - z ^ 2) * (1 + z) ^ 3 by ring]
+    exact mul_ne_zero hDelta (pow_ne_zero 3 (by nlinarith [hz.1]))
+  have hcube : 1 + z * 3 + z ^ 2 * 3 + z ^ 3 ≠ 0 := by
+    rw [show 1 + z * 3 + z ^ 2 * 3 + z ^ 3 = (1 + z) ^ 3 by ring]
+    exact pow_ne_zero 3 (by nlinarith [hz.1])
+  unfold lrScalarEndpointF lrScalarEndpointUpper lrScalarLogLower
+    lrScalarLogRatio lrScalarEndpointP
+  dsimp only
+  field_simp [hz1, hp1, hp2, hDelta, hcomp, hcube]
+  field_simp [hplus]
+  ring
+
+/-- The fully assembled elementary endpoint inequality in the variables
+`z = exp (-2a)` and `ell = -log z`. -/
+theorem lrScalarEndpointF_log_nonneg
+    {z : ℝ} (hz : z ∈ Ioo (0 : ℝ) 1) :
+    0 ≤ lrScalarEndpointF z (Real.log (1 + z)) (-Real.log z) := by
+  have hUle := log_one_add_le_lrScalarEndpointUpper
+    (show z ∈ Icc (0 : ℝ) 1 from ⟨hz.1.le, hz.2.le⟩)
+  have hU₀ : 0 ≤ Real.log (1 + z) :=
+    Real.log_nonneg (by linarith [hz.1])
+  have hU : 0 ≤ lrScalarEndpointUpper z := hU₀.trans hUle
+  have hell : 0 ≤ -Real.log z := (Real.log_neg hz.1 hz.2).le |> neg_nonneg.mpr
+  have hUstep := lrScalarEndpointF_antitone_U hz hU₀ hU hUle hell
+  have hellLower := lrScalarLogLower_le_neg_log hz
+  have hderiv : 0 ≤ lrScalarEndpointFEllDeriv z
+      (lrScalarEndpointUpper z) (lrScalarLogLower z) := by
+    rw [lrScalarEndpointFEllDeriv_upper_lower_eq hz]
+    exact lrScalarEndpoint_deriv_nonneg hz
+  have hellStep := lrScalarEndpointF_mono_ell_of_deriv hz hellLower hderiv
+  have hvalue : 0 ≤ lrScalarEndpointF z
+      (lrScalarEndpointUpper z) (lrScalarLogLower z) := by
+    rw [lrScalarEndpointF_upper_lower_eq hz]
+    exact lrScalarEndpoint_value_nonneg hz
+  exact hvalue.trans (hellStep.trans hUstep)
+
 end CourtadeKumar
