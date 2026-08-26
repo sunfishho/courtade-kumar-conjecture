@@ -61,6 +61,7 @@ import InformationTheory.CourtadeKumar.LRFlowCharts
 import InformationTheory.CourtadeKumar.LRFlowEll
 import InformationTheory.CourtadeKumar.LRAbelCoefficients
 import InformationTheory.CourtadeKumar.LRBernsteinP
+import InformationTheory.CourtadeKumar.LRScalarEndpoint
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
