@@ -62,9 +62,16 @@ def main():
     verifier.install_bounds()
     base = verifier.base
     v, z = verifier.v, verifier.z
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+    if not 2 <= n <= 7:
+        raise ValueError("expected a head index between 2 and 7")
+    tag = "L7" if n == 7 else f"H{n - 1}"
+    description = "L_7" if n == 7 else f"V_{n - 1}"
+    expression = (base.lower_comparison(7) if n == 7
+                  else verifier.v_head_minorant(n))
     radial = (1 + v) ** 9 * (2 + v) ** 9
     positive_base = radial * (20 - 17 * z) * (20 - 17 * v**2 * z)
-    numerator = base.positive_numerator(base.lower_comparison(7), positive_base)
+    numerator = base.positive_numerator(expression, positive_base)
     rows = tensor_rows(numerator)
     degree_v = len(rows) - 1
     degree_z = len(rows[0]) - 1
@@ -122,8 +129,11 @@ def main():
         "end CourtadeKumar",
         "",
     ]
-    target = Path(__file__).resolve().parents[1] / "InformationTheory/CourtadeKumar/LRLowShapeVL7CertificateData.lean"
-    target.write_text("\n".join(out))
+    target = Path(__file__).resolve().parents[1] / (
+        f"InformationTheory/CourtadeKumar/LRLowShapeV{tag}CertificateData.lean"
+    )
+    target.write_text("\n".join(out).replace("lrLowVL7", f"lrLowV{tag}")
+                      .replace("L_7", description))
 
     power_rows = [bernstein_to_power(row) for row in rows]
     poly = sp.Poly(sp.expand(numerator), v, z)
@@ -247,8 +257,13 @@ def main():
         "end CourtadeKumar",
         "",
     ]
-    power_target = Path(__file__).resolve().parents[1] / "InformationTheory/CourtadeKumar/LRLowShapeVL7Power.lean"
-    power_target.write_text("\n".join(out))
+    power_target = Path(__file__).resolve().parents[1] / (
+        f"InformationTheory/CourtadeKumar/LRLowShapeV{tag}Power.lean"
+    )
+    power_target.write_text("\n".join(out)
+                            .replace("LRLowShapeVL7", f"LRLowShapeV{tag}")
+                            .replace("lrLowVL7", f"lrLowV{tag}")
+                            .replace("L_7", description))
 
 
 if __name__ == "__main__":
