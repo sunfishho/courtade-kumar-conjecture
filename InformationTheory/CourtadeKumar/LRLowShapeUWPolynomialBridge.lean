@@ -2,6 +2,7 @@ import InformationTheory.CourtadeKumar.LRLowShapeUW1Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW2Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW3Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW4Power
+import InformationTheory.CourtadeKumar.LRLowShapeUW5Power
 
 /-! A reusable denominator-clearing bridge for the five finite low-shape
 `𝓦ₙ` certificates.  The definitions below are polynomial in `v` and `x`;
@@ -454,6 +455,59 @@ theorem lrLowSecondScalar_four_nonneg
     (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
   have hbridge := lrLowWMinorant_le_second_scalar hv ht
     (n := 4) (by norm_num)
+  norm_num at hbridge ⊢
+  exact hminorant.trans hbridge
+
+set_option maxHeartbeats 12000000 in
+set_option maxRecDepth 100000 in
+lemma lrLowWPolynomial_five_eq_power (v z : ℝ) :
+    lrLowWPolynomial v ((17 / 20 : ℝ) * z) 5 =
+      lrLowW5PowerEval v z := by
+  unfold lrLowWPolynomial
+  unfold lrLowWGRadialNumerator lrLowWALowerRadialNumerator
+    lrLowWAUpperScaledNumerator lrLowWBetaUpperNumerator
+  unfold lrLowWBetaDivVNumerator lrLowWMinusLogNumerator
+    lrLowWBetaNumerator lrLowWRadialBase lrLowWXiDenominator
+  unfold lrLowH lrLowPhiPrefix lrLowBnUpper
+    lrLowPnLower lrLowL12 lrLowT lrLowA lrLowW5PowerEval
+  unfold lrLowW5VPowerEvalCol0 lrLowW5VPowerEvalCol1 lrLowW5VPowerEvalCol2 lrLowW5VPowerEvalCol3 lrLowW5VPowerEvalCol4 lrLowW5VPowerEvalCol5 lrLowW5VPowerEvalCol6 lrLowW5VPowerEvalCol7 lrLowW5VPowerEvalCol8 lrLowW5VPowerEvalCol9 lrLowW5VPowerEvalCol10 lrLowW5VPowerEvalCol11 lrLowW5VPowerEvalCol12 lrLowW5VPowerEvalCol13 lrLowW5VPowerEvalCol14 lrLowW5VPowerEvalCol15 lrLowW5VPowerEvalCol16 lrLowW5VPowerEvalCol17 lrLowW5VPowerEvalCol18 lrLowW5VPowerEvalCol19 lrLowW5VPowerEvalCol20 lrLowW5VPowerEvalCol21 lrLowW5VPowerEvalCol22 lrLowW5VPowerEvalCol23 lrLowW5VPowerEvalCol24 lrLowW5VPowerEvalCol25
+  norm_num [Finset.sum_range_succ]
+  ring
+
+theorem lrLowWMinorant_five_nonneg
+    {v z : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1) (hz : z ∈ Icc (0 : ℝ) 1) :
+    0 ≤ lrLowWMinorant v ((17 / 20 : ℝ) * z) 5 := by
+  apply lrLowWMinorant_nonneg_of_polynomial_certificate hv hz
+    (lrLowWPolynomial_five_eq_power v z)
+  rw [← lrLowW5Bernstein_eq_power]
+  exact lrLowW5Bernstein_nonneg
+    (show v ∈ Icc (0 : ℝ) 1 from ⟨hv.1.le, hv.2⟩) hz
+
+theorem lrLowWMinorant_five_nonneg_of_sq_le
+    {v t : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1)
+    (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowWMinorant v (t ^ 2) 5 := by
+  have hz : (20 / 17 : ℝ) * t ^ 2 ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · positivity
+    · nlinarith
+  have h := lrLowWMinorant_five_nonneg hv hz
+  have hscale : (17 / 20 : ℝ) * ((20 / 17 : ℝ) * t ^ 2) = t ^ 2 := by
+    ring
+  rw [hscale] at h
+  exact h
+
+theorem lrLowSecondScalar_five_nonneg
+    {v t : ℝ} (hv : v ∈ Ioo (0 : ℝ) 1)
+    (ht : t ∈ Ioo (0 : ℝ) 1) (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowH (v ^ 2 * t ^ 2) 5 *
+          lrLowR v (t ^ 2) (lrGShape t v) 5 +
+        2 * (5 : ℝ) * (lrFlowBeta v + lrL (v * t)) *
+          lrLowEta v (t ^ 2) 5 := by
+  have hminorant := lrLowWMinorant_five_nonneg_of_sq_le
+    (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
+  have hbridge := lrLowWMinorant_le_second_scalar hv ht
+    (n := 5) (by norm_num)
   norm_num at hbridge ⊢
   exact hminorant.trans hbridge
 
