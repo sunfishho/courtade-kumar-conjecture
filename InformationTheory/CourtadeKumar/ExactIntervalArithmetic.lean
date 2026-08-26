@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
+import Mathlib.Tactic
 
 /-!
 # Exact rational interval arithmetic
@@ -48,6 +49,121 @@ theorem contains_sub {a b : RationalEnclosure} {x y : ℝ}
     (hx : a.Contains x) (hy : b.Contains y) :
     (sub a b).Contains (x - y) := by
   simpa [sub_eq_add_neg] using contains_add hx (contains_neg hy)
+
+/-- Rational midpoint of an enclosure. -/
+def center (a : RationalEnclosure) : ℚ :=
+  (a.lower + a.upper) / 2
+
+/-- Rational half-width of an enclosure. -/
+def radius (a : RationalEnclosure) : ℚ :=
+  (a.upper - a.lower) / 2
+
+theorem radius_nonnegative {a : RationalEnclosure} {x : ℝ}
+    (hx : a.Contains x) :
+    (0 : ℚ) ≤ radius a := by
+  have hvalidReal : (a.lower : ℝ) ≤ (a.upper : ℝ) := hx.1.trans hx.2
+  have hvalid : a.lower ≤ a.upper := by exact_mod_cast hvalidReal
+  simp only [radius]
+  exact div_nonneg (sub_nonneg.mpr hvalid) (by norm_num)
+
+theorem abs_sub_center_le_radius
+    {a : RationalEnclosure} {x : ℝ} (hx : a.Contains x) :
+    |x - (center a : ℝ)| ≤ (radius a : ℝ) := by
+  rw [abs_le]
+  rcases hx with ⟨hxLo, hxHi⟩
+  constructor <;> norm_num [center, radius] at * <;> linarith
+
+/-- A signed product enclosure in midpoint-radius form.  It is slightly
+wider than the four-corner hull, but its proof is compact and its rational
+computation is fully executable. -/
+def mul (a b : RationalEnclosure) : RationalEnclosure :=
+  let c := center a * center b
+  let r := |center a| * radius b + |center b| * radius a +
+    radius a * radius b
+  ⟨c - r, c + r⟩
+
+theorem contains_mul {a b : RationalEnclosure} {x y : ℝ}
+    (hx : a.Contains x) (hy : b.Contains y) :
+    (mul a b).Contains (x * y) := by
+  let ca : ℝ := center a
+  let cb : ℝ := center b
+  let ra : ℝ := radius a
+  let rb : ℝ := radius b
+  have hra : 0 ≤ ra := by
+    change (0 : ℝ) ≤ (radius a : ℝ)
+    exact_mod_cast (radius_nonnegative hx)
+  have hrb : 0 ≤ rb := by
+    change (0 : ℝ) ≤ (radius b : ℝ)
+    exact_mod_cast (radius_nonnegative hy)
+  have hxa : |x - ca| ≤ ra := abs_sub_center_le_radius hx
+  have hyb : |y - cb| ≤ rb := abs_sub_center_le_radius hy
+  have hcx : |ca| * |y - cb| ≤ |ca| * rb :=
+    mul_le_mul_of_nonneg_left hyb (abs_nonneg ca)
+  have hcy : |cb| * |x - ca| ≤ |cb| * ra :=
+    mul_le_mul_of_nonneg_left hxa (abs_nonneg cb)
+  have hxy : |x - ca| * |y - cb| ≤ ra * rb :=
+    mul_le_mul hxa hyb (abs_nonneg _) hra
+  have herror :
+      |x * y - ca * cb| ≤ |ca| * rb + |cb| * ra + ra * rb := by
+    calc
+      |x * y - ca * cb| =
+          |ca * (y - cb) + cb * (x - ca) + (x - ca) * (y - cb)| := by
+            congr 1
+            ring
+      _ ≤ |ca * (y - cb)| + |cb * (x - ca)| +
+          |(x - ca) * (y - cb)| := by
+            calc
+              _ ≤ |ca * (y - cb) + cb * (x - ca)| +
+                    |(x - ca) * (y - cb)| := abs_add_le _ _
+              _ ≤ (|ca * (y - cb)| + |cb * (x - ca)|) +
+                    |(x - ca) * (y - cb)| :=
+                  add_le_add (abs_add_le _ _) le_rfl
+      _ = |ca| * |y - cb| + |cb| * |x - ca| +
+          |x - ca| * |y - cb| := by rw [abs_mul, abs_mul, abs_mul]
+      _ ≤ |ca| * rb + |cb| * ra + ra * rb :=
+        add_le_add (add_le_add hcx hcy) hxy
+  have hbounds := (abs_le.mp herror)
+  change
+    (((center a * center b -
+        (|center a| * radius b + |center b| * radius a +
+          radius a * radius b) : ℚ) : ℝ) ≤ x * y) ∧
+      x * y ≤
+        ((center a * center b +
+          (|center a| * radius b + |center b| * radius a +
+            radius a * radius b) : ℚ) : ℝ)
+  norm_num at hbounds ⊢
+  constructor <;> linarith
+
+/-- Multiplication by an exact rational scalar, implemented through the
+general signed product so there is only one trusted multiplication rule. -/
+def scale (q : ℚ) (a : RationalEnclosure) : RationalEnclosure :=
+  mul (point q) a
+
+theorem contains_scale (q : ℚ) {a : RationalEnclosure} {x : ℝ}
+    (hx : a.Contains x) :
+    (scale q a).Contains ((q : ℝ) * x) := by
+  exact contains_mul (contains_point q) hx
+
+/-- A square enclosure. -/
+def square (a : RationalEnclosure) : RationalEnclosure :=
+  mul a a
+
+theorem contains_square {a : RationalEnclosure} {x : ℝ}
+    (hx : a.Contains x) :
+    (square a).Contains (x ^ 2) := by
+  simpa [square, pow_two] using contains_mul hx hx
+
+/-- Executable natural powers of an enclosure. -/
+def pow : RationalEnclosure → ℕ → RationalEnclosure
+  | _, 0 => point 1
+  | a, n + 1 => mul (pow a n) a
+
+theorem contains_pow {a : RationalEnclosure} {x : ℝ}
+    (hx : a.Contains x) :
+    ∀ n, (pow a n).Contains (x ^ n)
+  | 0 => by simpa [pow] using contains_point 1
+  | n + 1 => by
+      simpa [pow, pow_succ] using contains_mul (contains_pow hx n) hx
 
 /-- Product enclosure for intervals known to be nonnegative. -/
 def mulNonnegative (a b : RationalEnclosure) : RationalEnclosure :=
@@ -106,6 +222,17 @@ theorem contains_divNonnegative
     simp [invPositive, hbUpper.le]
   simpa [divNonnegative, div_eq_mul_inv] using
     contains_mulNonnegative ha hinvLower hx (contains_invPositive hb hy)
+
+/-- General signed quotient enclosure with a positive denominator. -/
+def div (a b : RationalEnclosure) : RationalEnclosure :=
+  mul a (invPositive b)
+
+theorem contains_div {a b : RationalEnclosure} {x y : ℝ}
+    (hb : (0 : ℚ) < b.lower)
+    (hx : a.Contains x) (hy : b.Contains y) :
+    (div a b).Contains (x / y) := by
+  simpa [div, div_eq_mul_inv] using
+    contains_mul hx (contains_invPositive hb hy)
 
 end RationalEnclosure
 end CourtadeKumar
