@@ -15,24 +15,28 @@ lemma lrLowB_le_log_two (n : ℕ) :
   exact sub_le_self _ (Finset.sum_nonneg fun k hk ↦
     (lrLowA_pos (by omega)).le)
 
+lemma lrLowA_mul_pred_eq_lrAbelA (j : ℕ) :
+    ((j : ℝ) - 1) * lrLowA j = lrAbelA j := by
+  unfold lrLowA lrAbelA
+  ring
+
+lemma lrLowA_succ_mul_eq_lrAbelB (j : ℕ) :
+    ((j : ℝ) + 1) * lrLowA (j + 1) = lrAbelB j := by
+  unfold lrLowA lrAbelB
+  norm_num only [Nat.cast_add, Nat.cast_one]
+  have hj1 : (j : ℝ) + 1 ≠ 0 := by positivity
+  have hplus : 2 * (j : ℝ) + 1 ≠ 0 := by
+    have : (0 : ℝ) ≤ j := Nat.cast_nonneg j
+    nlinarith
+  rw [show 2 * ((j : ℝ) + 1) - 1 = 2 * (j : ℝ) + 1 by ring]
+  field_simp [hj1, hplus]
+
 lemma lrWOmega_one_eq_tail_second_difference (j : ℕ) :
     lrWOmega j 1 =
       ((j : ℝ) - 1) * lrLowA j - (j + 1) * lrLowA (j + 1) := by
-  have hA : ((j : ℝ) - 1) * lrLowA j = lrAbelA j := by
-    unfold lrLowA lrAbelA
-    ring
-  have hB : ((j : ℝ) + 1) * lrLowA (j + 1) = lrAbelB j := by
-    unfold lrLowA lrAbelB
-    norm_num only [Nat.cast_add, Nat.cast_one]
-    have hj1 : (j : ℝ) + 1 ≠ 0 := by positivity
-    have hplus : 2 * (j : ℝ) + 1 ≠ 0 := by
-      have : (0 : ℝ) ≤ j := Nat.cast_nonneg j
-      nlinarith
-    rw [show 2 * ((j : ℝ) + 1) - 1 = 2 * (j : ℝ) + 1 by ring]
-    field_simp [hj1, hplus]
   unfold lrWOmega
   simp only [one_pow, mul_one]
-  rw [hA, hB]
+  rw [lrLowA_mul_pred_eq_lrAbelA, lrLowA_succ_mul_eq_lrAbelB]
 
 lemma lrLowB_weighted_second_difference (j : ℕ) :
     ((j + 1 : ℕ) : ℝ) * lrLowB (j + 1) -
