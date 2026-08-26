@@ -63,6 +63,7 @@ import InformationTheory.CourtadeKumar.LRAbelCoefficients
 import InformationTheory.CourtadeKumar.LRBernsteinP
 import InformationTheory.CourtadeKumar.LRScalarEndpoint
 import InformationTheory.CourtadeKumar.LRAbelPrefixBrace
+import InformationTheory.CourtadeKumar.LRAbelPrefixBounds
 import InformationTheory.General.Communication
 import InformationTheory.General.InformationQuantities
 import InformationTheory.General.RandomVariable
