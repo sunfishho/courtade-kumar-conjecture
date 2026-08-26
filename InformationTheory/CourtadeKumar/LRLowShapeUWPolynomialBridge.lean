@@ -1,6 +1,7 @@
 import InformationTheory.CourtadeKumar.LRLowShapeUW1Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW2Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW3Power
+import InformationTheory.CourtadeKumar.LRLowShapeUW4Power
 
 /-! A reusable denominator-clearing bridge for the five finite low-shape
 `𝓦ₙ` certificates.  The definitions below are polynomial in `v` and `x`;
@@ -400,6 +401,59 @@ theorem lrLowSecondScalar_three_nonneg
     (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
   have hbridge := lrLowWMinorant_le_second_scalar hv ht
     (n := 3) (by norm_num)
+  norm_num at hbridge ⊢
+  exact hminorant.trans hbridge
+
+set_option maxHeartbeats 12000000 in
+set_option maxRecDepth 100000 in
+lemma lrLowWPolynomial_four_eq_power (v z : ℝ) :
+    lrLowWPolynomial v ((17 / 20 : ℝ) * z) 4 =
+      lrLowW4PowerEval v z := by
+  unfold lrLowWPolynomial
+  unfold lrLowWGRadialNumerator lrLowWALowerRadialNumerator
+    lrLowWAUpperScaledNumerator lrLowWBetaUpperNumerator
+  unfold lrLowWBetaDivVNumerator lrLowWMinusLogNumerator
+    lrLowWBetaNumerator lrLowWRadialBase lrLowWXiDenominator
+  unfold lrLowH lrLowPhiPrefix lrLowBnUpper
+    lrLowPnLower lrLowL12 lrLowT lrLowA lrLowW4PowerEval
+  unfold lrLowW4VPowerEvalCol0 lrLowW4VPowerEvalCol1 lrLowW4VPowerEvalCol2 lrLowW4VPowerEvalCol3 lrLowW4VPowerEvalCol4 lrLowW4VPowerEvalCol5 lrLowW4VPowerEvalCol6 lrLowW4VPowerEvalCol7 lrLowW4VPowerEvalCol8 lrLowW4VPowerEvalCol9 lrLowW4VPowerEvalCol10 lrLowW4VPowerEvalCol11 lrLowW4VPowerEvalCol12 lrLowW4VPowerEvalCol13 lrLowW4VPowerEvalCol14 lrLowW4VPowerEvalCol15 lrLowW4VPowerEvalCol16 lrLowW4VPowerEvalCol17 lrLowW4VPowerEvalCol18 lrLowW4VPowerEvalCol19 lrLowW4VPowerEvalCol20 lrLowW4VPowerEvalCol21 lrLowW4VPowerEvalCol22 lrLowW4VPowerEvalCol23 lrLowW4VPowerEvalCol24 lrLowW4VPowerEvalCol25
+  norm_num [Finset.sum_range_succ]
+  ring
+
+theorem lrLowWMinorant_four_nonneg
+    {v z : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1) (hz : z ∈ Icc (0 : ℝ) 1) :
+    0 ≤ lrLowWMinorant v ((17 / 20 : ℝ) * z) 4 := by
+  apply lrLowWMinorant_nonneg_of_polynomial_certificate hv hz
+    (lrLowWPolynomial_four_eq_power v z)
+  rw [← lrLowW4Bernstein_eq_power]
+  exact lrLowW4Bernstein_nonneg
+    (show v ∈ Icc (0 : ℝ) 1 from ⟨hv.1.le, hv.2⟩) hz
+
+theorem lrLowWMinorant_four_nonneg_of_sq_le
+    {v t : ℝ} (hv : v ∈ Ioc (0 : ℝ) 1)
+    (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowWMinorant v (t ^ 2) 4 := by
+  have hz : (20 / 17 : ℝ) * t ^ 2 ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · positivity
+    · nlinarith
+  have h := lrLowWMinorant_four_nonneg hv hz
+  have hscale : (17 / 20 : ℝ) * ((20 / 17 : ℝ) * t ^ 2) = t ^ 2 := by
+    ring
+  rw [hscale] at h
+  exact h
+
+theorem lrLowSecondScalar_four_nonneg
+    {v t : ℝ} (hv : v ∈ Ioo (0 : ℝ) 1)
+    (ht : t ∈ Ioo (0 : ℝ) 1) (htSq : t ^ 2 ≤ (17 / 20 : ℝ)) :
+    0 ≤ lrLowH (v ^ 2 * t ^ 2) 4 *
+          lrLowR v (t ^ 2) (lrGShape t v) 4 +
+        2 * (4 : ℝ) * (lrFlowBeta v + lrL (v * t)) *
+          lrLowEta v (t ^ 2) 4 := by
+  have hminorant := lrLowWMinorant_four_nonneg_of_sq_le
+    (show v ∈ Ioc (0 : ℝ) 1 from ⟨hv.1, hv.2.le⟩) htSq
+  have hbridge := lrLowWMinorant_le_second_scalar hv ht
+    (n := 4) (by norm_num)
   norm_num at hbridge ⊢
   exact hminorant.trans hbridge
 
