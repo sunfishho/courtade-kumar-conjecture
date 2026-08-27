@@ -103,10 +103,6 @@ theorem hasDerivAt_lrCertificateOmega_zero_along
   · simp only [Pi.mul_apply, Function.comp_apply, hsz]
     ring
 
-@[simp] lemma lrCertificateQ_zero : lrCertificateQ 0 = 0 := by
-  rw [lrCertificateQ_eq]
-  norm_num [topPhi_one]
-
 def lrCertificateBAD (s y : IntervalAD) : IntervalAD :=
   IntervalAD.add s
     (IntervalAD.mul (IntervalAD.sub (IntervalAD.const 1) s) y)

@@ -32,6 +32,10 @@ lemma lrCertificateQ_eq (y : ℝ) :
   unfold lrCertificateQ topJ
   ring
 
+@[simp] lemma lrCertificateQ_zero : lrCertificateQ 0 = 0 := by
+  rw [lrCertificateQ_eq]
+  norm_num [topPhi_one]
+
 lemma lrCertificateQPrime_eq (y : ℝ) :
     lrCertificateQPrime y =
       Real.artanh (Real.sqrt (1 - y)) /
@@ -92,6 +96,17 @@ lemma lrCertificateQPrime_pos {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
     simpa using (Real.sqrt_lt_sqrt_iff harg.1.le).2 harg.2
   rw [lrCertificateQPrime_eq]
   exact div_pos (Real.artanh_pos ⟨hsqrtPos, hsqrtLt⟩) (by positivity)
+
+lemma lrCertificateQ_nonneg {y : ℝ} (hy : y ∈ Icc (0 : ℝ) 1) :
+    0 ≤ lrCertificateQ y := by
+  have hsqrtNonneg : 0 ≤ Real.sqrt (1 - y) := Real.sqrt_nonneg _
+  have hsqrtLe : Real.sqrt (1 - y) ≤ 1 := by
+    rw [Real.sqrt_le_one]
+    linarith [hy.1]
+  rw [lrCertificateQ, topJ_eq_binEntropy]
+  apply Real.binEntropy_nonneg
+  · linarith
+  · linarith
 
 lemma lrCertificateQSecond_nonpos {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
     lrCertificateQSecond y ≤ 0 := by

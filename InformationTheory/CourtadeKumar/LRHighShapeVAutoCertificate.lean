@@ -83,6 +83,14 @@ def auto (sqrtFuel logFuel : ℕ) (input : RationalEnclosure) :
 
 end LRQIntervalCertificate
 
+namespace LRQZeroIntervalCertificate
+
+def auto (sqrtFuel logFuel : ℕ) (input : RationalEnclosure) :
+    LRQZeroIntervalCertificate :=
+  { upper := LRQPointCertificate.auto sqrtFuel logFuel input.upper }
+
+end LRQZeroIntervalCertificate
+
 namespace LRQPrimeIntervalCertificate
 
 def auto (sqrtFuel logFuel : ℕ) (input : RationalEnclosure) :

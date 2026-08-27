@@ -3,6 +3,7 @@ import InformationTheory.CourtadeKumar.LRHighShapeMidpointVFallback
 import InformationTheory.CourtadeKumar.LRHighShapeVMidpointEvaluator
 import InformationTheory.CourtadeKumar.LRHighShapeVCenteredEvaluator
 import InformationTheory.CourtadeKumar.LRHighShapeCenteredPairEvaluator
+import InformationTheory.CourtadeKumar.LRHighShapeVZeroFaceEvaluator
 import InformationTheory.CourtadeKumar.LRHighShapeTangentAutoTree
 
 /-!
@@ -29,6 +30,7 @@ inductive LRHighShapeCombinedAcceptData where
   | directV (payload : LRHighShapeVCertificate)
   | directVMidpoint (payload : LRHighShapeVCertificate)
   | directVCentered (payload : LRHighShapeVCenteredCertificate)
+  | directVZeroFace (payload : LRHighShapeVZeroFaceCertificate)
   | midpointTangent (payload : LRHighShapeTangentCertificate)
   | midpointTangentCentered (payload : LRHighShapeCenteredPairCertificate)
 
@@ -41,6 +43,8 @@ def check (terms : ℕ) (box : CertificateBox) :
       LRHighShapeVCertificate.midpointAccepts terms box payload
   | .directVCentered payload =>
       LRHighShapeVCenteredCertificate.accepts terms box payload
+  | .directVZeroFace payload =>
+      LRHighShapeVZeroFaceCertificate.accepts terms box payload
   | .midpointTangent payload =>
       LRHighShapeMidpointCertificate.accepts terms box payload.base &&
         LRHighShapeTangentCertificate.accepts terms box payload
@@ -65,6 +69,11 @@ theorem sound (terms : ℕ) (box : CertificateBox)
         point hpoint hrelevant)
   | directVCentered payload =>
       exact Or.inl (lrHighShapeVCenteredSubdivisionCertificate_nonnegative terms
+        (certificate := .accept payload) (box := box)
+        (by simpa [check, SubdivisionCertificate.check] using hcheck)
+        point hpoint hrelevant)
+  | directVZeroFace payload =>
+      exact Or.inl (lrHighShapeVZeroFaceSubdivisionCertificate_nonnegative terms
         (certificate := .accept payload) (box := box)
         (by simpa [check, SubdivisionCertificate.check] using hcheck)
         point hpoint hrelevant)

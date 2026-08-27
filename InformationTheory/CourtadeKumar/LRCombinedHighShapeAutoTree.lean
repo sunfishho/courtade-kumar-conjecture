@@ -45,7 +45,12 @@ def chooseAxis (terms : ℕ) (box : CertificateBox)
   let sc :=
     uResult.derivChi.maxAbs * RationalEnclosure.radius box.chiInterval +
       tResult.derivChi.maxAbs * RationalEnclosure.radius box.chiInterval
-  if ss ≥ sk ∧ ss ≥ sc ∧ box.sLo < box.sHi then .s
+  -- A failed box touching an endpoint is first separated in `χ`.  The
+  -- derivative scores come from the open chart and are deliberately not
+  -- used to steer subdivision across its logarithmic boundary.
+  if (box.chiLo = 0 ∨ box.chiHi = 1) ∧
+      1 / 256 < box.chiHi - box.chiLo then .chi
+  else if ss ≥ sk ∧ ss ≥ sc ∧ box.sLo < box.sHi then .s
   else if sk ≥ sc ∧ box.kLo < box.kHi then .k
   else .chi
 
@@ -77,7 +82,12 @@ def autoAccept (terms sqrtFuel logFuel : ℕ) (box : CertificateBox)
       some (.directVMidpoint payload.base)
     else if pairAccepts terms box payload then
       some (.midpointTangent payload)
-    else none
+    else
+      let zeroFace := LRHighShapeVZeroFaceCertificate.autoFromBase
+        sqrtFuel logFuel box payload.base
+      if zeroFace.accepts terms box then
+        some (.directVZeroFace zeroFace)
+      else none
 
 theorem autoAccept_check_of_eq
     (terms sqrtFuel logFuel : ℕ) (box : CertificateBox)
@@ -89,6 +99,8 @@ theorem autoAccept_check_of_eq
     sqrtFuel logFuel box payload
   let centered : LRHighShapeVCenteredCertificate :=
     { center := centeredPair.center.base, derivative := payload.base }
+  let zeroFace := LRHighShapeVZeroFaceCertificate.autoFromBase
+    sqrtFuel logFuel box payload.base
   by_cases hV : LRHighShapeVCertificate.rawAccepts
       terms box payload.base = true
   · simp [autoAccept, hV] at haccept
@@ -123,10 +135,19 @@ theorem autoAccept_check_of_eq
       hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpair] at haccept
     cases haccept
     simpa [LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
-  · have hpairFalse : pairAccepts terms box payload = false :=
-      Bool.eq_false_of_not_eq_true hpair
-    simp [autoAccept, hVFalse, centeredPair, centered,
-      hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse] at haccept
+  have hpairFalse : pairAccepts terms box payload = false :=
+    Bool.eq_false_of_not_eq_true hpair
+  by_cases hZero : zeroFace.accepts terms box = true
+  · simp [autoAccept, hVFalse, centeredPair, centered, zeroFace,
+      hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse,
+      hZero] at haccept
+    cases haccept
+    simpa [LRHighShapeCombinedAcceptData.check] using hZero
+  · have hZeroFalse : zeroFace.accepts terms box = false :=
+      Bool.eq_false_of_not_eq_true hZero
+    simp [autoAccept, hVFalse, centeredPair, centered, zeroFace,
+      hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse,
+      hZeroFalse] at haccept
 
 def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option Tree
   | 0, box =>

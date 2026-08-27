@@ -244,6 +244,83 @@ theorem sound (terms : ℕ) {input : RationalEnclosure}
 
 end LRQIntervalCertificate
 
+/-- A value-only enclosure for intervals of the form `[0,u]`.  The
+derivative of `Q` is singular at zero, but `Q` itself is continuous,
+nonnegative, and increasing.  Endpoint-facing value evaluators can use this
+certificate without pretending that a finite `Q'` enclosure exists. -/
+structure LRQZeroIntervalCertificate where
+  upper : LRQPointCertificate
+
+namespace LRQZeroIntervalCertificate
+
+def check (input : RationalEnclosure)
+    (certificate : LRQZeroIntervalCertificate) : Bool :=
+  decide (input.lower = 0 ∧ input.lower ≤ input.upper ∧ input.upper < 1) &&
+    if input.upper = 0 then true else certificate.upper.check input.upper
+
+def enclosure (terms : ℕ) (input : RationalEnclosure)
+    (certificate : LRQZeroIntervalCertificate) : RationalEnclosure :=
+  if input.upper = 0 then RationalEnclosure.point 0
+  else ⟨0, (certificate.upper.enclosure terms).upper⟩
+
+theorem sound (terms : ℕ) {input : RationalEnclosure}
+    {certificate : LRQZeroIntervalCertificate}
+    (hcheck : certificate.check input = true)
+    {y : ℝ} (hy : input.Contains y) :
+    (certificate.enclosure terms input).Contains (lrCertificateQ y) := by
+  have hparts :
+      decide (input.lower = 0 ∧ input.lower ≤ input.upper ∧
+          input.upper < 1) = true ∧
+        (if input.upper = 0 then true
+          else certificate.upper.check input.upper) = true := by
+    simpa [check] using hcheck
+  have hdomain : input.lower = 0 ∧ input.lower ≤ input.upper ∧
+      input.upper < 1 := by
+    simpa using hparts.1
+  by_cases hu0 : input.upper = 0
+  · have hy0 : y = 0 := by
+      have hlo : (0 : ℝ) ≤ y := by simpa [hdomain.1] using hy.1
+      have hup : y ≤ (0 : ℝ) := by simpa [hu0] using hy.2
+      linarith
+    subst y
+    simp [enclosure, hu0, RationalEnclosure.point,
+      RationalEnclosure.Contains]
+  · have huNonneg : (0 : ℚ) ≤ input.upper := by
+      simpa [hdomain.1] using hdomain.2.1
+    have huPos : (0 : ℚ) < input.upper :=
+      lt_of_le_of_ne huNonneg (Ne.symm hu0)
+    have hupperCheck : certificate.upper.check input.upper = true := by
+      simpa [hu0] using hparts.2
+    have hupper := certificate.upper.sound terms hupperCheck
+    have huMem : (input.upper : ℝ) ∈ Ioo (0 : ℝ) 1 := by
+      constructor
+      · exact_mod_cast huPos
+      · exact_mod_cast hdomain.2.2
+    have hyMemClosed : y ∈ Icc (0 : ℝ) 1 := by
+      constructor
+      · simpa [hdomain.1] using hy.1
+      · exact hy.2.trans huMem.2.le
+    have hlower : 0 ≤ lrCertificateQ y :=
+      lrCertificateQ_nonneg hyMemClosed
+    have hupperValue :
+        lrCertificateQ y ≤
+          ((certificate.upper.enclosure terms).upper : ℝ) := by
+      by_cases hy0 : y = 0
+      · subst y
+        rw [lrCertificateQ_zero]
+        exact (lrCertificateQ_nonneg ⟨huMem.1.le, huMem.2.le⟩).trans hupper.2
+      · have hyPos : 0 < y := lt_of_le_of_ne hyMemClosed.1 (Ne.symm hy0)
+        have hyMem : y ∈ Ioo (0 : ℝ) 1 :=
+          ⟨hyPos, hy.2.trans_lt huMem.2⟩
+        have hmono : lrCertificateQ y ≤
+            lrCertificateQ (input.upper : ℝ) :=
+          lrCertificateQ_strictMonoOn.monotoneOn hyMem huMem hy.2
+        exact hmono.trans hupper.2
+    simpa [enclosure, hu0, RationalEnclosure.Contains] using
+      And.intro hlower hupperValue
+
+end LRQZeroIntervalCertificate
+
 /-- Endpoint payloads for enclosing the decreasing function `Q'`. -/
 structure LRQPrimeIntervalCertificate where
   lowerEndpoint : LRQPointCertificate
