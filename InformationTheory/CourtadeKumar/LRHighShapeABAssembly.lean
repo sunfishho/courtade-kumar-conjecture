@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRHighShapeGAssembly
+import InformationTheory.CourtadeKumar.LRCertificateOmega
 
 /-!
 # Cancellation-safe assembly of `A`, `B`, and `D`
@@ -11,33 +12,83 @@ open Set
 
 namespace CourtadeKumar
 
+noncomputable def lrCertificateAValue (e v : ℝ) : ℝ :=
+  Real.log (1 + v) - (1 / 2 : ℝ) * Real.log e
+
+noncomputable def lrCertificateBFlowValue (s e v : ℝ) : ℝ :=
+  Real.log (1 + v) - (1 / 2 : ℝ) * Real.log (lrCertificateB s e)
+
+noncomputable def lrCertificateAValueDeriv
+    (e v e' v' : ℝ) : ℝ :=
+  v' / (1 + v) - (1 / 2 : ℝ) * (e' / e)
+
+noncomputable def lrCertificateBFlowValueDeriv
+    (s e v s' e' v' : ℝ) : ℝ :=
+  v' / (1 + v) - (1 / 2 : ℝ) *
+    (lrCertificateBDeriv s e s' e' / lrCertificateB s e)
+
 noncomputable def lrCertificateA (point : CertificatePoint) : ℝ :=
-  Real.log (1 + lrCertificateV point) -
-    (1 / 2 : ℝ) * Real.log (lrCertificateE point)
+  lrCertificateAValue (lrCertificateE point) (lrCertificateV point)
 
 noncomputable def lrCertificateBFlow (point : CertificatePoint) : ℝ :=
-  Real.log (1 + lrCertificateV point) -
-    (1 / 2 : ℝ) * Real.log (lrCertificateB point.s (lrCertificateE point))
+  lrCertificateBFlowValue point.s (lrCertificateE point)
+    (lrCertificateV point)
 
 noncomputable def lrCertificateD (point : CertificatePoint) : ℝ :=
   lrCertificateA point - lrCertificateBFlow point
 
 noncomputable def lrCertificateADeriv
     (point : CertificatePoint) (e' v' : ℝ) : ℝ :=
-  v' / (1 + lrCertificateV point) -
-    (1 / 2 : ℝ) * (e' / lrCertificateE point)
+  lrCertificateAValueDeriv (lrCertificateE point) (lrCertificateV point) e' v'
 
 noncomputable def lrCertificateBFlowDeriv
     (point : CertificatePoint) (s' e' v' : ℝ) : ℝ :=
-  v' / (1 + lrCertificateV point) -
-    (1 / 2 : ℝ) *
-      (lrCertificateBDeriv point.s (lrCertificateE point) s' e' /
-        lrCertificateB point.s (lrCertificateE point))
+  lrCertificateBFlowValueDeriv point.s (lrCertificateE point)
+    (lrCertificateV point) s' e' v'
 
 noncomputable def lrCertificateDDeriv
     (point : CertificatePoint) (s' e' v' : ℝ) : ℝ :=
   lrCertificateADeriv point e' v' -
     lrCertificateBFlowDeriv point s' e' v'
+
+theorem hasDerivAt_lrCertificateAValue_along
+    {z e' v' : ℝ} {efun vfun : ℝ → ℝ}
+    (he : HasDerivAt efun e' z) (hv : HasDerivAt vfun v' z)
+    (hePos : 0 < efun z) (hvPos : 0 < vfun z) :
+    HasDerivAt (fun q ↦ lrCertificateAValue (efun q) (vfun q))
+      (lrCertificateAValueDeriv (efun z) (vfun z) e' v') z := by
+  have honePlus := (hasDerivAt_const z 1).add hv
+  have hlogOnePlus :=
+    (Real.hasDerivAt_log (by linarith : 1 + vfun z ≠ 0)).comp z honePlus
+  have hlogE := (Real.hasDerivAt_log hePos.ne').comp z he
+  have hhalfLog := (hasDerivAt_const z (1 / 2 : ℝ)).mul hlogE
+  have h := hlogOnePlus.sub hhalfLog
+  unfold lrCertificateAValue lrCertificateAValueDeriv
+  convert h using 1 <;>
+    field_simp [hePos.ne', (by linarith : 1 + vfun z ≠ 0)] <;> ring
+
+theorem hasDerivAt_lrCertificateBFlowValue_along
+    {z s' e' v' : ℝ} {sfun efun vfun : ℝ → ℝ}
+    (hs : HasDerivAt sfun s' z) (he : HasDerivAt efun e' z)
+    (hv : HasDerivAt vfun v' z)
+    (hsMem : sfun z ∈ Ioo (0 : ℝ) 1)
+    (heMem : efun z ∈ Ioo (0 : ℝ) 1)
+    (hvPos : 0 < vfun z) :
+    HasDerivAt
+      (fun q ↦ lrCertificateBFlowValue (sfun q) (efun q) (vfun q))
+      (lrCertificateBFlowValueDeriv (sfun z) (efun z) (vfun z)
+        s' e' v') z := by
+  have hb := hasDerivAt_lrCertificateB_along hs he rfl rfl
+  have hbMem := lrCertificateB_mem_Ioo hsMem heMem
+  have honePlus := (hasDerivAt_const z 1).add hv
+  have hlogOnePlus :=
+    (Real.hasDerivAt_log (by linarith : 1 + vfun z ≠ 0)).comp z honePlus
+  have hlogB := (Real.hasDerivAt_log hbMem.1.ne').comp z hb
+  have hhalfLog := (hasDerivAt_const z (1 / 2 : ℝ)).mul hlogB
+  have h := hlogOnePlus.sub hhalfLog
+  unfold lrCertificateBFlowValue lrCertificateBFlowValueDeriv
+  convert h using 1 <;>
+    field_simp [hbMem.1.ne', (by linarith : 1 + vfun z ≠ 0)] <;> ring
 
 structure LRHighShapeABAD where
   a : IntervalAD
@@ -137,10 +188,14 @@ theorem sound (terms : ℕ) {box : CertificateBox}
   unfold evaluate
   dsimp only
   refine ⟨?_, ?_, ?_⟩
-  · simpa [lrCertificateA, lrCertificateADeriv] using ha
-  · simpa [lrCertificateBFlow, lrCertificateBFlowDeriv] using hb
+  · simpa [lrCertificateA, lrCertificateAValue, lrCertificateADeriv,
+      lrCertificateAValueDeriv] using ha
+  · simpa [lrCertificateBFlow, lrCertificateBFlowValue,
+      lrCertificateBFlowDeriv, lrCertificateBFlowValueDeriv] using hb
   · simpa [lrCertificateD, lrCertificateDDeriv, lrCertificateA,
-      lrCertificateBFlow, lrCertificateADeriv, lrCertificateBFlowDeriv] using hd
+      lrCertificateAValue, lrCertificateBFlow, lrCertificateBFlowValue,
+      lrCertificateADeriv, lrCertificateAValueDeriv,
+      lrCertificateBFlowDeriv, lrCertificateBFlowValueDeriv] using hd
 
 end LRHighShapeABCertificate
 
@@ -195,14 +250,14 @@ theorem lrCertificateA_B_D_eq_flow
     ring
   have hA : lrCertificateA point =
       lrFlowA (lrCertificateV point) (lrCertificateT point) := by
-    unfold lrCertificateA lrFlowA lrFlowBeta lrL
+    unfold lrCertificateA lrCertificateAValue lrFlowA lrFlowBeta lrL
     rw [show 1 - (lrCertificateV point * lrCertificateT point) ^ 2 =
         lrCertificateE point by linarith [hvtSq]]
     ring
   have hB : lrCertificateBFlow point =
       lrFlowB (lrCertificateR point) (lrCertificateV point)
         (lrCertificateT point) := by
-    unfold lrCertificateBFlow lrFlowB lrFlowBeta lrL
+    unfold lrCertificateBFlow lrCertificateBFlowValue lrFlowB lrFlowBeta lrL
     rw [show 1 - (Real.sqrt (lrCertificateR point) *
         lrCertificateV point * lrCertificateT point) ^ 2 =
       lrCertificateB point.s (lrCertificateE point) by
