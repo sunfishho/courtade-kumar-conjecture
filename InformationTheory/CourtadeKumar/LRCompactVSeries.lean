@@ -416,6 +416,21 @@ theorem lrCompactVPWTerm_hasSum
   field_simp [hvNe]
   ring
 
+/-- Finite correction in the tail-enhanced lower bound for `P_W`. -/
+noncomputable def lrCompactVPWError
+    (N : ℕ) (R v x : ℝ) : ℝ :=
+  ∑ j ∈ Finset.range N,
+    lrLowA (j + 1) *
+      (lrCompactVScore R (N + 1) - lrCompactVScore R (j + 1)) *
+      lrCompactVT v x (j + 1)
+
+/-- Tail-enhanced lower bound `w_{N+1} P₀-E_N` from (M47). -/
+noncomputable def lrCompactVPWLower
+    (N : ℕ) (R v t : ℝ) : ℝ :=
+  lrCompactVScore R (N + 1) *
+      (topPhi t + topPhi (v * t) / v) -
+    lrCompactVPWError N R v (t ^ 2)
+
 /-- Endpoint version of the score series, needed for `W_R(1)`. -/
 theorem lrCompactVWOneTerm_hasSum
     {R : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) :
@@ -509,6 +524,49 @@ theorem lrCompactVPsiTerm_hasSum
     unfold lrGShape
     field_simp [hden]
     ring
+
+theorem lrCompactVPWLower_le_lrFlowPW
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (N : ℕ) :
+    lrCompactVPWLower N R v t ≤ lrFlowPW R v t := by
+  let w := lrCompactVScore R (N + 1)
+  let P₀ := topPhi t + topPhi (v * t) / v
+  let diff : ℕ → ℝ := fun j ↦
+    lrCompactVPWTerm R v (t ^ 2) (j + 1) -
+      w * (lrLowA (j + 1) * lrCompactVT v (t ^ 2) (j + 1))
+  have hdiff : HasSum diff (lrFlowPW R v t - w * P₀) := by
+    exact (lrCompactVPWTerm_hasSum hR hv ht).sub
+      ((lrCompactVT_hasSum hv ht).mul_left w)
+  have htail := (hasSum_nat_add_iff' N).2 hdiff
+  have htailNonneg : 0 ≤
+      (lrFlowPW R v t - w * P₀) -
+        ∑ j ∈ Finset.range N, diff j := by
+    apply htail.nonneg
+    intro j
+    dsimp [diff, w]
+    have hscore : lrCompactVScore R (N + 1) ≤
+        lrCompactVScore R (j + N + 1) :=
+      lrCompactVScore_monotone_index hR.1.le (by omega)
+    have ha : 0 ≤ lrLowA (j + N + 1) :=
+      (lrLowA_pos (by omega)).le
+    have hT : 0 ≤ lrCompactVT v (t ^ 2) (j + N + 1) :=
+      lrCompactVT_nonneg hv.1.le (sq_nonneg t) _
+    unfold lrCompactVPWTerm
+    nlinarith [mul_nonneg (mul_nonneg ha (sub_nonneg.mpr hscore)) hT]
+  have hprefix :
+      ∑ j ∈ Finset.range N, diff j =
+        -lrCompactVPWError N R v (t ^ 2) := by
+    unfold lrCompactVPWError diff w
+    rw [← Finset.sum_neg_distrib]
+    apply Finset.sum_congr rfl
+    intro j hj
+    unfold lrCompactVPWTerm
+    ring
+  unfold lrCompactVPWLower
+  dsimp [w, P₀] at htailNonneg
+  rw [hprefix] at htailNonneg
+  linarith
 
 theorem lrCompactVPWHead_le_lrFlowPW
     {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
