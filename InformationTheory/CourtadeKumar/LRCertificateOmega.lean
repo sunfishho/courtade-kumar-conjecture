@@ -33,6 +33,76 @@ noncomputable def lrCertificateOmegaDeriv
       s * (-y') * lrCertificateQPrime b +
       s * (1 - y) * (lrCertificateQSecond b * b'))
 
+lemma lrCertificateB_mem_Ioo {s y : ℝ}
+    (hs : s ∈ Ioo (0 : ℝ) 1) (hy : y ∈ Ioo (0 : ℝ) 1) :
+    lrCertificateB s y ∈ Ioo (0 : ℝ) 1 := by
+  unfold lrCertificateB
+  constructor
+  · have hnonneg : 0 ≤ (1 - s) * y :=
+      mul_nonneg (sub_nonneg.mpr hs.2.le) hy.1.le
+    exact add_pos_of_pos_of_nonneg hs.1 hnonneg
+  · nlinarith [mul_pos (sub_pos.mpr hs.2) (sub_pos.mpr hy.2)]
+
+theorem hasDerivAt_lrCertificateB_along
+    {z s y s' y' : ℝ} {sfun yfun : ℝ → ℝ}
+    (hs : HasDerivAt sfun s' z) (hy : HasDerivAt yfun y' z)
+    (hsz : sfun z = s) (hyz : yfun z = y) :
+    HasDerivAt (fun q ↦ lrCertificateB (sfun q) (yfun q))
+      (lrCertificateBDeriv s y s' y') z := by
+  have h := hs.add (((hasDerivAt_const z 1).sub hs).mul hy)
+  unfold lrCertificateB lrCertificateBDeriv
+  convert h using 1 <;>
+    simp only [Pi.add_apply, Pi.sub_apply, Pi.mul_apply, hsz, hyz] <;> ring
+
+theorem hasDerivAt_lrCertificateOmega_along
+    {z s y s' y' : ℝ} {sfun yfun : ℝ → ℝ}
+    (hs : HasDerivAt sfun s' z) (hy : HasDerivAt yfun y' z)
+    (hsz : sfun z = s) (hyz : yfun z = y)
+    (hsMem : s ∈ Ioo (0 : ℝ) 1) (hyMem : y ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (fun q ↦ lrCertificateOmega (sfun q) (yfun q))
+      (lrCertificateOmegaDeriv s y s' y') z := by
+  have hb := hasDerivAt_lrCertificateB_along hs hy hsz hyz
+  have hbMem := lrCertificateB_mem_Ioo hsMem hyMem
+  have hbMem' : lrCertificateB (sfun z) (yfun z) ∈ Ioo (0 : ℝ) 1 := by
+    simpa [hsz, hyz] using hbMem
+  have hyMem' : yfun z ∈ Ioo (0 : ℝ) 1 := by simpa [hyz] using hyMem
+  have hqb := (hasDerivAt_lrCertificateQ hbMem').comp z hb
+  have hqy := (hasDerivAt_lrCertificateQ hyMem').comp z hy
+  have hqpb := (hasDerivAt_lrCertificateQPrime hbMem').comp z hb
+  have honeMinusY := (hasDerivAt_const z 1).sub hy
+  have hfactor := (hs.mul honeMinusY).mul hqpb
+  have h := (hqb.sub hqy).sub hfactor
+  unfold lrCertificateOmega lrCertificateOmegaDeriv
+  dsimp only
+  convert h using 1 <;>
+    simp only [Pi.mul_apply, Pi.sub_apply, Function.comp_apply, hsz, hyz] <;>
+    ring
+
+/-- Endpoint-safe specialization used by `W = omega_s(0)`.  It never
+differentiates `Q` at zero; that term is constant along the path. -/
+theorem hasDerivAt_lrCertificateOmega_zero_along
+    {z s s' : ℝ} {sfun : ℝ → ℝ}
+    (hs : HasDerivAt sfun s' z) (hsz : sfun z = s)
+    (hsMem : s ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt (fun q ↦ lrCertificateOmega (sfun q) 0)
+      (lrCertificateOmegaDeriv s 0 s' 0) z := by
+  have hsMem' : sfun z ∈ Ioo (0 : ℝ) 1 := by simpa [hsz] using hsMem
+  have hqs := (hasDerivAt_lrCertificateQ hsMem').comp z hs
+  have hqps := (hasDerivAt_lrCertificateQPrime hsMem').comp z hs
+  have hqzero : HasDerivAt (fun _q : ℝ ↦ lrCertificateQ 0) 0 z :=
+    hasDerivAt_const z _
+  have hfactor := (hs.mul (hasDerivAt_const z 1)).mul hqps
+  have h := (hqs.sub hqzero).sub hfactor
+  unfold lrCertificateOmega lrCertificateOmegaDeriv lrCertificateB
+    lrCertificateBDeriv
+  dsimp only
+  convert h using 1
+  · funext q
+    simp only [Pi.mul_apply, Pi.sub_apply, Function.comp_apply]
+    ring
+  · simp only [Pi.mul_apply, Function.comp_apply, hsz]
+    ring
+
 def lrCertificateBAD (s y : IntervalAD) : IntervalAD :=
   IntervalAD.add s
     (IntervalAD.mul (IntervalAD.sub (IntervalAD.const 1) s) y)

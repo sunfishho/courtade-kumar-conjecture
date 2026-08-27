@@ -21,6 +21,29 @@ lemma lrCertificateG0_eq_lrG (v : ℝ) :
   unfold lrCertificateG0 lrG
   ring
 
+theorem hasDerivAt_lrCertificateG0 {v : ℝ} (hv : 0 < v) :
+    HasDerivAt lrCertificateG0 (lrCertificateG0Prime v) v := by
+  have hlogV : HasDerivAt Real.log (1 / v) v :=
+    by simpa [one_div] using Real.hasDerivAt_log hv.ne'
+  have hlogOnePlus : HasDerivAt (fun x : ℝ ↦ Real.log (1 + x))
+      (1 / (1 + v)) v := by
+    simpa using Real.hasDerivAt_log (by linarith : 1 + v ≠ 0) |>.comp v
+      ((hasDerivAt_const v 1).add (hasDerivAt_id v))
+  have hinv : HasDerivAt (fun x : ℝ ↦ 1 / x) (-1 / v ^ 2) v := by
+    have h := (hasDerivAt_id v).inv hv.ne'
+    simpa only [one_div, id_eq] using h
+  have hfactor : HasDerivAt (fun x : ℝ ↦ 1 + 1 / x)
+      (-1 / v ^ 2) v := by
+    convert (hasDerivAt_const v 1).add hinv using 1 <;> ring
+  have hdelta : HasDerivAt
+      (fun x : ℝ ↦ Real.log (1 + x) - Real.log 2)
+      (1 / (1 + v)) v := by
+    convert hlogOnePlus.sub_const (Real.log 2) using 1 <;> ring
+  have h := (hfactor.mul hdelta).sub hlogV
+  unfold lrCertificateG0 lrCertificateG0Prime
+  convert h using 1 <;> field_simp [hv.ne', (by linarith : 1 + v ≠ 0)] <;>
+    ring
+
 /-- Untrusted range-reduction data for the three logarithm nodes. -/
 structure LRG0ADCertificate where
   logV : RationalEnclosure.LogIntervalCertificate
