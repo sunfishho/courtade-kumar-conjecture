@@ -79,6 +79,7 @@ import InformationTheory.CourtadeKumar.LRCompactVCorrelatedReplayLedger
 import InformationTheory.CourtadeKumar.LRUniformTailChannel
 import InformationTheory.CourtadeKumar.LRUniformTailCurvature
 import InformationTheory.CourtadeKumar.LRUniformTailOmega
+import InformationTheory.CourtadeKumar.LRUniformTailPW
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
