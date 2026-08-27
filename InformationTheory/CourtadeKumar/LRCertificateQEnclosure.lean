@@ -304,4 +304,42 @@ theorem sound (terms : ℕ) {input : RationalEnclosure}
   exact ⟨hupper.1.trans hantiLower, hantiUpper.trans hlower.2⟩
 
 end LRQPrimeIntervalCertificate
+
+/-- Executable domain check for the universal `(C3)` enclosure of `Q''`. -/
+def lrQSecondCoarseCheck (input : RationalEnclosure) : Bool :=
+  decide ((0 : ℚ) < input.lower ∧ input.lower ≤ input.upper ∧ input.upper < 1)
+
+/-- The universal rational enclosure `-1/(4y₀) ≤ Q''(y) ≤ 0` on an
+interval whose lower endpoint is `y₀ > 0`. -/
+def lrQSecondCoarseEnclosure (input : RationalEnclosure) : RationalEnclosure :=
+  ⟨-1 / (4 * input.lower), 0⟩
+
+theorem lrQSecondCoarseEnclosure_sound {input : RationalEnclosure}
+    (hcheck : lrQSecondCoarseCheck input = true)
+    {y : ℝ} (hy : input.Contains y) :
+    (lrQSecondCoarseEnclosure input).Contains (lrCertificateQSecond y) := by
+  have hdomain :
+      (0 : ℚ) < input.lower ∧ input.lower ≤ input.upper ∧
+        input.upper < 1 := by
+    simpa [lrQSecondCoarseCheck] using hcheck
+  have hlowerPos : (0 : ℝ) < (input.lower : ℝ) := by
+    exact_mod_cast hdomain.1
+  have hupperLt : (input.upper : ℝ) < 1 := by
+    exact_mod_cast hdomain.2.2
+  have hyMem : y ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hlowerPos.trans_le hy.1, hy.2.trans_lt hupperLt⟩
+  have hdenLe : 4 * (input.lower : ℝ) ≤ 4 * y :=
+    mul_le_mul_of_nonneg_left hy.1 (by norm_num)
+  have hinv : 1 / (4 * y) ≤ 1 / (4 * (input.lower : ℝ)) :=
+    one_div_le_one_div_of_le (by positivity) hdenLe
+  have hcoarse :
+      -1 / (4 * (input.lower : ℝ)) ≤ -1 / (4 * y) := by
+    have := neg_le_neg hinv
+    simpa only [neg_div] using this
+  have hlower := hcoarse.trans (lrCertificateQSecond_lower hyMem)
+  have hupper := lrCertificateQSecond_nonpos hyMem
+  unfold lrQSecondCoarseEnclosure RationalEnclosure.Contains
+  norm_num at ⊢
+  exact ⟨hlower, hupper⟩
+
 end CourtadeKumar
