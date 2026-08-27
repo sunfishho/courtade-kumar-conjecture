@@ -80,6 +80,7 @@ import InformationTheory.CourtadeKumar.LRUniformTailChannel
 import InformationTheory.CourtadeKumar.LRUniformTailCurvature
 import InformationTheory.CourtadeKumar.LRUniformTailOmega
 import InformationTheory.CourtadeKumar.LRUniformTailPW
+import InformationTheory.CourtadeKumar.LRUniformTailCollection
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
