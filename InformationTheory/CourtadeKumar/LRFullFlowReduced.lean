@@ -26,6 +26,19 @@ theorem lrFlowNumeratorP_nonneg_target_of_midpoint_tangent
     lrHighShapeSmallVNumeratorTheorem hmidpoint htangent
       hR hp hv ht htarget
 
+/-- Pointwise closure using the exact audited half-midpoint target. -/
+theorem lrFlowNumeratorP_nonneg_target_of_halfMidpoint_tangent
+    (hmidpoint : LRHighShapeHalfMidpointTheorem)
+    (htangent : LRHighShapeTangentTheorem)
+    {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t) :
+    0 ≤ lrFlowNumeratorP R p v t :=
+  lrFlowNumeratorP_nonneg_target_of_complete_shape_halfMidpoint_T
+    lrHighShapeSmallVNumeratorTheorem hmidpoint htangent
+      hR hp hv ht htarget
+
 /-- Reduced pointwise interface matching the final high-shape `V` ledger. -/
 theorem lrFlowNumeratorP_nonneg_target_of_highShape_V_reduced
     (hV : LRHighShapeVTheorem)
@@ -56,6 +69,30 @@ theorem hasDerivAt_lrReserve_exactFlow_of_midpoint_tangent
       0 ≤ lrFlowNumerator R (lrProbabilityToOdds p) v t /
         (lrFlowB R v t * (1 - R) ^ 2 * t ^ 2) :=
   hasDerivAt_lrReserve_exactFlow_of_complete_shape_certificates
+    lrHighShapeSmallVNumeratorTheorem hmidpoint htangent
+      hR hp hv ht hvval hvfun htarget hcurve
+
+/-- Differential closure using the exact audited half-midpoint target. -/
+theorem hasDerivAt_lrReserve_exactFlow_of_halfMidpoint_tangent
+    (hmidpoint : LRHighShapeHalfMidpointTheorem)
+    (htangent : LRHighShapeTangentTheorem)
+    {R p v v' t : ℝ} {vfun : ℝ → ℝ}
+    (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioo (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (hvval : vfun R = v) (hvfun : HasDerivAt vfun v' R)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t)
+    (hcurve :
+      (fun y : ℝ ↦ lrSquareTarget y (vfun y) t) =ᶠ[nhds R]
+        (fun y : ℝ ↦ lrSquareObjective y (lrProbabilityToOdds p))) :
+    HasDerivAt
+        (fun y : ℝ ↦
+          lrSquareReserve y (lrProbabilityToOdds p) (vfun y) t)
+        (lrFlowNumerator R (lrProbabilityToOdds p) v t /
+          (lrFlowB R v t * (1 - R) ^ 2 * t ^ 2)) R ∧
+      0 ≤ lrFlowNumerator R (lrProbabilityToOdds p) v t /
+        (lrFlowB R v t * (1 - R) ^ 2 * t ^ 2) :=
+  hasDerivAt_lrReserve_exactFlow_of_complete_shape_halfMidpoint_T
     lrHighShapeSmallVNumeratorTheorem hmidpoint htangent
       hR hp hv ht hvval hvfun htarget hcurve
 

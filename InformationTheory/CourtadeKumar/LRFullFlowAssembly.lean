@@ -37,6 +37,19 @@ def LRHighShapeMidpointTheorem : Prop :=
     0 < lrFlowJ R v t →
     0 ≤ lrFlowUReserve R v t
 
+/-- The exact high-shape half-midpoint certificate used by the audited
+certificate ledger.  This is the direct target `N(M/2)`, in contrast with
+the older sufficient auxiliary reserve `LRHighShapeMidpointTheorem`. -/
+def LRHighShapeHalfMidpointTheorem : Prop :=
+  ∀ (R v t : ℝ),
+    R ∈ Ioo (0 : ℝ) 1 →
+    v ∈ Ioo (0 : ℝ) 1 →
+    t ∈ Ioo (0 : ℝ) 1 →
+    17 / 20 ≤ t ^ 2 →
+    1 / 3 ≤ v →
+    0 < lrFlowJ R v t →
+    0 ≤ lrFlowNumeratorP R (lrFlowM v / 2) v t
+
 /-- The high-shape tangent/determinant certificate `(T)`. -/
 def LRHighShapeTangentTheorem : Prop :=
   ∀ (R v t : ℝ),
@@ -84,6 +97,30 @@ theorem lrFlowNumeratorP_nonneg_target_of_highShape_certificates
           (hmidpoint R v t hR hv ht htHigh (by linarith) hJpos)
           (htangent R v t hR hv ht htHigh (by linarith) hJpos)
 
+/-- Positive-flow assembly using the exact half-midpoint target checked by
+the audited interval certificate. -/
+theorem lrFlowNumeratorP_nonneg_target_of_highShape_halfMidpoint_T
+    (hsmall : LRHighShapeSmallVNumeratorTheorem)
+    (hmidpoint : LRHighShapeHalfMidpointTheorem)
+    (htangent : LRHighShapeTangentTheorem)
+    {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htHigh : 17 / 20 ≤ t ^ 2)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t) :
+    0 ≤ lrFlowNumeratorP R p v t := by
+  rcases lt_trichotomy (lrFlowJ R v t) 0 with hJneg | hJzero | hJpos
+  · exact lrFlowNumeratorP_nonneg_of_J_neg_target
+      hR hp hv ht htarget hJneg
+  · exact lrFlowNumeratorP_nonneg_of_J_eq_zero_physical
+      hR hv ht hJzero
+  · by_cases hvSmall : v ≤ 1 / 3
+    · exact hsmall R p v t hR hp hv ht htHigh hvSmall hJpos htarget
+    · exact lrFlowNumeratorP_nonneg_of_J_pos_target_of_halfMidpoint_T
+        hR hp hv ht htarget hJpos
+          (hmidpoint R v t hR hv ht htHigh (by linarith) hJpos)
+          (htangent R v t hR hv ht htHigh (by linarith) hJpos)
+
 theorem lrFlowNumeratorP_nonneg_target_of_complete_shape_certificates
     (hsmall : LRHighShapeSmallVNumeratorTheorem)
     (hmidpoint : LRHighShapeMidpointTheorem)
@@ -97,6 +134,22 @@ theorem lrFlowNumeratorP_nonneg_target_of_complete_shape_certificates
   · exact lrFlowNumeratorP_nonneg_target_lowShape
       hR hp hv ht htLow htarget
   · exact lrFlowNumeratorP_nonneg_target_of_highShape_certificates
+      hsmall hmidpoint htangent hR hp hv ht (by linarith) htarget
+
+/-- Exhaustive shape assembly using the exact half-midpoint target. -/
+theorem lrFlowNumeratorP_nonneg_target_of_complete_shape_halfMidpoint_T
+    (hsmall : LRHighShapeSmallVNumeratorTheorem)
+    (hmidpoint : LRHighShapeHalfMidpointTheorem)
+    (htangent : LRHighShapeTangentTheorem)
+    {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t) :
+    0 ≤ lrFlowNumeratorP R p v t := by
+  by_cases htLow : t ^ 2 ≤ 17 / 20
+  · exact lrFlowNumeratorP_nonneg_target_lowShape
+      hR hp hv ht htLow htarget
+  · exact lrFlowNumeratorP_nonneg_target_of_highShape_halfMidpoint_T
       hsmall hmidpoint htangent hR hp hv ht (by linarith) htarget
 
 /-- A single high-shape `V` certificate replaces the independent midpoint
