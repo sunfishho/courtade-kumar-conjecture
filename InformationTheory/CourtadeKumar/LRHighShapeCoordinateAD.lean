@@ -57,30 +57,30 @@ noncomputable def lrCertificateVDeriv
 
 noncomputable def lrCertificateVRadicandDerivS
     (point : CertificatePoint) : ℝ :=
-  ((-lrCertificateEDerivS point) * lrCertificateX point -
-      (1 - lrCertificateE point) * lrCertificateXDerivS point) /
-    lrCertificateX point ^ 2
+  lrCertificateVRadicandDeriv point (lrCertificateEDerivS point)
+    (lrCertificateXDerivS point)
 
 noncomputable def lrCertificateVRadicandDerivK
     (point : CertificatePoint) : ℝ :=
-  ((-lrCertificateEDerivK point) * lrCertificateX point -
-      (1 - lrCertificateE point) * lrCertificateXDerivK point) /
-    lrCertificateX point ^ 2
+  lrCertificateVRadicandDeriv point (lrCertificateEDerivK point)
+    (lrCertificateXDerivK point)
 
 noncomputable def lrCertificateVRadicandDerivChi
     (point : CertificatePoint) : ℝ :=
-  ((-lrCertificateEDerivChi point) * lrCertificateX point -
-      (1 - lrCertificateE point) * lrCertificateXDerivChi point) /
-    lrCertificateX point ^ 2
+  lrCertificateVRadicandDeriv point (lrCertificateEDerivChi point)
+    (lrCertificateXDerivChi point)
 
 noncomputable def lrCertificateVDerivS (point : CertificatePoint) : ℝ :=
-  lrCertificateVRadicandDerivS point / (2 * lrCertificateV point)
+  lrCertificateVDeriv point (lrCertificateEDerivS point)
+    (lrCertificateXDerivS point)
 
 noncomputable def lrCertificateVDerivK (point : CertificatePoint) : ℝ :=
-  lrCertificateVRadicandDerivK point / (2 * lrCertificateV point)
+  lrCertificateVDeriv point (lrCertificateEDerivK point)
+    (lrCertificateXDerivK point)
 
 noncomputable def lrCertificateVDerivChi (point : CertificatePoint) : ℝ :=
-  lrCertificateVRadicandDerivChi point / (2 * lrCertificateV point)
+  lrCertificateVDeriv point (lrCertificateEDerivChi point)
+    (lrCertificateXDerivChi point)
 
 /-- A generic three-coordinate curve, used to prove the analytic chain rule
 once before specializing to the `s`, `k`, and `chi` coordinate lines. -/
@@ -262,6 +262,7 @@ theorem lrCertificateVRadicandAD_sound {box : CertificateBox}
   unfold lrCertificateVRadicandAD lrCertificateVRadicand
     lrCertificateVRadicandDerivS lrCertificateVRadicandDerivK
     lrCertificateVRadicandDerivChi
+  unfold lrCertificateVRadicandDeriv
   convert h using 1
   all_goals norm_num
 
@@ -302,7 +303,9 @@ theorem LRHighShapeCoordinateCertificate.vAD_sound
   have hrad := lrCertificateVRadicandAD_sound hpoint hparts.1.2
   have h := IntervalAD.contains_sqrt hparts.2 hrad
   simpa [LRHighShapeCoordinateCertificate.vAD, lrCertificateV,
-    lrCertificateVRadicand, lrCertificateVDerivS, lrCertificateVDerivK,
-    lrCertificateVDerivChi] using h
+    lrCertificateVRadicand, lrCertificateVDeriv,
+    lrCertificateVRadicandDerivS, lrCertificateVRadicandDerivK,
+    lrCertificateVRadicandDerivChi, lrCertificateVDerivS,
+    lrCertificateVDerivK, lrCertificateVDerivChi] using h
 
 end CourtadeKumar

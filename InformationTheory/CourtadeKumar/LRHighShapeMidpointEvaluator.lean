@@ -67,6 +67,181 @@ noncomputable def lrCertificateUTargetDeriv
       lrCertificateHalfMidpointNumerator point * denominator') /
     lrCertificateUDenominator point ^ 2
 
+noncomputable def lrCertificateUTargetCurveDeriv
+    (point : CertificatePoint) (s' k' chi' : ℝ) : ℝ :=
+  let e' := s' * point.k + point.s * k'
+  let x' := -(chi' * lrCertificateE point + point.chi * e')
+  let v' := lrCertificateVDeriv point e' x'
+  let y0' := chi' * lrCertificateE point + point.chi * e'
+  let a' := lrCertificateADeriv point e' v'
+  let b' := lrCertificateBFlowDeriv point s' e' v'
+  let d' := lrCertificateDDeriv point s' e' v'
+  let g' := lrCertificateGShapeDeriv point y0' e' v'
+  let w' := lrCertificateOmegaDeriv point.s 0 s' 0
+  let pw' := lrCertificatePWDeriv point s' y0' e' v'
+  let m' := lrCertificateMDeriv point v'
+  let numerator' := lrCertificateHalfMidpointNumeratorDeriv point
+    a' d' g' w' pw' b' m' x'
+  let denominator' := lrCertificateUDenominatorDeriv point s' e'
+  lrCertificateUTargetDeriv point numerator' denominator'
+
+theorem hasDerivAt_lrCertificateUTarget_curve
+    {z s' k' chi' : ℝ} {sfun kfun chifun : ℝ → ℝ}
+    (hs : HasDerivAt sfun s' z) (hk : HasDerivAt kfun k' z)
+    (hchi : HasDerivAt chifun chi' z)
+    (hsMem : sfun z ∈ Ioo (0 : ℝ) 1)
+    (heMem : lrCertificateE (lrCertificateCurve sfun kfun chifun z) ∈
+      Ioo (0 : ℝ) 1)
+    (hchiMem : chifun z ∈ Ioo (0 : ℝ) 1) :
+    HasDerivAt
+      (fun q ↦ lrCertificateUTarget
+        (lrCertificateCurve sfun kfun chifun q))
+      (lrCertificateUTargetCurveDeriv
+        (lrCertificateCurve sfun kfun chifun z) s' k' chi') z := by
+  let point := lrCertificateCurve sfun kfun chifun z
+  let e' := s' * point.k + point.s * k'
+  let x' := -(chi' * lrCertificateE point + point.chi * e')
+  let v' := lrCertificateVDeriv point e' x'
+  let y0' := chi' * lrCertificateE point + point.chi * e'
+  let a' := lrCertificateADeriv point e' v'
+  let b' := lrCertificateBFlowDeriv point s' e' v'
+  let d' := lrCertificateDDeriv point s' e' v'
+  let g' := lrCertificateGShapeDeriv point y0' e' v'
+  let w' := lrCertificateOmegaDeriv point.s 0 s' 0
+  let pw' := lrCertificatePWDeriv point s' y0' e' v'
+  let m' := lrCertificateMDeriv point v'
+  have he := hasDerivAt_lrCertificateE_curve (chi := chifun) hs hk
+  have hxRaw := hasDerivAt_lrCertificateX_curve hs hk hchi
+  have hx : HasDerivAt
+      (fun q ↦ lrCertificateX (lrCertificateCurve sfun kfun chifun q))
+      x' z := by
+    simpa [point, e', x', lrCertificateCurve] using hxRaw
+  have hvRaw := hasDerivAt_lrCertificateV_curve hs hk hchi heMem hchiMem
+  have hv : HasDerivAt
+      (fun q ↦ lrCertificateV (lrCertificateCurve sfun kfun chifun q))
+      v' z := by
+    simpa [point, e', x', v', lrCertificateCurve] using hvRaw
+  have hxPos : 0 < lrCertificateX point := by
+    change 0 < 1 - chifun z * lrCertificateE point
+    have hprod : chifun z * lrCertificateE point < 1 := by
+      calc
+        chifun z * lrCertificateE point < 1 * lrCertificateE point :=
+          mul_lt_mul_of_pos_right hchiMem.2 heMem.1
+        _ = lrCertificateE point := one_mul _
+        _ < 1 := heMem.2
+    exact sub_pos.mpr hprod
+  have hradPos : 0 < lrCertificateVRadicand point :=
+    div_pos (sub_pos.mpr heMem.2) hxPos
+  have hvPos : 0 < lrCertificateV point := Real.sqrt_pos.2 hradPos
+  have hy0 : HasDerivAt
+      (fun q ↦ lrCertificateY0 (lrCertificateCurve sfun kfun chifun q))
+      y0' z := by
+    have h := hchi.mul he
+    simpa [lrCertificateY0, point, e', y0', lrCertificateCurve] using h
+  have hy0Mem : lrCertificateY0 point ∈ Ioo (0 : ℝ) 1 := by
+    unfold lrCertificateY0
+    constructor
+    · exact mul_pos hchiMem.1 heMem.1
+    · calc
+        point.chi * lrCertificateE point < 1 * lrCertificateE point :=
+          mul_lt_mul_of_pos_right hchiMem.2 heMem.1
+        _ = lrCertificateE point := one_mul _
+        _ < 1 := heMem.2
+  have hAraw := hasDerivAt_lrCertificateAValue_along he hv heMem.1 hvPos
+  have hA : HasDerivAt
+      (fun q ↦ lrCertificateA (lrCertificateCurve sfun kfun chifun q))
+      a' z := by
+    simpa [lrCertificateA, lrCertificateADeriv, point, e', v', a'] using hAraw
+  have hBraw := hasDerivAt_lrCertificateBFlowValue_along
+    hs he hv hsMem heMem hvPos
+  have hB : HasDerivAt
+      (fun q ↦ lrCertificateBFlow (lrCertificateCurve sfun kfun chifun q))
+      b' z := by
+    simpa [lrCertificateBFlow, lrCertificateBFlowDeriv,
+      point, e', v', b', lrCertificateCurve] using hBraw
+  have hD : HasDerivAt
+      (fun q ↦ lrCertificateD (lrCertificateCurve sfun kfun chifun q))
+      d' z := by
+    have h := hA.sub hB
+    simpa [lrCertificateD, lrCertificateDDeriv, point, e', v', a', b', d']
+      using h
+  have hGraw := hasDerivAt_lrCertificateGShapeValue_along
+    hy0 he hv hy0Mem heMem hvPos
+  have hG : HasDerivAt
+      (fun q ↦ lrCertificateGShape (lrCertificateCurve sfun kfun chifun q))
+      g' z := by
+    simpa [lrCertificateGShape, lrCertificateGShapeDeriv,
+      point, e', v', y0', g'] using hGraw
+  have hWraw := hasDerivAt_lrCertificateOmega_zero_along hs rfl hsMem
+  have hW : HasDerivAt
+      (fun q ↦ lrCertificateW (lrCertificateCurve sfun kfun chifun q))
+      w' z := by
+    simpa [lrCertificateW, point, w', lrCertificateCurve] using hWraw
+  have hPWraw := hasDerivAt_lrCertificatePWValue_along
+    hs hy0 he hv hsMem hy0Mem heMem hvPos
+  have hPW : HasDerivAt
+      (fun q ↦ lrCertificatePW (lrCertificateCurve sfun kfun chifun q))
+      pw' z := by
+    simpa [lrCertificatePW, lrCertificatePWDeriv,
+      point, e', v', y0', pw', lrCertificateCurve] using hPWraw
+  have honePlusV := (hasDerivAt_const z 1).add hv
+  have hMraw := hv.div honePlusV (by
+    change 1 + lrCertificateV point ≠ 0
+    linarith)
+  have hM : HasDerivAt
+      (fun q ↦ lrCertificateM (lrCertificateCurve sfun kfun chifun q))
+      m' z := by
+    unfold lrCertificateM
+    convert hMraw using 1 <;>
+      dsimp [point, v', m', lrCertificateMDeriv] <;>
+      field_simp [(by linarith : 1 + lrCertificateV point ≠ 0)] <;> ring
+  have hp := hM.mul (hasDerivAt_const z (1 / 2 : ℝ))
+  have honeMinusP := (hasDerivAt_const z 1).sub hp
+  have hleft := honeMinusP.mul hD
+  have hpx := hp.mul hx
+  have hright := hpx.mul hB
+  have hbracketRaw := hleft.add hright
+  have hbracket : HasDerivAt
+      (fun q ↦ lrCertificateHalfMidpointBracket
+        (lrCertificateCurve sfun kfun chifun q))
+      (lrCertificateHalfMidpointBracketDeriv point b' d' m' x') z := by
+    unfold lrCertificateHalfMidpointBracket
+      lrCertificateHalfMidpointBracketDeriv
+    dsimp only
+    convert hbracketRaw using 1 <;>
+      first
+      | (funext q; simp only [Pi.add_apply, Pi.sub_apply, Pi.mul_apply]; ring)
+      | (dsimp [point]; ring)
+  have hdg := hD.mul hG
+  have hapw := hA.mul hPW
+  have hpositive := hdg.add hapw
+  have hcorrection := ((hasDerivAt_const z 4).mul hW).mul hbracket
+  have hnumRaw := hpositive.sub hcorrection
+  have hnum : HasDerivAt
+      (fun q ↦ lrCertificateHalfMidpointNumerator
+        (lrCertificateCurve sfun kfun chifun q))
+      (lrCertificateHalfMidpointNumeratorDeriv point
+        a' d' g' w' pw' b' m' x') z := by
+    unfold lrCertificateHalfMidpointNumerator
+      lrCertificateHalfMidpointNumeratorDeriv
+    convert hnumRaw using 1 <;> dsimp [point] <;> ring
+  have hdenRaw := hs.mul he
+  have hden : HasDerivAt
+      (fun q ↦ lrCertificateUDenominator
+        (lrCertificateCurve sfun kfun chifun q))
+      (lrCertificateUDenominatorDeriv point s' e') z := by
+    unfold lrCertificateUDenominator lrCertificateUDenominatorDeriv
+    convert hdenRaw using 1 <;> dsimp [point, e', lrCertificateCurve] <;> ring
+  have hdenPos : 0 < lrCertificateUDenominator point :=
+    mul_pos hsMem.1 heMem.1
+  have htargetRaw := hnum.div hden hdenPos.ne'
+  unfold lrCertificateUTarget lrCertificateUTargetCurveDeriv
+    lrCertificateUTargetDeriv
+  dsimp only
+  convert htargetRaw using 1 <;>
+    dsimp [point, e', x', v', y0', a', b', d', g', w', pw', m'] <;>
+    field_simp [hdenPos.ne'] <;> ring
+
 private noncomputable def lrCertificateADerivS (point : CertificatePoint) : ℝ :=
   lrCertificateADeriv point (lrCertificateEDerivS point)
     (lrCertificateVDerivS point)
@@ -149,6 +324,171 @@ noncomputable def lrCertificateUTargetDerivChi
     (lrCertificateHalfMidpointNumeratorDerivChi point)
     (lrCertificateUDenominatorDeriv point 0 (lrCertificateEDerivChi point))
 
+def LRHighShapeInterior (point : CertificatePoint) : Prop :=
+  point.s ∈ Ioo (0 : ℝ) 1 ∧
+    lrCertificateE point ∈ Ioo (0 : ℝ) 1 ∧
+    point.chi ∈ Ioo (0 : ℝ) 1
+
+def lrHighShapeInteriorBoxCheck (box : CertificateBox) : Bool :=
+  decide (
+    (0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧
+    (0 : ℚ) < box.kLo ∧ box.kLo ≤ box.kHi ∧
+      box.sHi * box.kHi < 1 ∧
+    (0 : ℚ) < box.chiLo ∧ box.chiLo ≤ box.chiHi ∧ box.chiHi < 1)
+
+theorem lrHighShapeInteriorBoxCheck_sound {box : CertificateBox}
+    (hcheck : lrHighShapeInteriorBoxCheck box = true)
+    {point : CertificatePoint} (hpoint : box.Contains point) :
+    LRHighShapeInterior point := by
+  have hparts :
+      (0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧
+      (0 : ℚ) < box.kLo ∧ box.kLo ≤ box.kHi ∧
+        box.sHi * box.kHi < 1 ∧
+      (0 : ℚ) < box.chiLo ∧ box.chiLo ≤ box.chiHi ∧
+        box.chiHi < 1 := by
+    simpa [lrHighShapeInteriorBoxCheck] using hcheck
+  have hsLo : (0 : ℝ) < box.sLo := by exact_mod_cast hparts.1
+  have hsOrder : (box.sLo : ℝ) ≤ box.sHi := by
+    exact_mod_cast hparts.2.1
+  have hsHi : (box.sHi : ℝ) < 1 := by exact_mod_cast hparts.2.2.1
+  have hkLo : (0 : ℝ) < box.kLo := by exact_mod_cast hparts.2.2.2.1
+  have hkOrder : (box.kLo : ℝ) ≤ box.kHi := by
+    exact_mod_cast hparts.2.2.2.2.1
+  have hprodHi : ((box.sHi * box.kHi : ℚ) : ℝ) < 1 := by
+    exact_mod_cast hparts.2.2.2.2.2.1
+  have hchiLo : (0 : ℝ) < box.chiLo := by
+    exact_mod_cast hparts.2.2.2.2.2.2.1
+  have hchiHi : (box.chiHi : ℝ) < 1 := by
+    exact_mod_cast hparts.2.2.2.2.2.2.2.2
+  have hs : point.s ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hsLo.trans_le hpoint.1, hpoint.2.1.trans_lt hsHi⟩
+  have hkPos : 0 < point.k := hkLo.trans_le hpoint.2.2.1
+  have hkHiNonneg : (0 : ℝ) ≤ box.kHi :=
+    hkLo.le.trans hkOrder
+  have heUpper : lrCertificateE point ≤
+      (box.sHi : ℝ) * box.kHi := by
+    unfold lrCertificateE
+    exact mul_le_mul hpoint.2.1 hpoint.2.2.2.1 hkPos.le
+      (hsLo.le.trans hsOrder)
+  have he : lrCertificateE point ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · unfold lrCertificateE
+      exact mul_pos hs.1 hkPos
+    · exact heUpper.trans_lt (by simpa using hprodHi)
+  have hchi : point.chi ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hchiLo.trans_le hpoint.2.2.2.2.1,
+      hpoint.2.2.2.2.2.trans_lt hchiHi⟩
+  exact ⟨hs, he, hchi⟩
+
+theorem lrHighShapeInteriorBoxCheck_midpoint {box : CertificateBox}
+    (hcheck : lrHighShapeInteriorBoxCheck box = true) :
+    box.Contains box.midpoint := by
+  have hparts :
+      (0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧
+      (0 : ℚ) < box.kLo ∧ box.kLo ≤ box.kHi ∧
+        box.sHi * box.kHi < 1 ∧
+      (0 : ℚ) < box.chiLo ∧ box.chiLo ≤ box.chiHi ∧
+        box.chiHi < 1 := by
+    simpa [lrHighShapeInteriorBoxCheck] using hcheck
+  let witness : CertificatePoint :=
+    { s := box.sLo, k := box.kLo, chi := box.chiLo }
+  have hwitness : box.Contains witness := by
+    dsimp [witness]
+    constructor
+    · rfl
+    constructor
+    · change ((box.sLo : ℚ) : ℝ) ≤ box.sHi
+      exact_mod_cast hparts.2.1
+    constructor
+    · rfl
+    constructor
+    · change ((box.kLo : ℚ) : ℝ) ≤ box.kHi
+      exact_mod_cast hparts.2.2.2.2.1
+    constructor
+    · rfl
+    · change ((box.chiLo : ℚ) : ℝ) ≤ box.chiHi
+      exact_mod_cast hparts.2.2.2.2.2.2.2.1
+  exact box.midpoint_mem hwitness
+
+private lemma lrCertificateUTargetCurveDeriv_s (point : CertificatePoint) :
+    lrCertificateUTargetCurveDeriv point 1 0 0 =
+      lrCertificateUTargetDerivS point := by
+  unfold lrCertificateUTargetCurveDeriv lrCertificateUTargetDerivS
+    lrCertificateHalfMidpointNumeratorDerivS lrCertificateADerivS
+    lrCertificateBFlowDerivS lrCertificateDDerivS
+    lrCertificateGShapeDerivS lrCertificateWDerivS
+    lrCertificatePWDerivS lrCertificateY0DerivS
+    lrCertificateVDerivS
+  unfold lrCertificateEDerivS lrCertificateXDerivS
+  dsimp only
+  ring
+
+private lemma lrCertificateUTargetCurveDeriv_k (point : CertificatePoint) :
+    lrCertificateUTargetCurveDeriv point 0 1 0 =
+      lrCertificateUTargetDerivK point := by
+  unfold lrCertificateUTargetCurveDeriv lrCertificateUTargetDerivK
+    lrCertificateHalfMidpointNumeratorDerivK lrCertificateADerivK
+    lrCertificateBFlowDerivK lrCertificateDDerivK
+    lrCertificateGShapeDerivK lrCertificateWDerivK
+    lrCertificatePWDerivK lrCertificateY0DerivK
+    lrCertificateVDerivK
+  unfold lrCertificateEDerivK lrCertificateXDerivK
+  dsimp only
+  ring
+
+private lemma lrCertificateUTargetCurveDeriv_chi (point : CertificatePoint) :
+    lrCertificateUTargetCurveDeriv point 0 0 1 =
+      lrCertificateUTargetDerivChi point := by
+  unfold lrCertificateUTargetCurveDeriv lrCertificateUTargetDerivChi
+    lrCertificateHalfMidpointNumeratorDerivChi lrCertificateADerivChi
+    lrCertificateBFlowDerivChi lrCertificateDDerivChi
+    lrCertificateGShapeDerivChi lrCertificateWDerivChi
+    lrCertificatePWDerivChi lrCertificateY0DerivChi
+    lrCertificateVDerivChi
+  unfold lrCertificateEDerivChi lrCertificateXDerivChi
+  dsimp only
+  ring
+
+theorem hasDerivAt_lrCertificateUTarget_s {point : CertificatePoint}
+    (hpoint : LRHighShapeInterior point) :
+    HasDerivAt (fun s ↦ lrCertificateUTarget { point with s := s })
+      (lrCertificateUTargetDerivS point) point.s := by
+  have h := hasDerivAt_lrCertificateUTarget_curve
+    (sfun := fun q ↦ q) (kfun := fun _q ↦ point.k)
+    (chifun := fun _q ↦ point.chi)
+    (hasDerivAt_id point.s) (hasDerivAt_const point.s point.k)
+    (hasDerivAt_const point.s point.chi) hpoint.1 hpoint.2.1 hpoint.2.2
+  convert h using 1
+  simpa [lrCertificateCurve] using
+    (lrCertificateUTargetCurveDeriv_s point).symm
+
+theorem hasDerivAt_lrCertificateUTarget_k {point : CertificatePoint}
+    (hpoint : LRHighShapeInterior point) :
+    HasDerivAt (fun k ↦ lrCertificateUTarget { point with k := k })
+      (lrCertificateUTargetDerivK point) point.k := by
+  have h := hasDerivAt_lrCertificateUTarget_curve
+    (sfun := fun _q ↦ point.s) (kfun := fun q ↦ q)
+    (chifun := fun _q ↦ point.chi)
+    (hasDerivAt_const point.k point.s) (hasDerivAt_id point.k)
+    (hasDerivAt_const point.k point.chi) hpoint.1 hpoint.2.1 hpoint.2.2
+  convert h using 1
+  simpa [lrCertificateCurve] using
+    (lrCertificateUTargetCurveDeriv_k point).symm
+
+theorem hasDerivAt_lrCertificateUTarget_chi {point : CertificatePoint}
+    (hpoint : LRHighShapeInterior point) :
+    HasDerivAt (fun chi ↦ lrCertificateUTarget { point with chi := chi })
+      (lrCertificateUTargetDerivChi point) point.chi := by
+  have h := hasDerivAt_lrCertificateUTarget_curve
+    (sfun := fun _q ↦ point.s) (kfun := fun _q ↦ point.k)
+    (chifun := fun q ↦ q)
+    (hasDerivAt_const point.chi point.s)
+    (hasDerivAt_const point.chi point.k) (hasDerivAt_id point.chi)
+    hpoint.1 hpoint.2.1 hpoint.2.2
+  convert h using 1
+  simpa [lrCertificateCurve] using
+    (lrCertificateUTargetCurveDeriv_chi point).symm
+
 /-- All untrusted scalar payloads needed at one accepted midpoint leaf. -/
 structure LRHighShapeMidpointCertificate where
   kernel : LRHighShapeKernelCertificate
@@ -203,6 +543,14 @@ def check (box : CertificateBox)
     certificate.ab.check box coordinate = true ∧
     (0 : ℚ) < (IntervalAD.add (IntervalAD.const 1) v).value.lower ∧
     (0 : ℚ) < (denominatorAD box).value.lower)
+
+def payloadCheck (box : CertificateBox)
+    (certificate : LRHighShapeMidpointCertificate) : Bool :=
+  lrHighShapeInteriorBoxCheck box && certificate.check box
+
+def accepts (terms : ℕ) (box : CertificateBox)
+    (certificate : LRHighShapeMidpointCertificate) : Bool :=
+  checkedMidpointLeafAccepts payloadCheck (evaluate terms) box certificate
 
 theorem mAD_sound {box : CertificateBox} {point : CertificatePoint}
     {certificate : LRHighShapeMidpointCertificate}
@@ -326,6 +674,56 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
     (certificate.evaluate terms box).value.Contains
       (lrCertificateUTarget point) := by
   exact (certificate.evaluateAD_sound terms hpoint hcheck).1
+
+noncomputable def evaluate_derivativeEnclosures (terms : ℕ)
+    {box : CertificateBox}
+    {certificate : LRHighShapeMidpointCertificate}
+    (hcheck : certificate.check box = true)
+    (hinterior : ∀ point, box.Contains point → LRHighShapeInterior point) :
+    BoxDerivativeEnclosures lrCertificateUTarget box
+      (certificate.evaluate terms box) := by
+  refine
+    { partialS := lrCertificateUTargetDerivS
+      partialK := lrCertificateUTargetDerivK
+      partialChi := lrCertificateUTargetDerivChi
+      derivS := ?_
+      derivK := ?_
+      derivChi := ?_
+      boundS := ?_
+      boundK := ?_
+      boundChi := ?_ }
+  · intro point hpoint
+    exact hasDerivAt_lrCertificateUTarget_s (hinterior point hpoint)
+  · intro point hpoint
+    exact hasDerivAt_lrCertificateUTarget_k (hinterior point hpoint)
+  · intro point hpoint
+    exact hasDerivAt_lrCertificateUTarget_chi (hinterior point hpoint)
+  · intro point hpoint
+    have h := certificate.evaluateAD_sound terms hpoint hcheck
+    simpa [evaluate] using h.2.1
+  · intro point hpoint
+    have h := certificate.evaluateAD_sound terms hpoint hcheck
+    simpa [evaluate] using h.2.2.1
+  · intro point hpoint
+    have h := certificate.evaluateAD_sound terms hpoint hcheck
+    simpa [evaluate] using h.2.2.2
+
+noncomputable def checkedEvaluatorSound (terms : ℕ) :
+    CheckedMidpointLeafEvaluatorSound lrCertificateUTarget payloadCheck
+      (evaluate terms) := by
+  constructor
+  · intro box certificate hpayload
+    have hparts : lrHighShapeInteriorBoxCheck box = true ∧
+        certificate.check box = true := by
+      simpa [payloadCheck] using hpayload
+    exact certificate.evaluate_value_sound terms
+      (lrHighShapeInteriorBoxCheck_midpoint hparts.1) hparts.2
+  · intro box certificate hpayload
+    have hparts : lrHighShapeInteriorBoxCheck box = true ∧
+        certificate.check box = true := by
+      simpa [payloadCheck] using hpayload
+    exact certificate.evaluate_derivativeEnclosures terms hparts.2
+      (fun _point hpoint ↦ lrHighShapeInteriorBoxCheck_sound hparts.1 hpoint)
 
 end LRHighShapeMidpointCertificate
 
