@@ -36,7 +36,7 @@ namespace LRHighShapeCombinedAcceptData
 
 def check (terms : ℕ) (box : CertificateBox) :
     LRHighShapeCombinedAcceptData → Bool
-  | .directV payload => LRHighShapeVCertificate.accepts terms box payload
+  | .directV payload => LRHighShapeVCertificate.rawAccepts terms box payload
   | .directVMidpoint payload =>
       LRHighShapeVCertificate.midpointAccepts terms box payload
   | .directVCentered payload =>
@@ -54,7 +54,7 @@ theorem sound (terms : ℕ) (box : CertificateBox)
   intro point hpoint hrelevant
   cases data with
   | directV payload =>
-      exact Or.inl (lrHighShapeVSubdivisionCertificate_nonnegative terms
+      exact Or.inl (lrHighShapeVRawSubdivisionCertificate_nonnegative terms
         (certificate := .accept payload) (box := box)
         (by simpa [check, SubdivisionCertificate.check] using hcheck)
         point hpoint hrelevant)

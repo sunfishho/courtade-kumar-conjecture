@@ -134,6 +134,19 @@ def accepts (terms : ℕ) (box : CertificateBox)
     (certificate : LRHighShapeVCertificate) : Bool :=
   checkedEnclosureLeafAccepts payloadCheck (enclose terms) box certificate
 
+/-- The whole-box `V` extension only uses the arithmetic payload.  In
+particular, unlike the derivative-based midpoint evaluators, its soundness
+does not require every point of the box to lie in the open `χ` chart.  This
+variant can therefore certify boxes whose closed faces touch `χ = 0` or
+`χ = 1`. -/
+def rawPayloadCheck (box : CertificateBox)
+    (certificate : LRHighShapeVCertificate) : Bool :=
+  certificate.check box
+
+def rawAccepts (terms : ℕ) (box : CertificateBox)
+    (certificate : LRHighShapeVCertificate) : Bool :=
+  checkedEnclosureLeafAccepts rawPayloadCheck (enclose terms) box certificate
+
 theorem jAD_value_sound (terms : ℕ) {box : CertificateBox}
     {point : CertificatePoint} {certificate : LRHighShapeVCertificate}
     (hpoint : box.Contains point) (hcheck : certificate.check box = true) :
@@ -191,6 +204,14 @@ noncomputable def checkedEvaluatorSound (terms : ℕ) :
       certificate.check box = true := by
     simpa [payloadCheck] using hpayload
   exact certificate.evaluate_value_sound terms hpoint hparts.2
+
+noncomputable def rawCheckedEvaluatorSound (terms : ℕ) :
+    CheckedEnclosureLeafEvaluatorSound lrCertificateVTarget rawPayloadCheck
+      (enclose terms) := by
+  constructor
+  intro box certificate hpayload point hpoint
+  exact certificate.evaluate_value_sound terms hpoint (by
+    simpa [rawPayloadCheck] using hpayload)
 
 end LRHighShapeVCertificate
 
@@ -250,6 +271,21 @@ theorem lrHighShapeVSubdivisionCertificate_nonnegative
       0 ≤ lrCertificateVTarget point := by
   exact subdivisionCertificate_nonnegative_checkedEnclosure
     (LRHighShapeVCertificate.checkedEvaluatorSound terms)
+    (lrHighShapeVDiscardCheck_sound terms) hcheck
+
+/-- Direct-`V` subdivisions may use the closed-chart raw checker at accepted
+leaves.  Discard leaves retain their existing, independently sound checker. -/
+theorem lrHighShapeVRawSubdivisionCertificate_nonnegative
+    (terms : ℕ) {box : CertificateBox}
+    {certificate : SubdivisionCertificate LRHighShapeVCertificate
+      LRHighShapeVDiscardData}
+    (hcheck : certificate.check
+      (LRHighShapeVCertificate.rawAccepts terms)
+      (lrHighShapeVDiscardCheck terms) box = true) :
+    ∀ point, box.Contains point → LRHighShapeVRelevant point →
+      0 ≤ lrCertificateVTarget point := by
+  exact subdivisionCertificate_nonnegative_checkedEnclosure
+    (LRHighShapeVCertificate.rawCheckedEvaluatorSound terms)
     (lrHighShapeVDiscardCheck_sound terms) hcheck
 
 /-- Every analytic high-shape positive-`J` point maps into the exact
