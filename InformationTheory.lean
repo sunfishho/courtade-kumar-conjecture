@@ -51,6 +51,7 @@ import InformationTheory.CourtadeKumar.LRCertificateOmega
 import InformationTheory.CourtadeKumar.LRHighShapeKernelAssembly
 import InformationTheory.CourtadeKumar.LRCertificateG0
 import InformationTheory.CourtadeKumar.LRHighShapeGAssembly
+import InformationTheory.CourtadeKumar.LRHighShapeABAssembly
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
