@@ -388,18 +388,14 @@ noncomputable def lrCertificateTTargetDeriv
     halfSlope' * lrCertificateMidpointNumerator point +
       lrCertificateHalfSlope point * numerator'
 
-noncomputable def lrCertificateTTargetCurveDeriv
-    (point : CertificatePoint) (s' k' chi' : ℝ) : ℝ :=
-  let e' := s' * point.k + point.s * k'
-  let x' := -(chi' * lrCertificateE point + point.chi * e')
-  let y0' := chi' * lrCertificateE point + point.chi * e'
-  let v' := lrCertificateVDeriv point e' x'
+noncomputable def lrCertificateTTargetCoordinateDeriv
+    (point : CertificatePoint)
+    (s' e' x' y0' v' w' : ℝ) : ℝ :=
   let m' := lrCertificateMDeriv point v'
   let a' := lrCertificateADeriv point e' v'
   let b' := lrCertificateBFlowDeriv point s' e' v'
   let d' := lrCertificateDDeriv point s' e' v'
   let g' := lrCertificateGShapeDeriv point y0' e' v'
-  let w' := lrCertificateOmegaDeriv point.s 0 s' 0
   let pw' := lrCertificatePWDeriv point s' y0' e' v'
   let square' := lrCertificateSquareTargetDeriv point s' y0' e' v'
   let prefix' := lrCertificatePrefixAtMDeriv point s' v'
@@ -410,17 +406,35 @@ noncomputable def lrCertificateTTargetCurveDeriv
     d' g' a' pw' w' m' x' b'
   lrCertificateTTargetDeriv point w' j' gap' halfSlope' numerator'
 
+noncomputable def lrCertificateTTargetCurveDeriv
+    (point : CertificatePoint) (s' k' chi' : ℝ) : ℝ :=
+  let e' := s' * point.k + point.s * k'
+  let x' := -(chi' * lrCertificateE point + point.chi * e')
+  let y0' := chi' * lrCertificateE point + point.chi * e'
+  let v' := lrCertificateVDeriv point e' x'
+  lrCertificateTTargetCoordinateDeriv point s' e' x' y0' v'
+    (lrCertificateOmegaDeriv point.s 0 s' 0)
+
 noncomputable def lrCertificateTTargetDerivS
     (point : CertificatePoint) : ℝ :=
-  lrCertificateTTargetCurveDeriv point 1 0 0
+  lrCertificateTTargetCoordinateDeriv point 1
+    (lrCertificateEDerivS point) (lrCertificateXDerivS point)
+    (lrCertificateY0DerivS point) (lrCertificateVDerivS point)
+    (lrCertificateWDerivS point)
 
 noncomputable def lrCertificateTTargetDerivK
     (point : CertificatePoint) : ℝ :=
-  lrCertificateTTargetCurveDeriv point 0 1 0
+  lrCertificateTTargetCoordinateDeriv point 0
+    (lrCertificateEDerivK point) (lrCertificateXDerivK point)
+    (lrCertificateY0DerivK point) (lrCertificateVDerivK point)
+    (lrCertificateWDerivK point)
 
 noncomputable def lrCertificateTTargetDerivChi
     (point : CertificatePoint) : ℝ :=
-  lrCertificateTTargetCurveDeriv point 0 0 1
+  lrCertificateTTargetCoordinateDeriv point 0
+    (lrCertificateEDerivChi point) (lrCertificateXDerivChi point)
+    (lrCertificateY0DerivChi point) (lrCertificateVDerivChi point)
+    (lrCertificateWDerivChi point)
 
 /-! ## Checked interval-AD assembly -/
 
@@ -534,12 +548,16 @@ def check (box : CertificateBox)
     (0 : ℚ) < (IntervalAD.add (IntervalAD.const 2) v).value.lower ∧
     (0 : ℚ) < (IntervalAD.mul v v).value.lower)
 
-theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
+set_option maxHeartbeats 800000 in
+theorem evaluateAD_sound (terms : ℕ) {box : CertificateBox}
     {point : CertificatePoint}
     {certificate : LRHighShapeTangentCertificate}
     (hpoint : box.Contains point) (hcheck : certificate.check box = true) :
-    (certificate.evaluateAD terms box).value.Contains
-      (lrCertificateTTarget point) := by
+    (certificate.evaluateAD terms box).Contains
+      (lrCertificateTTarget point)
+      (lrCertificateTTargetDerivS point)
+      (lrCertificateTTargetDerivK point)
+      (lrCertificateTTargetDerivChi point) := by
   let coordinate := certificate.base.kernel.coordinate
   let v := coordinate.vAD box
   let s := lrCertificateSAD box
@@ -601,6 +619,12 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
   have hxAD := lrCertificateXAD_sound hpoint
   have hy0AD := lrCertificateY0AD_sound hpoint
   have hvAD := coordinate.vAD_sound hpoint hgParts.1
+  have hvLowerReal : (0 : ℝ) < v.value.lower := by
+    exact_mod_cast hparts.2.2.2.2.2.1
+  have hvPos : 0 < lrCertificateV point :=
+    hvLowerReal.trans_le hvAD.1.1
+  have hvPlus : 1 + lrCertificateV point ≠ 0 := by linarith
+  have htwoPlus : 2 + lrCertificateV point ≠ 0 := by linarith
   have hby0AD := lrCertificateBAD_sound hsAD hy0AD
   have hbeAD := lrCertificateBAD_sound hsAD heAD
   have hqBY0 := certificate.qBY0.sound terms hparts.2.1 hby0AD
@@ -620,6 +644,25 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
     hqBE hvAD
   have hsquare := IntervalAD.contains_add (IntervalAD.contains_add hg0 hqBY0)
     hqBEdiv
+  have hsquareNamed :
+      ((IntervalAD.add (IntervalAD.add
+        (certificate.base.gShape.g0.evaluate terms v)
+        (certificate.qBY0.evaluate terms by0))
+        (IntervalAD.divPositive (certificate.qBE.evaluate terms be) v))).Contains
+          (lrCertificateSquareTarget point)
+          (lrCertificateSquareTargetDeriv point 1
+            (lrCertificateY0DerivS point) (lrCertificateEDerivS point)
+            (lrCertificateVDerivS point))
+          (lrCertificateSquareTargetDeriv point 0
+            (lrCertificateY0DerivK point) (lrCertificateEDerivK point)
+            (lrCertificateVDerivK point))
+          (lrCertificateSquareTargetDeriv point 0
+            (lrCertificateY0DerivChi point) (lrCertificateEDerivChi point)
+            (lrCertificateVDerivChi point)) := by
+    convert hsquare using 1 <;>
+      simp only [lrCertificateSquareTarget,
+        lrCertificateSquareTargetDeriv] <;>
+      field_simp [hvPos.ne'] <;> ring
   have hinvV := IntervalAD.contains_invPositive hparts.2.2.2.2.2.1 hvAD
   have hfactor := IntervalAD.contains_add (IntervalAD.contains_const 1) hinvV
   have hcore := IntervalAD.contains_add hg0
@@ -631,7 +674,34 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
     (IntervalAD.contains_divPositive hparts.2.2.2.2.2.2.1
       (IntervalAD.contains_mul (IntervalAD.contains_const 4) hdelta)
       honePlusV)
-  have hgap := IntervalAD.contains_sub hsquare hprefix
+  have hprefixNamed :
+      ((IntervalAD.add
+        (IntervalAD.mul s
+          (IntervalAD.add (certificate.base.gShape.g0.evaluate terms v)
+            (IntervalAD.mul
+              (IntervalAD.add (IntervalAD.const 1)
+                (IntervalAD.invPositive v))
+              (IntervalAD.log terms certificate.base.gShape.g0.logTwo
+                (IntervalAD.const 2)))))
+        (IntervalAD.divPositive
+          (IntervalAD.mul (IntervalAD.const 4)
+            (IntervalAD.sub (certificate.qS.evaluate terms s)
+              (IntervalAD.mul s
+                (IntervalAD.log terms certificate.base.gShape.g0.logTwo
+                  (IntervalAD.const 2)))))
+          (IntervalAD.add (IntervalAD.const 1) v)))).Contains
+        (lrCertificatePrefixAtM point)
+        (lrCertificatePrefixAtMDeriv point 1
+          (lrCertificateVDerivS point))
+        (lrCertificatePrefixAtMDeriv point 0
+          (lrCertificateVDerivK point))
+        (lrCertificatePrefixAtMDeriv point 0
+          (lrCertificateVDerivChi point)) := by
+    convert hprefix using 1 <;>
+      simp only [lrCertificatePrefixAtM,
+        lrCertificatePrefixAtMDeriv, pow_two] <;>
+      field_simp [hvPos.ne', hvPlus] <;> ring
+  have hgapNamed := IntervalAD.contains_sub hsquareNamed hprefixNamed
   have hlogFactor := IntervalAD.contains_sub
     (IntervalAD.contains_add hlogTwo hlogOnePlusV) hlogTwoPlusV
   have honePlusVSq := IntervalAD.contains_mul honePlusV honePlusV
@@ -644,6 +714,39 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
   have hhalfSlope := IntervalAD.contains_add
     (IntervalAD.contains_mul hratio hlogFactor)
     (IntervalAD.contains_mul (IntervalAD.contains_const 4) hdelta)
+  have hhalfSlopeNamed :
+      ((IntervalAD.add
+        (IntervalAD.mul
+          (IntervalAD.divPositive
+            (IntervalAD.mul (IntervalAD.mul (IntervalAD.const 4) s)
+              (IntervalAD.mul
+                (IntervalAD.add (IntervalAD.const 1) v)
+                (IntervalAD.add (IntervalAD.const 1) v)))
+            (IntervalAD.mul v v))
+          (IntervalAD.sub
+            (IntervalAD.add
+              (IntervalAD.log terms certificate.base.gShape.g0.logTwo
+                (IntervalAD.const 2))
+              (IntervalAD.log terms certificate.base.ab.logOnePlusV
+                (IntervalAD.add (IntervalAD.const 1) v)))
+            (IntervalAD.log terms certificate.logTwoPlusV
+              (IntervalAD.add (IntervalAD.const 2) v))))
+        (IntervalAD.mul (IntervalAD.const 4)
+          (IntervalAD.sub (certificate.qS.evaluate terms s)
+            (IntervalAD.mul s
+              (IntervalAD.log terms certificate.base.gShape.g0.logTwo
+                (IntervalAD.const 2))))))).Contains
+        (lrCertificateHalfSlope point)
+        (lrCertificateHalfSlopeDeriv point 1
+          (lrCertificateVDerivS point))
+        (lrCertificateHalfSlopeDeriv point 0
+          (lrCertificateVDerivK point))
+        (lrCertificateHalfSlopeDeriv point 0
+          (lrCertificateVDerivChi point)) := by
+    convert hhalfSlope using 1 <;>
+      simp only [lrCertificateHalfSlope,
+        lrCertificateHalfSlopeDeriv, pow_two] <;>
+      field_simp [hvPos.ne', hvPlus, htwoPlus] <;> ring
   have hab := certificate.base.ab.sound terms hpoint hbaseParts.2.2.1
   have hg := certificate.base.gShape.sound terms hpoint hbaseParts.2.1
   have hw := certificate.base.kernel.wAD_sound terms hpoint hbaseParts.1
@@ -651,6 +754,31 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
   have hm := certificate.base.mAD_sound hpoint hparts.1
   have hj := IntervalAD.contains_sub (IntervalAD.contains_mul hab.2.1 hxAD)
     hab.2.2
+  have hjNamed :
+      (IntervalAD.sub
+        (IntervalAD.mul
+          (certificate.base.ab.evaluate terms box coordinate).b x)
+        (certificate.base.ab.evaluate terms box coordinate).d).Contains
+        (lrCertificateJ point)
+        (lrCertificateJDeriv point
+          (lrCertificateBFlowDeriv point 1 (lrCertificateEDerivS point)
+            (lrCertificateVDerivS point))
+          (lrCertificateXDerivS point)
+          (lrCertificateDDeriv point 1 (lrCertificateEDerivS point)
+            (lrCertificateVDerivS point)))
+        (lrCertificateJDeriv point
+          (lrCertificateBFlowDeriv point 0 (lrCertificateEDerivK point)
+            (lrCertificateVDerivK point))
+          (lrCertificateXDerivK point)
+          (lrCertificateDDeriv point 0 (lrCertificateEDerivK point)
+            (lrCertificateVDerivK point)))
+        (lrCertificateJDeriv point
+          (lrCertificateBFlowDeriv point 0 (lrCertificateEDerivChi point)
+            (lrCertificateVDerivChi point))
+          (lrCertificateXDerivChi point)
+          (lrCertificateDDeriv point 0 (lrCertificateEDerivChi point)
+            (lrCertificateVDerivChi point))) := by
+    simpa [lrCertificateJ, lrCertificateJDeriv] using hj
   have hbracket := IntervalAD.contains_add
     (IntervalAD.contains_mul
       (IntervalAD.contains_sub (IntervalAD.contains_const 1) hm) hab.2.2)
@@ -660,16 +788,92 @@ theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
       (IntervalAD.contains_mul hab.1 hpw))
     (IntervalAD.contains_mul
       (IntervalAD.contains_mul (IntervalAD.contains_const 4) hw) hbracket)
+  have hmidpointNumeratorNamed :
+      (IntervalAD.sub
+        (IntervalAD.add
+          (IntervalAD.mul
+            (certificate.base.ab.evaluate terms box coordinate).d
+            (certificate.base.gShape.evaluate terms box coordinate))
+          (IntervalAD.mul
+            (certificate.base.ab.evaluate terms box coordinate).a
+            (certificate.base.kernel.pwAD terms box)))
+        (IntervalAD.mul
+          (IntervalAD.mul (IntervalAD.const 4)
+            (certificate.base.kernel.wAD terms box))
+          (IntervalAD.add
+            (IntervalAD.mul
+              (IntervalAD.sub (IntervalAD.const 1)
+                (certificate.base.mAD box))
+              (certificate.base.ab.evaluate terms box coordinate).d)
+            (IntervalAD.mul
+              (IntervalAD.mul (certificate.base.mAD box) x)
+              (certificate.base.ab.evaluate terms box coordinate).b)))).Contains
+        (lrCertificateMidpointNumerator point)
+        (lrCertificateMidpointNumeratorDeriv point
+          (lrCertificateDDeriv point 1 (lrCertificateEDerivS point)
+            (lrCertificateVDerivS point))
+          (lrCertificateGShapeDerivS point)
+          (lrCertificateADeriv point (lrCertificateEDerivS point)
+            (lrCertificateVDerivS point))
+          (lrCertificatePWDerivS point) (lrCertificateWDerivS point)
+          (lrCertificateMDeriv point (lrCertificateVDerivS point))
+          (lrCertificateXDerivS point)
+          (lrCertificateBFlowDeriv point 1 (lrCertificateEDerivS point)
+            (lrCertificateVDerivS point)))
+        (lrCertificateMidpointNumeratorDeriv point
+          (lrCertificateDDeriv point 0 (lrCertificateEDerivK point)
+            (lrCertificateVDerivK point))
+          (lrCertificateGShapeDerivK point)
+          (lrCertificateADeriv point (lrCertificateEDerivK point)
+            (lrCertificateVDerivK point))
+          (lrCertificatePWDerivK point) (lrCertificateWDerivK point)
+          (lrCertificateMDeriv point (lrCertificateVDerivK point))
+          (lrCertificateXDerivK point)
+          (lrCertificateBFlowDeriv point 0 (lrCertificateEDerivK point)
+            (lrCertificateVDerivK point)))
+        (lrCertificateMidpointNumeratorDeriv point
+          (lrCertificateDDeriv point 0 (lrCertificateEDerivChi point)
+            (lrCertificateVDerivChi point))
+          (lrCertificateGShapeDerivChi point)
+          (lrCertificateADeriv point (lrCertificateEDerivChi point)
+            (lrCertificateVDerivChi point))
+          (lrCertificatePWDerivChi point) (lrCertificateWDerivChi point)
+          (lrCertificateMDeriv point (lrCertificateVDerivChi point))
+          (lrCertificateXDerivChi point)
+          (lrCertificateBFlowDeriv point 0 (lrCertificateEDerivChi point)
+            (lrCertificateVDerivChi point))) := by
+    convert hmidpointNumerator using 1 <;>
+      simp only [lrCertificateMidpointNumerator,
+        lrCertificateMidpointNumeratorDeriv,
+        lrCertificateMidpointBracket,
+        lrCertificateMidpointBracketDeriv] <;> ring
   have htarget := IntervalAD.contains_add
     (IntervalAD.contains_mul
       (IntervalAD.contains_mul
-        (IntervalAD.contains_mul (IntervalAD.contains_const 4) hw) hj) hgap)
-    (IntervalAD.contains_mul hhalfSlope hmidpointNumerator)
-  simpa [evaluateAD, evaluateAll, coordinate, v, s, e, x, y0, by0, be,
-    lrCertificateSAD, pow_two, lrCertificateTTarget,
-    lrCertificateSquareTarget, lrCertificatePrefixAtM, lrCertificateGap,
-    lrCertificateHalfSlope, lrCertificateJ, lrCertificateMidpointNumerator,
-    lrCertificateMidpointBracket] using htarget.1
+        (IntervalAD.contains_mul (IntervalAD.contains_const 4) hw) hjNamed)
+      hgapNamed)
+    (IntervalAD.contains_mul hhalfSlopeNamed hmidpointNumeratorNamed)
+  unfold evaluateAD evaluateAll
+  dsimp only
+  convert htarget using 1 <;>
+    simp only [lrCertificateTTargetDerivS, lrCertificateTTargetDerivK,
+      lrCertificateTTargetDerivChi,
+      lrCertificateTTargetCoordinateDeriv,
+      lrCertificateTTarget, lrCertificateTTargetDeriv,
+      lrCertificateGap, lrCertificateGapDeriv,
+      lrCertificateGShapeDerivS, lrCertificateGShapeDerivK,
+      lrCertificateGShapeDerivChi,
+      lrCertificatePWDerivS, lrCertificatePWDerivK,
+      lrCertificatePWDerivChi] <;>
+    ring
+
+theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
+    {point : CertificatePoint}
+    {certificate : LRHighShapeTangentCertificate}
+    (hpoint : box.Contains point) (hcheck : certificate.check box = true) :
+    (certificate.evaluateAD terms box).value.Contains
+      (lrCertificateTTarget point) :=
+  (certificate.evaluateAD_sound terms hpoint hcheck).1
 
 theorem evaluate_highShapeTarget_sound (terms : ℕ) {box : CertificateBox}
     {point : CertificatePoint}
