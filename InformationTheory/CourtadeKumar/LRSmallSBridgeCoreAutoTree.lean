@@ -74,5 +74,51 @@ def rootBox (kLo kHi : ℚ) : CertificateBox :=
     kLo := kLo, kHi := kHi
     chiLo := 0, chiHi := 1 }
 
+/-- Correctness of the untrusted tree-building program: whenever it returns
+a tree, every leaf in that tree passes the verified Boolean checker. -/
+theorem buildTree_check_of_eq
+    (terms sqrtFuel logFuel fuel : ℕ) (box : CertificateBox)
+    (tree : SubdivisionCertificate Unit Unit)
+    (hbuild : buildTree terms sqrtFuel logFuel fuel box = some tree) :
+    tree.check (autoAccepts terms sqrtFuel logFuel) noDiscard box = true := by
+  induction fuel generalizing box tree with
+  | zero =>
+      by_cases haccept : autoAccepts terms sqrtFuel logFuel box () = true
+      · simp [buildTree, haccept] at hbuild
+        subst tree
+        simpa [SubdivisionCertificate.check] using haccept
+      · have hfalse : autoAccepts terms sqrtFuel logFuel box () = false :=
+          Bool.eq_false_of_not_eq_true haccept
+        simp [buildTree, hfalse] at hbuild
+  | succ fuel ih =>
+      by_cases haccept : autoAccepts terms sqrtFuel logFuel box () = true
+      · simp [buildTree, haccept] at hbuild
+        subst tree
+        simpa [SubdivisionCertificate.check] using haccept
+      · have hfalse : autoAccepts terms sqrtFuel logFuel box () = false :=
+          Bool.eq_false_of_not_eq_true haccept
+        let payload := auto sqrtFuel logFuel box
+        let axis := chooseAxis terms box payload
+        let cut := axisCut box axis
+        generalize hlower : buildTree terms sqrtFuel logFuel fuel
+          (box.lower axis cut) = lowerOption
+        generalize hupper : buildTree terms sqrtFuel logFuel fuel
+          (box.upper axis cut) = upperOption
+        cases lowerOption with
+        | none =>
+            simp [buildTree, hfalse, payload, axis, cut, hlower] at hbuild
+        | some lower =>
+            cases upperOption with
+            | none =>
+                simp [buildTree, hfalse, payload, axis, cut, hlower,
+                  hupper] at hbuild
+            | some upper =>
+                simp [buildTree, hfalse, payload, axis, cut, hlower,
+                  hupper] at hbuild
+                subst tree
+                simp only [SubdivisionCertificate.check,
+                  Bool.and_eq_true]
+                exact ⟨ih _ _ hlower, ih _ _ hupper⟩
+
 end LRSmallSBridgeCoreCertificate
 end CourtadeKumar
