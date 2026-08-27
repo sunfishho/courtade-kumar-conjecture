@@ -161,4 +161,61 @@ theorem lrSmallSBridgeQChi_lower
       exact hrootLower.trans_le
         (hmono ⟨le_rfl, hwchi.le⟩ ⟨hwchi.le, le_rfl⟩ hwchi.le)
 
+lemma lrSmallSBridgeQChi_nonpos
+    {chi : ℝ} (hchi : chi ∈ Icc (0 : ℝ) 1) :
+    lrSmallSBridgeQChi chi ≤ 0 := by
+  rcases hchi.1.eq_or_lt with rfl | hchiPos
+  · norm_num [lrSmallSBridgeQChi]
+  · have hlog : Real.log chi ≤ 0 := Real.log_nonpos hchiPos.le hchi.2
+    unfold lrSmallSBridgeQChi
+    exact div_nonpos_of_nonpos_of_nonneg
+      (mul_nonpos_of_nonneg_of_nonpos hchi.1 hlog) (by linarith [hchi.1])
+
+lemma lrSmallSBridgeQChi_antitoneOn_quarter :
+    AntitoneOn lrSmallSBridgeQChi (Icc (0 : ℝ) (1 / 4)) := by
+  intro a ha b hb hab
+  rcases ha.1.eq_or_lt with rfl | haPos
+  · norm_num [lrSmallSBridgeQChi]
+    exact lrSmallSBridgeQChi_nonpos
+      ⟨hb.1, hb.2.trans (by norm_num)⟩
+  · have hanti : AntitoneOn lrSmallSBridgeQChi (Icc a b) := by
+      apply antitoneOn_of_deriv_nonpos (convex_Icc a b)
+      · intro x hx
+        exact (hasDerivAt_lrSmallSBridgeQChi
+          (haPos.trans_le hx.1)).continuousAt.continuousWithinAt
+      · intro x hx
+        rw [interior_Icc] at hx
+        exact (hasDerivAt_lrSmallSBridgeQChi
+          (haPos.trans hx.1)).differentiableAt.differentiableWithinAt
+      · intro x hx
+        rw [interior_Icc] at hx
+        rw [(hasDerivAt_lrSmallSBridgeQChi (haPos.trans hx.1)).deriv]
+        apply div_nonpos_of_nonpos_of_nonneg
+        · have hnumLe : lrSmallSBridgeQChiNumerator x ≤
+              lrSmallSBridgeQChiNumerator (1 / 4) := by
+            by_cases hxq : x = 1 / 4
+            · exact hxq ▸ le_rfl
+            · exact (lrSmallSBridgeQChiNumerator_strictMonoOn
+                (show x ∈ Ioi (0 : ℝ) from haPos.trans hx.1)
+                (show (1 / 4 : ℝ) ∈ Ioi (0 : ℝ) by norm_num)
+                (hx.2.trans_le hb.2)).le
+          linarith [lrSmallSBridgeQChiNumerator_quarter_neg]
+        · positivity
+    exact hanti ⟨le_rfl, hab⟩ ⟨hab, le_rfl⟩ hab
+
+/-- Uniform direct enclosure used by replay boxes touching `chi = 0`. -/
+def lrSmallSBridgeQChiEndpointEnclosure : RationalEnclosure :=
+  ⟨-2 / 7, 0⟩
+
+theorem lrSmallSBridgeQChiEndpointEnclosure_sound
+    {chi : ℝ} (hchi : chi ∈ Icc (0 : ℝ) 1) :
+    lrSmallSBridgeQChiEndpointEnclosure.Contains
+      (lrSmallSBridgeQChi chi) := by
+  have h : (-2 / 7 : ℝ) ≤ lrSmallSBridgeQChi chi ∧
+      lrSmallSBridgeQChi chi ≤ 0 :=
+    ⟨(lrSmallSBridgeQChi_lower hchi).le,
+      lrSmallSBridgeQChi_nonpos hchi⟩
+  simpa [lrSmallSBridgeQChiEndpointEnclosure,
+    RationalEnclosure.Contains] using h
+
 end CourtadeKumar
