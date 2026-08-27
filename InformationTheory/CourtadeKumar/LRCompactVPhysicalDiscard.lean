@@ -44,6 +44,30 @@ noncomputable def lrCompactVJX (point : CertificatePoint) : ℝ :=
 def LRCompactVPhysical (point : CertificatePoint) : Prop :=
   LRCompactVInterior point ∧ 0 < lrCompactVJX point
 
+theorem lrCompactVAX_flow
+    {v t : ℝ} :
+    lrCompactVAX v (t ^ 2) = lrFlowA v t := by
+  unfold lrCompactVAX lrFlowA lrFlowBeta lrL
+  rw [mul_pow]
+  ring
+
+theorem lrCompactVJX_flow
+    {R v t : ℝ} (ht : 0 < t) :
+    lrCompactVJX (lrCompactVFlowPoint R v t) = lrFlowJ R v t := by
+  unfold lrCompactVJX lrCompactVFlowPoint
+  rw [Real.sqrt_sq_eq_abs, abs_of_pos ht, lrCompactVAX_flow]
+  unfold lrFlowJ lrFlowD
+  ring
+
+theorem lrCompactVFlowPoint_physical
+    {R v t : ℝ} (hR : R ∈ Set.Ioo (0 : ℝ) 1)
+    (hv : v ∈ Set.Ioo (0 : ℝ) 1)
+    (ht : t ∈ Set.Ioo (0 : ℝ) 1)
+    (hJ : 0 < lrFlowJ R v t) :
+    LRCompactVPhysical (lrCompactVFlowPoint R v t) := by
+  exact ⟨lrCompactVFlowPoint_interior hR hv ht,
+    by simpa [lrCompactVJX_flow ht.1] using hJ⟩
+
 /-- Discard payload.  The `B` certificate supplies the shared `log(1+v)`
 range reduction; only one additional logarithm is needed for `A`. -/
 structure LRCompactVDiscardCertificate where

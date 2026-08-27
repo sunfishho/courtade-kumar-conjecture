@@ -80,4 +80,38 @@ def lrCompactVR34Root : CertificateBox where
   chiLo := 17 / 20
   chiHi := 1
 
+/-- A successful generated replay on the audited root proves the `V`
+reserve throughout the `R≤3/4` high-shape slab. -/
+theorem generatedLRCompactVR34_sound
+    (logTerms pZeroTerms wTerms N logFuel fuel : ℕ)
+    (hcheck : (generateLRCompactVCertificate
+      logTerms pZeroTerms wTerms N logFuel fuel lrCompactVR34Root).check
+        (LRCompactVLeafCertificate.check
+          logTerms pZeroTerms wTerms N)
+        (LRCompactVDiscardCertificate.check logTerms)
+        lrCompactVR34Root = true) :
+    ∀ (R v t : ℝ),
+      R ∈ Set.Ioo (0 : ℝ) 1 → R ≤ 3 / 4 →
+      v ∈ Set.Ioo (0 : ℝ) 1 → 1 / 3 ≤ v →
+      t ∈ Set.Ioo (0 : ℝ) 1 → 17 / 20 ≤ t ^ 2 →
+      0 < lrFlowJ R v t →
+      0 ≤ lrLowVReserve R v t := by
+  have hroot := generatedLRCompactVCertificate_sound
+    logTerms pZeroTerms wTerms N logFuel fuel hcheck
+  intro R v t hR hRUpper hv hvLower ht htLower hJ
+  let point := lrCompactVFlowPoint R v t
+  have htSqUpper : t ^ 2 ≤ 1 := by
+    nlinarith [mul_nonneg ht.1.le (sub_nonneg.mpr ht.2.le)]
+  have htAbsUpper : |t| ≤ 1 := by
+    rw [abs_of_pos ht.1]
+    exact ht.2.le
+  have hcontains : lrCompactVR34Root.Contains point := by
+    unfold lrCompactVR34Root point lrCompactVFlowPoint CertificateBox.Contains
+    norm_num
+    exact ⟨hR.1.le, hRUpper, hvLower, hv.2.le, htLower, htAbsUpper⟩
+  have hphysical : LRCompactVPhysical point :=
+    lrCompactVFlowPoint_physical hR hv ht hJ
+  have hreserve := hroot point hcontains hphysical
+  simpa [point, lrCompactVReserveTarget_flow ht.1] using hreserve
+
 end CourtadeKumar
