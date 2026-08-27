@@ -133,4 +133,41 @@ theorem lrLowerFacePWQ0_rational_lower
         (1 - s * k - k * Real.log ((1 + (1 - s) * k) / k)) := hscaled
     _ ≤ lrLowerFacePWQ0 s k chi v := hpw
 
+/-- Closed-face specialization of (M23).  Strictness comes from the logarithm
+estimate, so no artificial exclusion of `s=1/128`, `chi=0,1`, or `v=1` is
+needed. -/
+theorem lrLowerFacePWQ0_rational_lower_closed
+    {s k chi v : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 128 : ℝ))
+    (hk : 0 < k) (hkUpper : k ≤ 1 / 4)
+    (hchi : chi ∈ Icc (0 : ℝ) 1)
+    (hv : v ∈ Ioc (0 : ℝ) 1) :
+    s * (893 / 3072 : ℝ) < lrLowerFacePWQ0 s k chi v := by
+  have hsUnit : s ∈ Ioo (0 : ℝ) 1 := ⟨hs.1, hs.2.trans_lt (by norm_num)⟩
+  have hsk : s * k < 1 := by
+    calc
+      s * k ≤ s * (1 / 4) := mul_le_mul_of_nonneg_left hkUpper hs.1.le
+      _ ≤ (1 / 128 : ℝ) * (1 / 4) :=
+        mul_le_mul_of_nonneg_right hs.2 (by norm_num)
+      _ < 1 := by norm_num
+  have hpw := lrLowerFacePWQ0_lower_closed hsUnit hk hsk hchi hv
+  have hskUpper : s * k ≤ 1 / 512 := by
+    calc
+      s * k ≤ s * (1 / 4) := mul_le_mul_of_nonneg_left hkUpper hs.1.le
+      _ ≤ (1 / 128 : ℝ) * (1 / 4) :=
+        mul_le_mul_of_nonneg_right hs.2 (by norm_num)
+      _ = 1 / 512 := by norm_num
+  have hlog := lrLowerFace_k_log_ratio_lt
+    (show s ∈ Icc (0 : ℝ) 1 from ⟨hs.1.le, hsUnit.2.le⟩) hk hkUpper
+  have hbracket : 893 / 1536 <
+      1 - s * k - k * Real.log ((1 + (1 - s) * k) / k) := by
+    norm_num at hskUpper hlog ⊢
+    linarith
+  have hsHalf : 0 < s / 2 := div_pos hs.1 (by norm_num)
+  have hscaled := mul_lt_mul_of_pos_left hbracket hsHalf
+  calc
+    s * (893 / 3072 : ℝ) = (s / 2) * (893 / 1536) := by ring
+    _ < (s / 2) *
+        (1 - s * k - k * Real.log ((1 + (1 - s) * k) / k)) := hscaled
+    _ ≤ lrLowerFacePWQ0 s k chi v := hpw
+
 end CourtadeKumar

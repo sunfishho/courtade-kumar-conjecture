@@ -276,4 +276,69 @@ theorem lrLowerFacePWQ0_lower
   unfold lrLowerFacePWQ0
   linarith
 
+@[simp] lemma lrLowerFaceOmegaQ0_zero
+    {s : ℝ} (hs : 0 < s) :
+    lrLowerFaceOmegaQ0 s 0 = s / 4 := by
+  unfold lrLowerFaceOmegaQ0 lrLowerFaceQ0 lrLowerFaceQ0Prime
+    lrCertificateB
+  simp only [mul_zero, sub_zero, add_zero, zero_div, zero_mul]
+  ring
+
+/-- Endpoint-safe version of (M23), allowing `chi=0,1` and `v=1`. -/
+theorem lrLowerFacePWQ0_lower_closed
+    {s k chi v : ℝ} (hs : s ∈ Ioo (0 : ℝ) 1)
+    (hk : 0 < k) (hsk : s * k < 1)
+    (hchi : chi ∈ Icc (0 : ℝ) 1)
+    (hv : v ∈ Ioc (0 : ℝ) 1) :
+    s / 2 *
+        (1 - s * k -
+          k * Real.log ((1 + (1 - s) * k) / k)) ≤
+      lrLowerFacePWQ0 s k chi v := by
+  have he : s * k ∈ Ioo (0 : ℝ) 1 := ⟨mul_pos hs.1 hk, hsk⟩
+  have hfirst : lrLowerFaceOmegaQ0 s (s * k) ≤
+      lrLowerFaceOmegaQ0 s (chi * (s * k)) := by
+    rcases hchi.1.eq_or_lt with rfl | hchiPos
+    · rw [zero_mul, lrLowerFaceOmegaQ0_zero hs.1]
+      rw [lrLowerFaceOmegaQ0_eq hs he]
+      have hb := lrCertificateB_mem_Ioo hs he
+      have hratio : 0 < (s * k) / lrCertificateB s (s * k) :=
+        div_pos he.1 hb.1
+      have hratioLe : (s * k) / lrCertificateB s (s * k) ≤ 1 := by
+        rw [div_le_one hb.1]
+        have hgap := mul_pos hs.1 (sub_pos.mpr he.2)
+        linarith [lrLowerFaceB_sub s (s * k)]
+      have hlog : Real.log ((s * k) / lrCertificateB s (s * k)) ≤ 0 :=
+        Real.log_nonpos hratio.le hratioLe
+      have hprod : (s * k) *
+          Real.log ((s * k) / lrCertificateB s (s * k)) ≤ 0 :=
+        mul_nonpos_of_nonneg_of_nonpos he.1.le hlog
+      have hbase : s * (1 - s * k) ≤ s := by
+        nlinarith [mul_nonneg hs.1.le he.1.le]
+      nlinarith
+    · have hchie : chi * (s * k) ∈ Ioo (0 : ℝ) 1 := by
+        constructor
+        · exact mul_pos hchiPos he.1
+        · exact (mul_le_of_le_one_left he.1.le hchi.2).trans_lt he.2
+      have hchieLe : chi * (s * k) ≤ s * k :=
+        mul_le_of_le_one_left he.1.le hchi.2
+      exact lrLowerFaceOmegaQ0_antitoneOn hs hchie he hchieLe
+  have homega := lrLowerFaceOmegaQ0_nonneg hs he
+  have hinv : 1 ≤ 1 / v := by
+    rw [le_div_iff₀ hv.1]
+    simpa using hv.2
+  have hsecond : lrLowerFaceOmegaQ0 s (s * k) ≤
+      lrLowerFaceOmegaQ0 s (s * k) / v := by
+    have hmul := mul_le_mul_of_nonneg_right hinv homega
+    convert hmul using 1 <;> field_simp [hv.1.ne'] <;> ring
+  have htwo :
+      s / 2 *
+          (1 - s * k -
+            k * Real.log ((1 + (1 - s) * k) / k)) =
+        2 * lrLowerFaceOmegaQ0 s (s * k) := by
+    rw [lrLowerFaceOmegaQ0_sk_eq hs hk hsk]
+    ring
+  rw [htwo]
+  unfold lrLowerFacePWQ0
+  linarith
+
 end CourtadeKumar

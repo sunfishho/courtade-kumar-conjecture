@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRLowerFaceR0PrimeBound
 import InformationTheory.CourtadeKumar.LRLowShapeSeriesBounds
+import InformationTheory.CourtadeKumar.LRUniformTailOmega
 
 /-!
 # Entropy-remainder payment on the lower midpoint face
@@ -289,6 +290,130 @@ theorem lrLowerFacePWR0_payment
   have hprodLt : (1 + 1 / v) * lrLowerFaceR0Prime s <
       (1023 / 1533 : ℝ) * (9 * Real.log 2 / 128) :=
     hprodLe.trans_lt (mul_lt_mul_of_pos_right hcoeff hlogPos)
+  linarith
+
+/-- Closed-face form of (M24), sufficient for the strict lower-face reserve. -/
+theorem lrLowerFacePWR0_payment_closed
+    {s k chi v : ℝ}
+    (hs : s ∈ Ioc (0 : ℝ) (1 / 128))
+    (hk : k ∈ Ioc (0 : ℝ) (1 / 4))
+    (hchi : chi ∈ Icc (0 : ℝ) 1)
+    (hv : v ∈ Ioc (0 : ℝ) 1)
+    (hvSq : (511 / 512 : ℝ) ≤ v ^ 2) :
+    -(1023 / 1533 : ℝ) * (9 * Real.log 2 / 128) ≤
+      lrLowerFacePWR0 s k chi v / s := by
+  have hsUnit : s ∈ Ioo (0 : ℝ) 1 := ⟨hs.1, hs.2.trans_lt (by norm_num)⟩
+  have hePos : 0 < s * k := mul_pos hs.1 hk.1
+  have heLe : s * k ≤ (1 / 128 : ℝ) * (1 / 4) :=
+    mul_le_mul hs.2 hk.2 hk.1.le (by norm_num)
+  have heLt : s * k < 1 := heLe.trans_lt (by norm_num)
+  have heMem : s * k ∈ Ico (0 : ℝ) 1 := ⟨hePos.le, heLt⟩
+  have hchiEMem : chi * (s * k) ∈ Ico (0 : ℝ) 1 := by
+    constructor
+    · exact mul_nonneg hchi.1 hePos.le
+    · calc
+        chi * (s * k) ≤ 1 * (s * k) :=
+          mul_le_mul_of_nonneg_right hchi.2 hePos.le
+        _ < 1 := by simpa using heLt
+  have hpw := lrLowerFacePWR0_lower hsUnit hv.1 hchiEMem heMem
+  have hpwDiv : -(1 + 1 / v) * lrLowerFaceR0Prime s ≤
+      lrLowerFacePWR0 s k chi v / s := by
+    rw [le_div_iff₀ hs.1]
+    convert hpw using 1 <;> ring
+  have hvLower : (511 / 512 : ℝ) ≤ v := by
+    have hvSqLe : v ^ 2 ≤ v := by nlinarith [hv.1, hv.2]
+    linarith
+  have hinv : 1 / v ≤ (512 / 511 : ℝ) := by
+    rw [div_le_div_iff₀ hv.1 (by norm_num : (0 : ℝ) < 511)]
+    nlinarith [hvLower]
+  have hcoeff : (1 + 1 / v) / 3 ≤ (1023 / 1533 : ℝ) := by
+    nlinarith [hinv]
+  have hprime := lrLowerFaceR0Prime_payment_upper hs
+  have hlogNonneg : 0 ≤ 9 * Real.log 2 / 128 := by positivity
+  have hfactorPos : 0 < 1 + 1 / v := by positivity
+  have hprodLe : (1 + 1 / v) * lrLowerFaceR0Prime s ≤
+      ((1 + 1 / v) / 3) * (9 * Real.log 2 / 128) := by
+    have := mul_le_mul_of_nonneg_left hprime hfactorPos.le
+    nlinarith
+  have hprodBound : (1 + 1 / v) * lrLowerFaceR0Prime s ≤
+      (1023 / 1533 : ℝ) * (9 * Real.log 2 / 128) :=
+    hprodLe.trans (mul_le_mul_of_nonneg_right hcoeff hlogNonneg)
+  linarith
+
+noncomputable def lrLowerFaceY (s k chi v : ℝ) : ℝ :=
+  lrCertificatePWValue s (chi * (s * k)) (s * k) v -
+    2 * (v / (1 + v)) * (1 - chi * (s * k)) *
+      lrCertificateOmega s 0
+
+/-- Manuscript (M25): the lower-face `Y_R` reserve is strictly positive. -/
+theorem lrLowerFaceY_pos
+    {s k chi v : ℝ}
+    (hs : s ∈ Ioc (0 : ℝ) (1 / 128))
+    (hk : k ∈ Ioc (0 : ℝ) (1 / 4))
+    (hchi : chi ∈ Icc (0 : ℝ) 1)
+    (hv : v ∈ Ioc (0 : ℝ) 1)
+    (hvSq : (511 / 512 : ℝ) ≤ v ^ 2) :
+    0 < lrLowerFaceY s k chi v := by
+  have hsUnit : s ∈ Ioo (0 : ℝ) 1 := ⟨hs.1, hs.2.trans_lt (by norm_num)⟩
+  have hq0 := lrLowerFacePWQ0_rational_lower_closed
+    hs hk.1 hk.2 hchi hv
+  have hr0 := lrLowerFacePWR0_payment_closed hs hk hchi hv hvSq
+  have hq0Div : (893 / 3072 : ℝ) < lrLowerFacePWQ0 s k chi v / s := by
+    rw [lt_div_iff₀ hs.1]
+    simpa [mul_comm] using hq0
+  have hpwSplit := lrCertificatePWValue_eq_lowerFace_split
+    (s := s) (k := k) (chi := chi) (v := v)
+  have hpwDiv :
+      (893 / 3072 : ℝ) -
+          (1023 / 1533 : ℝ) * (9 * Real.log 2 / 128) <
+        lrCertificatePWValue s (chi * (s * k)) (s * k) v / s := by
+    rw [hpwSplit]
+    rw [add_div]
+    linarith
+  have hlog : Real.log 2 < (7 / 10 : ℝ) := by
+    exact Real.log_two_lt_d9.trans (by norm_num)
+  have hconstant : (1 / 4 : ℝ) <
+      (893 / 3072 : ℝ) -
+        (1023 / 1533 : ℝ) * (9 * Real.log 2 / 128) := by
+    nlinarith
+  have hpwQuarter : s / 4 <
+      lrCertificatePWValue s (chi * (s * k)) (s * k) v := by
+    have hdiv := hconstant.trans hpwDiv
+    rw [lt_div_iff₀ hs.1] at hdiv
+    nlinarith
+  have hw := lrCertificateOmega_zero_mem hsUnit
+  have hmNonneg : 0 ≤ v / (1 + v) :=
+    div_nonneg hv.1.le (by linarith [hv.1])
+  have hmLe : v / (1 + v) ≤ 1 / 2 := by
+    rw [div_le_iff₀ (by linarith [hv.1] : 0 < 1 + v)]
+    nlinarith [hv.2]
+  have hePos : 0 < s * k := mul_pos hs.1 hk.1
+  have hxNonneg : 0 ≤ 1 - chi * (s * k) := by
+    have heLe : s * k ≤ (1 / 128 : ℝ) * (1 / 4) :=
+      mul_le_mul hs.2 hk.2 hk.1.le (by norm_num)
+    have hchie : chi * (s * k) ≤ 1 * (s * k) :=
+      mul_le_mul_of_nonneg_right hchi.2 hePos.le
+    nlinarith
+  have hxLe : 1 - chi * (s * k) ≤ 1 :=
+    sub_le_self _ (mul_nonneg hchi.1 hePos.le)
+  have hmx : 2 * (v / (1 + v)) * (1 - chi * (s * k)) ≤ 1 := by
+    have htwoM : 2 * (v / (1 + v)) ≤ 1 := by nlinarith
+    calc
+      2 * (v / (1 + v)) * (1 - chi * (s * k)) ≤
+          1 * (1 - chi * (s * k)) :=
+        mul_le_mul_of_nonneg_right htwoM hxNonneg
+      _ ≤ 1 := by simpa using hxLe
+  have hmxNonneg : 0 ≤ 2 * (v / (1 + v)) * (1 - chi * (s * k)) :=
+    mul_nonneg (by positivity) hxNonneg
+  have hcorrection :
+      2 * (v / (1 + v)) * (1 - chi * (s * k)) *
+          lrCertificateOmega s 0 ≤ s / 4 := by
+    calc
+      2 * (v / (1 + v)) * (1 - chi * (s * k)) *
+          lrCertificateOmega s 0 ≤ 1 * (s / 4) :=
+        mul_le_mul hmx hw.2 hw.1.le (by norm_num)
+      _ = s / 4 := one_mul _
+  unfold lrLowerFaceY
   linarith
 
 end CourtadeKumar

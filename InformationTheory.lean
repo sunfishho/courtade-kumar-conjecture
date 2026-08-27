@@ -89,6 +89,7 @@ import InformationTheory.CourtadeKumar.LRLowerFaceQ0Bound
 import InformationTheory.CourtadeKumar.LRLowerFaceR0
 import InformationTheory.CourtadeKumar.LRLowerFaceR0PrimeBound
 import InformationTheory.CourtadeKumar.LRLowerFaceR0Payment
+import InformationTheory.CourtadeKumar.LRLowerFaceAssembly
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
