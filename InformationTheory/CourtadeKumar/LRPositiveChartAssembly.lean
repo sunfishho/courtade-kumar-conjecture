@@ -228,14 +228,16 @@ theorem lrFlowNumeratorP_halfMidpoint_nonneg_of_U
     field_simp [hB.ne'] at hscaled
     nlinarith
 
-/-- Certificates `(U)` and `(T)` close the positive-`J` chart. -/
-theorem lrFlowNumeratorP_nonneg_of_J_pos_target_of_U_T
+/-- The manuscript's half-midpoint numerator and tangent certificate close
+the positive-`J` chart. -/
+theorem lrFlowNumeratorP_nonneg_of_J_pos_target_of_halfMidpoint_T
     {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
     (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
     (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
     (htarget : lrPrefixEll R p = lrSquareTarget R v t)
     (hJ : 0 < lrFlowJ R v t)
-    (hU : 0 ≤ lrFlowUReserve R v t)
+    (hhalfInput : 0 ≤
+      lrFlowNumeratorP R (lrFlowM v / 2) v t)
     (hT : 0 ≤ lrFlowTReserve R v t) :
     0 ≤ lrFlowNumeratorP R p v t := by
   let M := lrFlowM v
@@ -270,8 +272,7 @@ theorem lrFlowNumeratorP_nonneg_of_J_pos_target_of_U_T
     nlinarith
   · have hNMneg : N M < 0 := lt_of_not_ge hNM
     have hhalf : 0 ≤ N (M / 2) := by
-      unfold N M
-      exact lrFlowNumeratorP_halfMidpoint_nonneg_of_U hR hv ht hJ hU
+      simpa [N, M] using hhalfInput
     have hhalfAffine := hAffine M (M / 2)
     have hhalfValue : N (M / 2) = N M + k * (M / 2) := by
       nlinarith [hhalfAffine]
@@ -343,6 +344,21 @@ theorem lrFlowNumeratorP_nonneg_of_J_pos_target_of_U_T
     have hmoveNonneg : 0 ≤ k * (π - p) :=
       mul_nonneg hk.le (sub_nonneg.mpr hpπ)
     nlinarith
+
+/-- Compatibility wrapper: the older auxiliary `U` reserve implies the
+actual half-midpoint numerator used by the manuscript certificate. -/
+theorem lrFlowNumeratorP_nonneg_of_J_pos_target_of_U_T
+    {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t)
+    (hJ : 0 < lrFlowJ R v t)
+    (hU : 0 ≤ lrFlowUReserve R v t)
+    (hT : 0 ≤ lrFlowTReserve R v t) :
+    0 ≤ lrFlowNumeratorP R p v t := by
+  have hhalf := lrFlowNumeratorP_halfMidpoint_nonneg_of_U hR hv ht hJ hU
+  exact lrFlowNumeratorP_nonneg_of_J_pos_target_of_halfMidpoint_T
+    hR hp hv ht htarget hJ hhalf hT
 
 /-- Once `(U)` and `(T)` are certified, all three sign charts combine into
 one pointwise flow-numerator theorem. -/

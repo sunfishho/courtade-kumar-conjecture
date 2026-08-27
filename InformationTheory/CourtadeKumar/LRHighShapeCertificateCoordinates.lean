@@ -32,8 +32,9 @@ noncomputable def lrCertificateV (point : CertificatePoint) : ℝ :=
 /-- The midpoint target in the exact normalization used by the replay. -/
 noncomputable def lrHighShapeUCertificateTarget
     (point : CertificatePoint) : ℝ :=
-  lrFlowUReserve (lrCertificateR point) (lrCertificateV point)
-      (lrCertificateT point) /
+  lrFlowNumeratorP (lrCertificateR point)
+      (lrFlowM (lrCertificateV point) / 2)
+      (lrCertificateV point) (lrCertificateT point) /
     (point.s * lrCertificateE point)
 
 /-- The tangent target expressed through the same flow reserve as the final
@@ -94,7 +95,8 @@ lemma lrHighShapeUCertificateTarget_flow
     {R v t : ℝ} (hR : R ≠ 1) (he : 1 - v ^ 2 * t ^ 2 ≠ 0)
     (hv : 0 < v) (ht : 0 < t) :
     lrHighShapeUCertificateTarget (lrFlowCertificatePoint R v t) =
-      lrFlowUReserve R v t / ((1 - R) * (1 - v ^ 2 * t ^ 2)) := by
+      lrFlowNumeratorP R (lrFlowM v / 2) v t /
+        ((1 - R) * (1 - v ^ 2 * t ^ 2)) := by
   unfold lrHighShapeUCertificateTarget
   rw [lrCertificateR_flow, lrCertificateV_flow hR he hv ht,
     lrCertificateT_flow hR he ht, lrCertificateE_flow hR]
@@ -109,12 +111,12 @@ lemma lrHighShapeTCertificateTarget_flow
   rw [lrCertificateR_flow, lrCertificateV_flow hR he hv ht,
     lrCertificateT_flow hR he ht]
 
-theorem lrFlowUReserve_nonneg_of_certificateTarget
+theorem lrFlowHalfMidpoint_nonneg_of_certificateTarget
     {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1) (hv : 0 < v) (ht : 0 < t)
     (he : 0 < 1 - v ^ 2 * t ^ 2)
     (htarget : 0 ≤
       lrHighShapeUCertificateTarget (lrFlowCertificatePoint R v t)) :
-    0 ≤ lrFlowUReserve R v t := by
+    0 ≤ lrFlowNumeratorP R (lrFlowM v / 2) v t := by
   have hRNe : R ≠ 1 := hR.2.ne
   have heNe : 1 - v ^ 2 * t ^ 2 ≠ 0 := he.ne'
   rw [lrHighShapeUCertificateTarget_flow hRNe heNe hv ht] at htarget
