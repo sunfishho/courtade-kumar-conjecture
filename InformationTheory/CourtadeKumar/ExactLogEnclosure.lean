@@ -118,5 +118,78 @@ theorem contains_log_of_rangeReduction
     exact hxCast
   simpa [hxReal] using h
 
+/-- Untrusted range-reduction data for one positive rational endpoint. -/
+structure LogRangeCertificate where
+  exponent : ℤ
+  mantissa : ℚ
+
+def LogRangeCertificate.Valid (x : ℚ)
+    (certificate : LogRangeCertificate) : Prop :=
+  1 ≤ certificate.mantissa ∧ certificate.mantissa < 2 ∧
+    x = (2 : ℚ) ^ certificate.exponent * certificate.mantissa
+
+def LogRangeCertificate.check (x : ℚ)
+    (certificate : LogRangeCertificate) : Bool :=
+  decide (
+    1 ≤ certificate.mantissa ∧ certificate.mantissa < 2 ∧
+      x = (2 : ℚ) ^ certificate.exponent * certificate.mantissa)
+
+def LogRangeCertificate.enclosure
+    (terms : ℕ) (certificate : LogRangeCertificate) : RationalEnclosure :=
+  logScaledMantissaEnclosure terms certificate.exponent certificate.mantissa
+
+theorem LogRangeCertificate.sound
+    (terms : ℕ) {x : ℚ} {certificate : LogRangeCertificate}
+    (hcheck : certificate.check x = true) :
+    (certificate.enclosure terms).Contains (Real.log (x : ℝ)) := by
+  have hvalid : certificate.Valid x := by
+    simpa [LogRangeCertificate.check, LogRangeCertificate.Valid] using hcheck
+  exact contains_log_of_rangeReduction terms certificate.exponent
+    hvalid.1 hvalid.2.2
+
+/-- Range-reduction certificates for the two endpoints of an input
+interval. -/
+structure LogIntervalCertificate where
+  lower : LogRangeCertificate
+  upper : LogRangeCertificate
+
+def LogIntervalCertificate.check
+    (input : RationalEnclosure) (certificate : LogIntervalCertificate) : Bool :=
+  decide (0 < input.lower) &&
+    (certificate.lower.check input.lower && certificate.upper.check input.upper)
+
+def LogIntervalCertificate.enclosure
+    (terms : ℕ) (certificate : LogIntervalCertificate) : RationalEnclosure :=
+  ⟨(certificate.lower.enclosure terms).lower,
+    (certificate.upper.enclosure terms).upper⟩
+
+theorem LogIntervalCertificate.sound
+    (terms : ℕ) {input : RationalEnclosure}
+    {certificate : LogIntervalCertificate}
+    (hcheck : certificate.check input = true)
+    {x : ℝ} (hx : input.Contains x) :
+    (certificate.enclosure terms).Contains (Real.log x) := by
+  have hparts :
+      (0 : ℚ) < input.lower ∧
+      certificate.lower.check input.lower = true ∧
+      certificate.upper.check input.upper = true := by
+    simpa [LogIntervalCertificate.check] using hcheck
+  have hlowerCheck : certificate.lower.check input.lower = true :=
+    hparts.2.1
+  have hupperCheck : certificate.upper.check input.upper = true :=
+    hparts.2.2
+  have hlowerPositiveRat : (0 : ℚ) < input.lower := by
+    simpa using hparts.1
+  have hlower := certificate.lower.sound terms hlowerCheck
+  have hupper := certificate.upper.sound terms hupperCheck
+  have hlowerPos : (0 : ℝ) < (input.lower : ℝ) := by
+    exact_mod_cast hlowerPositiveRat
+  have hxPos : 0 < x := hlowerPos.trans_le hx.1
+  have hlogLower : Real.log (input.lower : ℝ) ≤ Real.log x :=
+    Real.log_le_log hlowerPos hx.1
+  have hlogUpper : Real.log x ≤ Real.log (input.upper : ℝ) :=
+    Real.log_le_log hxPos hx.2
+  exact ⟨hlower.1.trans hlogLower, hlogUpper.trans hupper.2⟩
+
 end RationalEnclosure
 end CourtadeKumar
