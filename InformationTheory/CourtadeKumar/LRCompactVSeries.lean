@@ -568,6 +568,164 @@ theorem lrCompactVPWLower_le_lrFlowPW
   rw [hprefix] at htailNonneg
   linarith
 
+/-- Positive summand of the truncated lower bound for `D=A-B`. -/
+noncomputable def lrCompactVDTerm
+    (R y : ℝ) (n : ℕ) : ℝ :=
+  (1 - R ^ n) * y ^ n / (2 * (n : ℝ))
+
+noncomputable def lrCompactVDHead
+    (N : ℕ) (R y : ℝ) : ℝ :=
+  ∑ j ∈ Finset.range N, lrCompactVDTerm R y (j + 1)
+
+theorem lrCompactVDTerm_hasSum
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1) :
+    HasSum (fun j : ℕ ↦
+      lrCompactVDTerm R ((v * t) ^ 2) (j + 1))
+      (lrFlowD R v t) := by
+  have hvt : v * t ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos hv.1 ht.1
+    · calc
+        v * t < 1 * t := mul_lt_mul_of_pos_right hv.2 ht.1
+        _ < 1 := by simpa using ht.2
+  have hy : (v * t) ^ 2 ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact sq_pos_of_pos hvt.1
+    · nlinarith [sq_nonneg (v * t), mul_pos hvt.1 (sub_pos.mpr hvt.2)]
+  have hRy : R * (v * t) ^ 2 ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos hR.1 hy.1
+    · calc
+        R * (v * t) ^ 2 < 1 * (v * t) ^ 2 :=
+          mul_lt_mul_of_pos_right hR.2 hy.1
+        _ = (v * t) ^ 2 := one_mul _
+        _ < 1 := hy.2
+  have hySeries := lrL_sqrt_hasSum hy
+  have hRySeries := lrL_sqrt_hasSum hRy
+  have hsqrtR : 0 < Real.sqrt R := Real.sqrt_pos.2 hR.1
+  have hsqrtMul : Real.sqrt (R * (v * t) ^ 2) =
+      Real.sqrt R * (v * t) := by
+    rw [Real.sqrt_mul hR.1.le, Real.sqrt_sq_eq_abs, abs_of_pos hvt.1]
+  unfold lrFlowD lrFlowA lrFlowB
+  convert hySeries.sub hRySeries using 1
+  · funext j
+    unfold lrCompactVDTerm
+    rw [mul_pow]
+    norm_num only [Nat.cast_add, Nat.cast_one]
+    ring
+  · rw [Real.sqrt_sq_eq_abs, abs_of_pos hvt.1, hsqrtMul]
+    ring
+
+theorem lrCompactVDHead_le_lrFlowD
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (N : ℕ) :
+    lrCompactVDHead N R ((v * t) ^ 2) ≤ lrFlowD R v t := by
+  have hseries := lrCompactVDTerm_hasSum hR hv ht
+  rw [← hseries.tsum_eq]
+  unfold lrCompactVDHead
+  apply hseries.summable.sum_le_tsum (Finset.range N)
+  intro j hj
+  unfold lrCompactVDTerm
+  have hRpow : R ^ (j + 1) ≤ 1 := pow_le_one₀ hR.1.le hR.2.le
+  exact div_nonneg
+    (mul_nonneg (sub_nonneg.mpr hRpow) (pow_nonneg (sq_nonneg (v * t)) _))
+    (by positivity)
+
+theorem lrCompactVDHead_nonneg
+    {R y : ℝ} (hR : R ∈ Icc (0 : ℝ) 1) (hy : 0 ≤ y)
+    (N : ℕ) :
+    0 ≤ lrCompactVDHead N R y := by
+  unfold lrCompactVDHead
+  apply Finset.sum_nonneg
+  intro j hj
+  unfold lrCompactVDTerm
+  exact div_nonneg
+    (mul_nonneg
+      (sub_nonneg.mpr (pow_le_one₀ hR.1 hR.2))
+      (pow_nonneg hy _))
+    (by positivity)
+
+theorem lrCompactVPsiHead_nonneg
+    {R v x : ℝ} (hR : R ∈ Icc (0 : ℝ) 1)
+    (hv : v ∈ Ioc (0 : ℝ) 1) (hx : x ∈ Icc (0 : ℝ) 1)
+    (N : ℕ) :
+    0 ≤ lrCompactVPsiHead N R v x := by
+  unfold lrCompactVPsiHead
+  exact add_nonneg (lrCompactVFZero_nonneg hv) <|
+    Finset.sum_nonneg fun j _ ↦
+      lrCompactVPsiTerm_nonneg hR ⟨hv.1.le, hv.2⟩ hx (by omega)
+
+/-- Exact finite lower expression before rational interval enclosure. -/
+noncomputable def lrCompactVFiniteLower
+    (N : ℕ) (R v t : ℝ) : ℝ :=
+  lrFlowB R v t *
+      (lrCompactVPWLower N R v t -
+        4 * lrWKernel R 1 * (v * t ^ 2 / (1 + v))) +
+    lrCompactVDHead N R ((v * t) ^ 2) *
+      lrCompactVPsiHead N R v (t ^ 2)
+
+/-- Analytic soundness of the finite structured certificate criterion. -/
+theorem lrLowVReserve_nonneg_of_compact_finiteLower
+    {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (N : ℕ) (hlower : 0 ≤ lrCompactVFiniteLower N R v t) :
+    0 ≤ lrLowVReserve R v t := by
+  have htSq : t ^ 2 ∈ Icc (0 : ℝ) 1 := by
+    constructor
+    · exact sq_nonneg t
+    · nlinarith [mul_nonneg ht.1.le (sub_nonneg.mpr ht.2.le)]
+  have hBPos : 0 < lrFlowB R v t := by
+    apply lrFlowB_pos hv.1 ht.1.le
+    have hsqrtR : Real.sqrt R < 1 := by
+      simpa using (Real.sqrt_lt_sqrt_iff hR.1.le).2 hR.2
+    calc
+      Real.sqrt R * v * t < 1 * v * t := by
+        exact mul_lt_mul_of_pos_right
+          (mul_lt_mul_of_pos_right hsqrtR hv.1) ht.1
+      _ < 1 := by
+        have : v * t < 1 := calc
+          v * t < 1 * t := mul_lt_mul_of_pos_right hv.2 ht.1
+          _ < 1 := by simpa using ht.2
+        simpa using this
+  have hDHead := lrCompactVDHead_nonneg
+    ⟨hR.1.le, hR.2.le⟩ (sq_nonneg (v * t)) N
+  have hDLower := lrCompactVDHead_le_lrFlowD hR hv ht N
+  have hD : 0 ≤ lrFlowD R v t := hDHead.trans hDLower
+  have hPsiHead := lrCompactVPsiHead_nonneg
+    ⟨hR.1.le, hR.2.le⟩ ⟨hv.1, hv.2.le⟩ htSq N
+  have hPsiLower : lrCompactVPsiHead N R v (t ^ 2) ≤
+      lrFlowC R v t :=
+    lrCompactVPsiHead_le_of_hasSum
+      ⟨hR.1.le, hR.2.le⟩ ⟨hv.1, hv.2.le⟩ htSq
+      (lrCompactVPsiTerm_hasSum hR hv ht) N
+  have hPWLower := lrCompactVPWLower_le_lrFlowPW hR hv ht N
+  have hgroup : lrLowVReserve R v t =
+      lrFlowB R v t *
+          (lrFlowPW R v t -
+            4 * lrWKernel R 1 * (v * t ^ 2 / (1 + v))) +
+        lrFlowD R v t * lrFlowC R v t := by
+    unfold lrLowVReserve lrLowYTangent lrFlowM
+    have hden : 1 + v ≠ 0 := by linarith [hv.1]
+    field_simp [hden]
+    ring
+  have hQ :
+      lrCompactVPWLower N R v t -
+          4 * lrWKernel R 1 * (v * t ^ 2 / (1 + v)) ≤
+        lrFlowPW R v t -
+          4 * lrWKernel R 1 * (v * t ^ 2 / (1 + v)) := by
+    linarith
+  have hBQ := mul_le_mul_of_nonneg_left hQ hBPos.le
+  have hDPsi :
+      lrCompactVDHead N R ((v * t) ^ 2) *
+          lrCompactVPsiHead N R v (t ^ 2) ≤
+        lrFlowD R v t * lrFlowC R v t :=
+    mul_le_mul hDLower hPsiLower hPsiHead hD
+  rw [hgroup]
+  unfold lrCompactVFiniteLower at hlower
+  nlinarith
+
 theorem lrCompactVPWHead_le_lrFlowPW
     {R v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
     (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
