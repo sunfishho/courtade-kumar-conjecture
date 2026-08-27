@@ -19,10 +19,18 @@ def lrCertificateY0 (point : CertificatePoint) : ℝ :=
 noncomputable def lrCertificateW (point : CertificatePoint) : ℝ :=
   lrCertificateOmega point.s 0
 
+noncomputable def lrCertificatePWValue (s y0 e v : ℝ) : ℝ :=
+  lrCertificateOmega s y0 + lrCertificateOmega s e / v
+
+noncomputable def lrCertificatePWValueDeriv
+    (s y0 e v s' y0' e' v' : ℝ) : ℝ :=
+  lrCertificateOmegaDeriv s y0 s' y0' +
+    (lrCertificateOmegaDeriv s e s' e' * v -
+      lrCertificateOmega s e * v') / v ^ 2
+
 noncomputable def lrCertificatePW (point : CertificatePoint) : ℝ :=
-  lrCertificateOmega point.s (lrCertificateY0 point) +
-    lrCertificateOmega point.s (lrCertificateE point) /
-      lrCertificateV point
+  lrCertificatePWValue point.s (lrCertificateY0 point)
+    (lrCertificateE point) (lrCertificateV point)
 
 def lrCertificateY0DerivS (point : CertificatePoint) : ℝ :=
   point.chi * point.k
@@ -44,11 +52,31 @@ noncomputable def lrCertificateWDerivChi (point : CertificatePoint) : ℝ :=
 
 noncomputable def lrCertificatePWDeriv
     (point : CertificatePoint) (s' y0' e' v' : ℝ) : ℝ :=
-  lrCertificateOmegaDeriv point.s (lrCertificateY0 point) s' y0' +
-    (lrCertificateOmegaDeriv point.s (lrCertificateE point) s' e' *
-        lrCertificateV point -
-      lrCertificateOmega point.s (lrCertificateE point) * v') /
-      lrCertificateV point ^ 2
+  lrCertificatePWValueDeriv point.s (lrCertificateY0 point)
+    (lrCertificateE point) (lrCertificateV point) s' y0' e' v'
+
+theorem hasDerivAt_lrCertificatePWValue_along
+    {z s' y0' e' v' : ℝ}
+    {sfun y0fun efun vfun : ℝ → ℝ}
+    (hs : HasDerivAt sfun s' z) (hy0 : HasDerivAt y0fun y0' z)
+    (he : HasDerivAt efun e' z) (hv : HasDerivAt vfun v' z)
+    (hsMem : sfun z ∈ Ioo (0 : ℝ) 1)
+    (hy0Mem : y0fun z ∈ Ioo (0 : ℝ) 1)
+    (heMem : efun z ∈ Ioo (0 : ℝ) 1)
+    (hvPos : 0 < vfun z) :
+    HasDerivAt
+      (fun q ↦ lrCertificatePWValue (sfun q) (y0fun q)
+        (efun q) (vfun q))
+      (lrCertificatePWValueDeriv (sfun z) (y0fun z) (efun z)
+        (vfun z) s' y0' e' v') z := by
+  have homegaY0 := hasDerivAt_lrCertificateOmega_along
+    hs hy0 rfl rfl hsMem hy0Mem
+  have homegaE := hasDerivAt_lrCertificateOmega_along
+    hs he rfl rfl hsMem heMem
+  have hquot := homegaE.div hv hvPos.ne'
+  have h := homegaY0.add hquot
+  unfold lrCertificatePWValue lrCertificatePWValueDeriv
+  convert h using 1 <;> field_simp [hvPos.ne'] <;> ring
 
 noncomputable def lrCertificatePWDerivS (point : CertificatePoint) : ℝ :=
   lrCertificatePWDeriv point 1 (lrCertificateY0DerivS point)
@@ -161,8 +189,9 @@ theorem LRHighShapeKernelCertificate.pwAD_sound
     homegaE hv
   have h := IntervalAD.contains_add homegaY0 hquot
   unfold LRHighShapeKernelCertificate.pwAD lrCertificatePW
+    lrCertificatePWValue
     lrCertificatePWDerivS lrCertificatePWDerivK lrCertificatePWDerivChi
-    lrCertificatePWDeriv
+    lrCertificatePWDeriv lrCertificatePWValueDeriv
   dsimp only
   convert h using 1
 
@@ -234,7 +263,7 @@ theorem lrCertificatePW_eq_lrFlowPW
   have homegaE := lrCertificateOmega_one_sub_sq hs hvtMem
   rw [← hy0] at homegaY0
   rw [← heq] at homegaE
-  unfold lrCertificatePW lrFlowPW lrCertificateR
+  unfold lrCertificatePW lrCertificatePWValue lrFlowPW lrCertificateR
   rw [homegaY0, homegaE]
 
 end CourtadeKumar
