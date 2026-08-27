@@ -11,6 +11,8 @@ verifies them before the semantic theorems expose values and all three
 coordinate derivatives.
 -/
 
+open Set
+
 namespace CourtadeKumar
 
 def lrCertificateEDerivS (point : CertificatePoint) : ℝ := point.k
@@ -42,6 +44,17 @@ noncomputable def lrCertificateTDerivChi (point : CertificatePoint) : ℝ :=
 noncomputable def lrCertificateVRadicand (point : CertificatePoint) : ℝ :=
   (1 - lrCertificateE point) / lrCertificateX point
 
+noncomputable def lrCertificateVRadicandDeriv
+    (point : CertificatePoint) (e' x' : ℝ) : ℝ :=
+  ((-e') * lrCertificateX point -
+      (1 - lrCertificateE point) * x') /
+    lrCertificateX point ^ 2
+
+noncomputable def lrCertificateVDeriv
+    (point : CertificatePoint) (e' x' : ℝ) : ℝ :=
+  lrCertificateVRadicandDeriv point e' x' /
+    (2 * lrCertificateV point)
+
 noncomputable def lrCertificateVRadicandDerivS
     (point : CertificatePoint) : ℝ :=
   ((-lrCertificateEDerivS point) * lrCertificateX point -
@@ -68,6 +81,82 @@ noncomputable def lrCertificateVDerivK (point : CertificatePoint) : ℝ :=
 
 noncomputable def lrCertificateVDerivChi (point : CertificatePoint) : ℝ :=
   lrCertificateVRadicandDerivChi point / (2 * lrCertificateV point)
+
+/-- A generic three-coordinate curve, used to prove the analytic chain rule
+once before specializing to the `s`, `k`, and `chi` coordinate lines. -/
+def lrCertificateCurve (s k chi : ℝ → ℝ) (q : ℝ) : CertificatePoint where
+  s := s q
+  k := k q
+  chi := chi q
+
+theorem hasDerivAt_lrCertificateE_curve
+    {z s' k' : ℝ} {s k chi : ℝ → ℝ}
+    (hs : HasDerivAt s s' z) (hk : HasDerivAt k k' z) :
+    HasDerivAt (fun q ↦ lrCertificateE (lrCertificateCurve s k chi q))
+      (s' * k z + s z * k') z := by
+  simpa [lrCertificateE, lrCertificateCurve] using hs.mul hk
+
+theorem hasDerivAt_lrCertificateX_curve
+    {z s' k' chi' : ℝ} {s k chi : ℝ → ℝ}
+    (hs : HasDerivAt s s' z) (hk : HasDerivAt k k' z)
+    (hchi : HasDerivAt chi chi' z) :
+    HasDerivAt (fun q ↦ lrCertificateX (lrCertificateCurve s k chi q))
+      (-(chi' * lrCertificateE (lrCertificateCurve s k chi z) +
+        chi z * (s' * k z + s z * k'))) z := by
+  have he := hasDerivAt_lrCertificateE_curve (chi := chi) hs hk
+  have hprod := hchi.mul he
+  have h := (hasDerivAt_const z 1).sub hprod
+  unfold lrCertificateX
+  convert h using 1 <;> ring
+
+theorem hasDerivAt_lrCertificateV_curve
+    {z s' k' chi' : ℝ} {s k chi : ℝ → ℝ}
+    (hs : HasDerivAt s s' z) (hk : HasDerivAt k k' z)
+    (hchi : HasDerivAt chi chi' z)
+    (heMem : lrCertificateE (lrCertificateCurve s k chi z) ∈ Ioo (0 : ℝ) 1)
+    (hchiMem : chi z ∈ Ioo (0 : ℝ) 1) :
+    let point := lrCertificateCurve s k chi z
+    let e' := s' * k z + s z * k'
+    let x' := -(chi' * lrCertificateE point + chi z * e')
+    HasDerivAt (fun q ↦ lrCertificateV (lrCertificateCurve s k chi q))
+      (lrCertificateVDeriv point e' x') z := by
+  dsimp only
+  let point := lrCertificateCurve s k chi z
+  let e' := s' * k z + s z * k'
+  let x' := -(chi' * lrCertificateE point + chi z * e')
+  have he := hasDerivAt_lrCertificateE_curve (chi := chi) hs hk
+  have hx := hasDerivAt_lrCertificateX_curve hs hk hchi
+  have hxPos : 0 < lrCertificateX point := by
+    change 0 < 1 - chi z *
+      lrCertificateE (lrCertificateCurve s k chi z)
+    have hprod : chi z * lrCertificateE (lrCertificateCurve s k chi z) < 1 := by
+      calc
+        chi z * lrCertificateE (lrCertificateCurve s k chi z) <
+            1 * lrCertificateE (lrCertificateCurve s k chi z) :=
+          mul_lt_mul_of_pos_right hchiMem.2 heMem.1
+        _ = lrCertificateE (lrCertificateCurve s k chi z) := one_mul _
+        _ < 1 := heMem.2
+    exact sub_pos.mpr hprod
+  have hnum := (hasDerivAt_const z 1).sub he
+  have hradRaw := hnum.div hx hxPos.ne'
+  have hrad : HasDerivAt
+      (fun q ↦ lrCertificateVRadicand (lrCertificateCurve s k chi q))
+      (lrCertificateVRadicandDeriv point e' x') z := by
+    unfold lrCertificateVRadicand lrCertificateVRadicandDeriv
+    convert hradRaw using 1 <;>
+      simp only [Pi.sub_apply] <;>
+      dsimp [point, e', x', lrCertificateCurve, lrCertificateE,
+        lrCertificateX] <;> ring
+  have hradPos : 0 < lrCertificateVRadicand point :=
+    div_pos (sub_pos.mpr heMem.2) hxPos
+  have hsqrt := (Real.hasDerivAt_sqrt hradPos.ne').comp z hrad
+  have hsqrtEq : Real.sqrt (lrCertificateVRadicand point) =
+      lrCertificateV point := by rfl
+  unfold lrCertificateV lrCertificateVDeriv
+  convert hsqrt using 1
+  rw [hsqrtEq]
+  dsimp [point, e', x']
+  field_simp
 
 def lrCertificateSAD (box : CertificateBox) : IntervalAD :=
   IntervalAD.variableS box.sInterval
