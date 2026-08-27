@@ -96,7 +96,7 @@ def lrCertificateY0AD (box : CertificateBox) : IntervalAD :=
 /-- Payload for the common high-shape noise kernel. -/
 structure LRHighShapeKernelCertificate where
   coordinate : LRHighShapeCoordinateCertificate
-  omegaZero : LROmegaADCertificate
+  omegaZero : LROmegaZeroADCertificate
   omegaY0 : LROmegaADCertificate
   omegaE : LROmegaADCertificate
 
@@ -105,7 +105,6 @@ namespace LRHighShapeKernelCertificate
 def wAD (terms : ℕ) (box : CertificateBox)
     (certificate : LRHighShapeKernelCertificate) : IntervalAD :=
   certificate.omegaZero.evaluate terms (lrCertificateSAD box)
-    (IntervalAD.const 0)
 
 def pwAD (terms : ℕ) (box : CertificateBox)
     (certificate : LRHighShapeKernelCertificate) : IntervalAD :=
@@ -120,7 +119,7 @@ def check (box : CertificateBox)
     (certificate : LRHighShapeKernelCertificate) : Bool :=
   decide (
     certificate.coordinate.check box = true ∧
-    certificate.omegaZero.check (lrCertificateSAD box) (IntervalAD.const 0) = true ∧
+    certificate.omegaZero.check (lrCertificateSAD box) = true ∧
     certificate.omegaY0.check (lrCertificateSAD box) (lrCertificateY0AD box) = true ∧
     certificate.omegaE.check (lrCertificateSAD box) (lrCertificateEAD box) = true ∧
     (0 : ℚ) < (certificate.coordinate.vAD box).value.lower)
@@ -151,7 +150,7 @@ theorem LRHighShapeKernelCertificate.wAD_sound
       (lrCertificateWDerivChi point) := by
   have hparts :
       certificate.coordinate.check box = true ∧
-      certificate.omegaZero.check (lrCertificateSAD box) (IntervalAD.const 0) = true ∧
+      certificate.omegaZero.check (lrCertificateSAD box) = true ∧
       certificate.omegaY0.check (lrCertificateSAD box) (lrCertificateY0AD box) = true ∧
       certificate.omegaE.check (lrCertificateSAD box) (lrCertificateEAD box) = true ∧
       (0 : ℚ) < (certificate.coordinate.vAD box).value.lower := by
@@ -159,7 +158,6 @@ theorem LRHighShapeKernelCertificate.wAD_sound
   have hs := IntervalAD.contains_variableS
     (show box.sInterval.Contains point.s from ⟨hpoint.1, hpoint.2.1⟩)
   have h := certificate.omegaZero.sound terms hparts.2.1 hs
-    (IntervalAD.contains_const 0)
   simpa [LRHighShapeKernelCertificate.wAD, lrCertificateW,
     lrCertificateWDerivS, lrCertificateWDerivK,
     lrCertificateWDerivChi] using h
@@ -173,7 +171,7 @@ theorem LRHighShapeKernelCertificate.pwAD_sound
       (lrCertificatePWDerivChi point) := by
   have hparts :
       certificate.coordinate.check box = true ∧
-      certificate.omegaZero.check (lrCertificateSAD box) (IntervalAD.const 0) = true ∧
+      certificate.omegaZero.check (lrCertificateSAD box) = true ∧
       certificate.omegaY0.check (lrCertificateSAD box) (lrCertificateY0AD box) = true ∧
       certificate.omegaE.check (lrCertificateSAD box) (lrCertificateEAD box) = true ∧
       (0 : ℚ) < (certificate.coordinate.vAD box).value.lower := by

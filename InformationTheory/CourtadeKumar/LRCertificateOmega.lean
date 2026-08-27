@@ -103,6 +103,10 @@ theorem hasDerivAt_lrCertificateOmega_zero_along
   · simp only [Pi.mul_apply, Function.comp_apply, hsz]
     ring
 
+@[simp] lemma lrCertificateQ_zero : lrCertificateQ 0 = 0 := by
+  rw [lrCertificateQ_eq]
+  norm_num [topPhi_one]
+
 def lrCertificateBAD (s y : IntervalAD) : IntervalAD :=
   IntervalAD.add s
     (IntervalAD.mul (IntervalAD.sub (IntervalAD.const 1) s) y)
@@ -175,6 +179,47 @@ theorem sound (terms : ℕ) {certificate : LROmegaADCertificate}
   convert h using 1 <;> ring
 
 end LROmegaADCertificate
+
+/-- Endpoint-safe payload for `omega_s(0)`.  The generic `Q` interval node
+has the correct open domain `(0,1)` and therefore must not be asked to
+evaluate `Q(0)`.  The exact identity `Q(0)=0` removes that term entirely. -/
+structure LROmegaZeroADCertificate where
+  qAtS : LRQADCertificate
+  qPrimeAtS : LRQPrimeADCertificate
+
+namespace LROmegaZeroADCertificate
+
+def check (s : IntervalAD) (certificate : LROmegaZeroADCertificate) : Bool :=
+  certificate.qAtS.check s.value && certificate.qPrimeAtS.check s.value
+
+def evaluate (terms : ℕ) (certificate : LROmegaZeroADCertificate)
+    (s : IntervalAD) : IntervalAD :=
+  let qs := certificate.qAtS.evaluate terms s
+  let qps := certificate.qPrimeAtS.evaluate terms s
+  IntervalAD.sub qs (IntervalAD.mul s qps)
+
+theorem sound (terms : ℕ) {certificate : LROmegaZeroADCertificate}
+    {sAD : IntervalAD} {s sS sK sChi : ℝ}
+    (hcheck : certificate.check sAD = true)
+    (hs : sAD.Contains s sS sK sChi) :
+    (certificate.evaluate terms sAD).Contains
+      (lrCertificateOmega s 0)
+      (lrCertificateOmegaDeriv s 0 sS 0)
+      (lrCertificateOmegaDeriv s 0 sK 0)
+      (lrCertificateOmegaDeriv s 0 sChi 0) := by
+  have hparts : certificate.qAtS.check sAD.value = true ∧
+      certificate.qPrimeAtS.check sAD.value = true := by
+    simpa [check] using hcheck
+  have hqs := certificate.qAtS.sound terms hparts.1 hs
+  have hqps := certificate.qPrimeAtS.sound terms hparts.2 hs
+  have h := IntervalAD.contains_sub hqs (IntervalAD.contains_mul hs hqps)
+  unfold evaluate lrCertificateOmega lrCertificateOmegaDeriv
+    lrCertificateB lrCertificateBDeriv
+  dsimp only
+  simpa only [lrCertificateQ_zero, sub_zero, mul_one, mul_zero, add_zero,
+    zero_mul, neg_zero] using h
+
+end LROmegaZeroADCertificate
 
 /-- The certificate primitive is exactly the analytic `W` kernel in squared
 complement coordinates. -/

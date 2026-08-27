@@ -569,8 +569,7 @@ theorem mAD_sound {box : CertificateBox} {point : CertificatePoint}
     simpa [check] using hcheck
   have hkernelParts :
       certificate.kernel.coordinate.check box = true ∧
-      certificate.kernel.omegaZero.check (lrCertificateSAD box)
-        (IntervalAD.const 0) = true ∧
+      certificate.kernel.omegaZero.check (lrCertificateSAD box) = true ∧
       certificate.kernel.omegaY0.check (lrCertificateSAD box)
         (lrCertificateY0AD box) = true ∧
       certificate.kernel.omegaE.check (lrCertificateSAD box)
