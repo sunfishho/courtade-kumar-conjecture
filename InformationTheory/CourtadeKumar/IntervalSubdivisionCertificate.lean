@@ -111,18 +111,20 @@ theorem CertificateBox.contains_lower_or_upper
 /-- A finite subdivision proof.  Leaves contain no claimed arithmetic fact:
 the trusted checker recomputes either the analytic acceptance test or the
 one-sided physical discard test from the current box. -/
-inductive SubdivisionCertificate where
-  | accept
-  | discard
+inductive SubdivisionCertificate (AcceptData DiscardData : Type) where
+  | accept (data : AcceptData)
+  | discard (data : DiscardData)
   | split (axis : CertificateAxis) (cut : ℚ)
-      (lower upper : SubdivisionCertificate)
+      (lower upper : SubdivisionCertificate AcceptData DiscardData)
 
 /-- Boolean traversal of a subdivision certificate. -/
 def SubdivisionCertificate.check
-    (acceptBox discardBox : CertificateBox → Bool) :
-    CertificateBox → SubdivisionCertificate → Bool
-  | box, .accept => acceptBox box
-  | box, .discard => discardBox box
+    {AcceptData DiscardData : Type}
+    (acceptBox : CertificateBox → AcceptData → Bool)
+    (discardBox : CertificateBox → DiscardData → Bool) :
+    CertificateBox → SubdivisionCertificate AcceptData DiscardData → Bool
+  | box, .accept data => acceptBox box data
+  | box, .discard data => discardBox box data
   | box, .split axis cut lower upper =>
       check acceptBox discardBox (box.lower axis cut) lower &&
         check acceptBox discardBox (box.upper axis cut) upper
@@ -132,24 +134,28 @@ is absent from the theorem's assumptions: only the two verified leaf
 implications and the result of the Boolean checker matter. -/
 theorem subdivisionCertificate_sound
     {Relevant Property : CertificatePoint → Prop}
-    {acceptBox discardBox : CertificateBox → Bool}
-    (accept_sound : ∀ box, acceptBox box = true →
+    {AcceptData DiscardData : Type}
+    {acceptBox : CertificateBox → AcceptData → Bool}
+    {discardBox : CertificateBox → DiscardData → Bool}
+    (accept_sound : ∀ box data, acceptBox box data = true →
       ∀ point, box.Contains point → Property point)
-    (discard_sound : ∀ box, discardBox box = true →
+    (discard_sound : ∀ box data, discardBox box data = true →
       ∀ point, box.Contains point → ¬ Relevant point)
-    {box : CertificateBox} {certificate : SubdivisionCertificate}
+    {box : CertificateBox}
+    {certificate : SubdivisionCertificate AcceptData DiscardData}
     (hcheck : certificate.check acceptBox discardBox box = true) :
     ∀ point, box.Contains point → Relevant point → Property point := by
   induction certificate generalizing box with
-  | accept =>
+  | accept data =>
       intro point hpoint _
-      exact accept_sound box (by simpa [SubdivisionCertificate.check] using hcheck)
+      exact accept_sound box data
+        (by simpa [SubdivisionCertificate.check] using hcheck)
         point hpoint
-  | discard =>
+  | discard data =>
       intro point hpoint hRelevant
-      have hdiscard : discardBox box = true := by
+      have hdiscard : discardBox box data = true := by
         simpa [SubdivisionCertificate.check] using hcheck
-      exact (discard_sound box hdiscard point hpoint hRelevant).elim
+      exact (discard_sound box data hdiscard point hpoint hRelevant).elim
   | split axis cut lower upper lower_ih upper_ih =>
       have hchildren := Bool.and_eq_true_iff.mp
         (by simpa [SubdivisionCertificate.check] using hcheck)
@@ -161,9 +167,10 @@ theorem subdivisionCertificate_sound
 /-- Turn a verified interval extension into the analytic acceptance Boolean
 used at certificate leaves. -/
 def enclosureAccepts
-    (enclose : CertificateBox → RationalEnclosure)
-    (box : CertificateBox) : Bool :=
-  (enclose box).provesNonnegative
+    {AcceptData : Type}
+    (enclose : CertificateBox → AcceptData → RationalEnclosure)
+    (box : CertificateBox) (data : AcceptData) : Bool :=
+  (enclose box data).provesNonnegative
 
 /-- End-to-end structural soundness for nonnegativity certificates.  What
 remains for a concrete target is to prove that `enclose` contains the target
@@ -172,21 +179,23 @@ domain. -/
 theorem subdivisionCertificate_nonnegative
     {Relevant : CertificatePoint → Prop}
     {target : CertificatePoint → ℝ}
-    {enclose : CertificateBox → RationalEnclosure}
-    {discardBox : CertificateBox → Bool}
-    (enclose_sound : ∀ box point, box.Contains point →
-      (enclose box).Contains (target point))
-    (discard_sound : ∀ box, discardBox box = true →
+    {AcceptData DiscardData : Type}
+    {enclose : CertificateBox → AcceptData → RationalEnclosure}
+    {discardBox : CertificateBox → DiscardData → Bool}
+    (enclose_sound : ∀ box data point, box.Contains point →
+      (enclose box data).Contains (target point))
+    (discard_sound : ∀ box data, discardBox box data = true →
       ∀ point, box.Contains point → ¬ Relevant point)
-    {box : CertificateBox} {certificate : SubdivisionCertificate}
+    {box : CertificateBox}
+    {certificate : SubdivisionCertificate AcceptData DiscardData}
     (hcheck : certificate.check (enclosureAccepts enclose) discardBox box = true) :
     ∀ point, box.Contains point → Relevant point → 0 ≤ target point := by
   apply subdivisionCertificate_sound
       (Relevant := Relevant) (Property := fun point ↦ 0 ≤ target point)
       (acceptBox := enclosureAccepts enclose) (discardBox := discardBox)
       (box := box) (certificate := certificate) ?_ discard_sound hcheck
-  intro leaf hleaf point hpoint
+  intro leaf data hleaf point hpoint
   exact RationalEnclosure.nonnegative_of_provesNonnegative hleaf
-    (enclose_sound leaf point hpoint)
+    (enclose_sound leaf data point hpoint)
 
 end CourtadeKumar
