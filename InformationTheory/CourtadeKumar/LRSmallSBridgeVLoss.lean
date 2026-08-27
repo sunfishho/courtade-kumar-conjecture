@@ -15,6 +15,47 @@ namespace CourtadeKumar
 
 noncomputable def lrSmallSBridgeEpsilonV : ℝ := 355543 / 819200000
 
+lemma lr_exp_five_thirds_gt_five :
+    (5 : ℝ) < Real.exp (5 / 3) := by
+  have hsum := Real.sum_le_exp_of_nonneg
+    (show (0 : ℝ) ≤ 5 / 3 by norm_num) 5
+  norm_num [Finset.sum_range_succ] at hsum ⊢
+  exact (by norm_num : (5 : ℝ) < 10009 / 1944).trans_le hsum
+
+lemma lr_log_five_lt_five_thirds :
+    Real.log 5 < (5 / 3 : ℝ) :=
+  (Real.log_lt_iff_lt_exp (by norm_num)).2 lr_exp_five_thirds_gt_five
+
+lemma lrSmallSBridgeD_mem
+    {s k : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 16384))
+    (hk : k ∈ Icc (1 / 4 : ℝ) 4) :
+    lrSmallSBridgeD s k ∈ Icc (0 : ℝ) (5 / 6) := by
+  have hkPos : 0 < k := (by norm_num : (0 : ℝ) < 1 / 4).trans_le hk.1
+  have hinvLower : (1 / 4 : ℝ) ≤ 1 / k := by
+    rw [le_div_iff₀ hkPos]
+    nlinarith [hk.2]
+  have hinvUpper : 1 / k ≤ (4 : ℝ) := by
+    rw [div_le_iff₀ hkPos]
+    nlinarith [hk.1]
+  have hrewrite : (1 + (1 - s) * k) / k = 1 / k + 1 - s := by
+    field_simp [hkPos.ne']
+    ring
+  have hargLower : 1 < (1 + (1 - s) * k) / k := by
+    rw [hrewrite]
+    nlinarith [hs.2]
+  have hargUpper : (1 + (1 - s) * k) / k ≤ 5 := by
+    rw [hrewrite]
+    nlinarith [hs.1]
+  have hlogNonneg : 0 ≤ Real.log ((1 + (1 - s) * k) / k) :=
+    (Real.log_pos hargLower).le
+  have hlogUpper := Real.log_le_log
+    (show (0 : ℝ) < (1 + (1 - s) * k) / k by linarith [hargLower])
+    hargUpper
+  unfold lrSmallSBridgeD
+  constructor
+  · positivity
+  · nlinarith [lr_log_five_lt_five_thirds]
+
 lemma lrSmallSBridgeE_upper
     {s k : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 16384))
     (hk : k ∈ Icc (1 / 4 : ℝ) 4) :
