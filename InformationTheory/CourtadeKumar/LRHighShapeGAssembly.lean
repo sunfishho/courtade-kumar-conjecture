@@ -13,18 +13,41 @@ open Set
 
 namespace CourtadeKumar
 
+noncomputable def lrCertificateGShapeValue (y0 e v : ℝ) : ℝ :=
+  lrCertificateG0 v + lrCertificateQ y0 + lrCertificateQ e / v
+
+noncomputable def lrCertificateGShapeValueDeriv
+    (y0 e v y0' e' v' : ℝ) : ℝ :=
+  lrCertificateG0Prime v * v' + lrCertificateQPrime y0 * y0' +
+    (lrCertificateQPrime e * e' * v - lrCertificateQ e * v') / v ^ 2
+
 noncomputable def lrCertificateGShape (point : CertificatePoint) : ℝ :=
-  lrCertificateG0 (lrCertificateV point) +
-    lrCertificateQ (lrCertificateY0 point) +
-    lrCertificateQ (lrCertificateE point) / lrCertificateV point
+  lrCertificateGShapeValue (lrCertificateY0 point)
+    (lrCertificateE point) (lrCertificateV point)
 
 noncomputable def lrCertificateGShapeDeriv
     (point : CertificatePoint) (y0' e' v' : ℝ) : ℝ :=
-  lrCertificateG0Prime (lrCertificateV point) * v' +
-    lrCertificateQPrime (lrCertificateY0 point) * y0' +
-    (lrCertificateQPrime (lrCertificateE point) * e' *
-        lrCertificateV point - lrCertificateQ (lrCertificateE point) * v') /
-      lrCertificateV point ^ 2
+  lrCertificateGShapeValueDeriv (lrCertificateY0 point)
+    (lrCertificateE point) (lrCertificateV point) y0' e' v'
+
+theorem hasDerivAt_lrCertificateGShapeValue_along
+    {z y0' e' v' : ℝ} {y0fun efun vfun : ℝ → ℝ}
+    (hy0 : HasDerivAt y0fun y0' z) (he : HasDerivAt efun e' z)
+    (hv : HasDerivAt vfun v' z)
+    (hy0Mem : y0fun z ∈ Ioo (0 : ℝ) 1)
+    (heMem : efun z ∈ Ioo (0 : ℝ) 1)
+    (hvPos : 0 < vfun z) :
+    HasDerivAt
+      (fun q ↦ lrCertificateGShapeValue (y0fun q) (efun q) (vfun q))
+      (lrCertificateGShapeValueDeriv (y0fun z) (efun z) (vfun z)
+        y0' e' v') z := by
+  have hg0 := (hasDerivAt_lrCertificateG0 hvPos).comp z hv
+  have hqY0 := (hasDerivAt_lrCertificateQ hy0Mem).comp z hy0
+  have hqE := (hasDerivAt_lrCertificateQ heMem).comp z he
+  have hquot := hqE.div hv hvPos.ne'
+  have h := (hg0.add hqY0).add hquot
+  unfold lrCertificateGShapeValue lrCertificateGShapeValueDeriv
+  convert h using 1 <;> field_simp [hvPos.ne'] <;> ring
 
 noncomputable def lrCertificateGShapeDerivS (point : CertificatePoint) : ℝ :=
   lrCertificateGShapeDeriv point (lrCertificateY0DerivS point)
@@ -91,9 +114,10 @@ theorem sound (terms : ℕ) {box : CertificateBox}
   have hqE := certificate.qE.sound terms hparts.2.2.2.1 he
   have hquot := IntervalAD.contains_divPositive hparts.2.2.2.2 hqE hv
   have h := IntervalAD.contains_add (IntervalAD.contains_add hg0 hqY0) hquot
-  unfold evaluate lrCertificateGShape lrCertificateGShapeDerivS
+  unfold evaluate lrCertificateGShape lrCertificateGShapeValue
+    lrCertificateGShapeDerivS
     lrCertificateGShapeDerivK lrCertificateGShapeDerivChi
-    lrCertificateGShapeDeriv
+    lrCertificateGShapeDeriv lrCertificateGShapeValueDeriv
   dsimp only
   convert h using 1
 
@@ -148,7 +172,7 @@ theorem lrCertificateGShape_eq_lrGShape
         lrCertificateT point) ^ 2) =
           (lrCertificateV point * lrCertificateT point) ^ 2 by ring,
       Real.sqrt_sq_eq_abs, abs_of_pos (mul_pos hvPos htPos)]
-  unfold lrCertificateGShape
+  unfold lrCertificateGShape lrCertificateGShapeValue
   rw [lrCertificateG0_eq_lrG, lrCertificateQ_eq, lrCertificateQ_eq,
     hsqrtY0, hsqrtE]
   unfold lrGShape
