@@ -32,9 +32,19 @@ def splitScoreChi (terms : ℕ) (box : CertificateBox)
 
 def chooseAxis (terms : ℕ) (box : CertificateBox)
     (payload : LRHighShapeTangentCertificate) : CertificateAxis :=
-  let ss := splitScoreS terms box payload
-  let sk := splitScoreK terms box payload
-  let sc := splitScoreChi terms box payload
+  -- Compute each large AD enclosure once.  Expanding `splitScoreS/K/Chi`
+  -- separately would repeat both evaluations three times at every split.
+  let uResult := payload.base.evaluateAD terms box
+  let tResult := payload.evaluateAD terms box
+  let ss :=
+    uResult.derivS.maxAbs * RationalEnclosure.radius box.sInterval +
+      tResult.derivS.maxAbs * RationalEnclosure.radius box.sInterval
+  let sk :=
+    uResult.derivK.maxAbs * RationalEnclosure.radius box.kInterval +
+      tResult.derivK.maxAbs * RationalEnclosure.radius box.kInterval
+  let sc :=
+    uResult.derivChi.maxAbs * RationalEnclosure.radius box.chiInterval +
+      tResult.derivChi.maxAbs * RationalEnclosure.radius box.chiInterval
   if ss ≥ sk ∧ ss ≥ sc ∧ box.sLo < box.sHi then .s
   else if sk ≥ sc ∧ box.kLo < box.kHi then .k
   else .chi
@@ -54,17 +64,17 @@ def autoAccept (terms sqrtFuel logFuel : ℕ) (box : CertificateBox)
     Option LRHighShapeCombinedAcceptData :=
   if LRHighShapeVCertificate.accepts terms box payload.base then
     some (.directV payload.base)
-  else if LRHighShapeVCertificate.midpointAccepts terms box payload.base then
-    some (.directVMidpoint payload.base)
   else
     let centeredPair := LRHighShapeCenteredPairCertificate.auto
       sqrtFuel logFuel box payload
     let centered : LRHighShapeVCenteredCertificate :=
       { center := centeredPair.center.base, derivative := payload.base }
-    if LRHighShapeVCenteredCertificate.accepts terms box centered then
-      some (.directVCentered centered)
-    else if centeredPair.pairAccepts terms box then
+    if centeredPair.pairAccepts terms box then
       some (.midpointTangentCentered centeredPair)
+    else if LRHighShapeVCenteredCertificate.accepts terms box centered then
+      some (.directVCentered centered)
+    else if LRHighShapeVCertificate.midpointAccepts terms box payload.base then
+      some (.directVMidpoint payload.base)
     else if pairAccepts terms box payload then
       some (.midpointTangent payload)
     else none
@@ -86,37 +96,37 @@ theorem autoAccept_check_of_eq
     simpa [LRHighShapeCombinedAcceptData.check] using hV
   have hVFalse : LRHighShapeVCertificate.accepts
       terms box payload.base = false := Bool.eq_false_of_not_eq_true hV
-  by_cases hVMid : LRHighShapeVCertificate.midpointAccepts
-      terms box payload.base = true
-  · simp [autoAccept, hVFalse, hVMid] at haccept
-    cases haccept
-    simpa [LRHighShapeCombinedAcceptData.check] using hVMid
-  have hVMidFalse : LRHighShapeVCertificate.midpointAccepts
-      terms box payload.base = false := Bool.eq_false_of_not_eq_true hVMid
-  by_cases hVCentered : LRHighShapeVCenteredCertificate.accepts
-      terms box centered = true
-  · simp [autoAccept, hVFalse, hVMidFalse, centeredPair,
-      centered, hVCentered] at haccept
-    cases haccept
-    simpa [LRHighShapeCombinedAcceptData.check] using hVCentered
-  have hVCenteredFalse : LRHighShapeVCenteredCertificate.accepts
-      terms box centered = false := Bool.eq_false_of_not_eq_true hVCentered
   by_cases hPairCentered : centeredPair.pairAccepts terms box = true
-  · simp [autoAccept, hVFalse, hVMidFalse, centeredPair, centered,
-      hVCenteredFalse, hPairCentered] at haccept
+  · simp [autoAccept, hVFalse, centeredPair, hPairCentered] at haccept
     cases haccept
     simpa [LRHighShapeCombinedAcceptData.check] using hPairCentered
   have hPairCenteredFalse : centeredPair.pairAccepts terms box = false :=
     Bool.eq_false_of_not_eq_true hPairCentered
+  by_cases hVCentered : LRHighShapeVCenteredCertificate.accepts
+      terms box centered = true
+  · simp [autoAccept, hVFalse, centeredPair, centered,
+      hPairCenteredFalse, hVCentered] at haccept
+    cases haccept
+    simpa [LRHighShapeCombinedAcceptData.check] using hVCentered
+  have hVCenteredFalse : LRHighShapeVCenteredCertificate.accepts
+      terms box centered = false := Bool.eq_false_of_not_eq_true hVCentered
+  by_cases hVMid : LRHighShapeVCertificate.midpointAccepts
+      terms box payload.base = true
+  · simp [autoAccept, hVFalse, centeredPair, centered,
+      hPairCenteredFalse, hVCenteredFalse, hVMid] at haccept
+    cases haccept
+    simpa [LRHighShapeCombinedAcceptData.check] using hVMid
+  have hVMidFalse : LRHighShapeVCertificate.midpointAccepts
+      terms box payload.base = false := Bool.eq_false_of_not_eq_true hVMid
   by_cases hpair : pairAccepts terms box payload = true
-  · simp [autoAccept, hVFalse, hVMidFalse, centeredPair, centered,
-      hVCenteredFalse, hPairCenteredFalse, hpair] at haccept
+  · simp [autoAccept, hVFalse, centeredPair, centered,
+      hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpair] at haccept
     cases haccept
     simpa [LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
   · have hpairFalse : pairAccepts terms box payload = false :=
       Bool.eq_false_of_not_eq_true hpair
-    simp [autoAccept, hVFalse, hVMidFalse, centeredPair, centered,
-      hVCenteredFalse, hPairCenteredFalse, hpairFalse] at haccept
+    simp [autoAccept, hVFalse, centeredPair, centered,
+      hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse] at haccept
 
 def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option Tree
   | 0, box =>
