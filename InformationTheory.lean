@@ -93,6 +93,7 @@ import InformationTheory.CourtadeKumar.LRLowerFaceAssembly
 import InformationTheory.CourtadeKumar.LRSmallSBridgeCoefficient
 import InformationTheory.CourtadeKumar.LRSmallSBridgeChi
 import InformationTheory.CourtadeKumar.LRSmallSBridgeFrozen
+import InformationTheory.CourtadeKumar.LRSmallSBridgeVLoss
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
