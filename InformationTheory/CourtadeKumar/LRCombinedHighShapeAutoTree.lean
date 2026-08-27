@@ -54,6 +54,9 @@ def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option
       let payload := LRHighShapeTangentCertificate.auto sqrtFuel logFuel box
       if LRHighShapeVCertificate.accepts terms box payload.base then
         some (.accept (.directV payload.base))
+      else if LRHighShapeVCertificate.midpointAccepts
+          terms box payload.base then
+        some (.accept (.directVMidpoint payload.base))
       else if pairAccepts terms box payload then
         some (.accept (.midpointTangent payload))
       else
@@ -64,6 +67,9 @@ def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option
       let payload := LRHighShapeTangentCertificate.auto sqrtFuel logFuel box
       if LRHighShapeVCertificate.accepts terms box payload.base then
         some (.accept (.directV payload.base))
+      else if LRHighShapeVCertificate.midpointAccepts
+          terms box payload.base then
+        some (.accept (.directVMidpoint payload.base))
       else if pairAccepts terms box payload then
         some (.accept (.midpointTangent payload))
       else
@@ -103,24 +109,35 @@ theorem buildTree_check_of_eq
       · have hVFalse : LRHighShapeVCertificate.accepts
             terms box payload.base = false :=
           Bool.eq_false_of_not_eq_true hV
-        by_cases hpair : pairAccepts terms box payload = true
-        · simp [buildTree, payload, hVFalse, hpair] at hbuild
+        by_cases hVMid : LRHighShapeVCertificate.midpointAccepts
+            terms box payload.base = true
+        · simp [buildTree, payload, hVFalse, hVMid] at hbuild
           subst tree
           simpa [SubdivisionCertificate.check,
-            LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
-        · have hpairFalse : pairAccepts terms box payload = false :=
-            Bool.eq_false_of_not_eq_true hpair
-          generalize hdiscard : LRHighShapeMidpointAutoTree.autoDiscard
-            terms box payload.base = discardOption
-          cases discardOption with
-          | none =>
-              simp [buildTree, payload, hVFalse, hpairFalse, hdiscard] at hbuild
-          | some data =>
-              simp [buildTree, payload, hVFalse, hpairFalse, hdiscard] at hbuild
-              subst tree
-              simpa [SubdivisionCertificate.check] using
-                LRHighShapeMidpointAutoTree.autoDiscard_check_of_eq
-                  terms box payload.base data hdiscard
+            LRHighShapeCombinedAcceptData.check] using hVMid
+        · have hVMidFalse : LRHighShapeVCertificate.midpointAccepts
+              terms box payload.base = false :=
+            Bool.eq_false_of_not_eq_true hVMid
+          by_cases hpair : pairAccepts terms box payload = true
+          · simp [buildTree, payload, hVFalse, hVMidFalse, hpair] at hbuild
+            subst tree
+            simpa [SubdivisionCertificate.check,
+              LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
+          · have hpairFalse : pairAccepts terms box payload = false :=
+              Bool.eq_false_of_not_eq_true hpair
+            generalize hdiscard : LRHighShapeMidpointAutoTree.autoDiscard
+              terms box payload.base = discardOption
+            cases discardOption with
+            | none =>
+                simp [buildTree, payload, hVFalse, hVMidFalse,
+                  hpairFalse, hdiscard] at hbuild
+            | some data =>
+                simp [buildTree, payload, hVFalse, hVMidFalse,
+                  hpairFalse, hdiscard] at hbuild
+                subst tree
+                simpa [SubdivisionCertificate.check] using
+                  LRHighShapeMidpointAutoTree.autoDiscard_check_of_eq
+                    terms box payload.base data hdiscard
   | succ fuel ih =>
       let payload := LRHighShapeTangentCertificate.auto sqrtFuel logFuel box
       by_cases hV : LRHighShapeVCertificate.accepts
@@ -132,45 +149,57 @@ theorem buildTree_check_of_eq
       · have hVFalse : LRHighShapeVCertificate.accepts
             terms box payload.base = false :=
           Bool.eq_false_of_not_eq_true hV
-        by_cases hpair : pairAccepts terms box payload = true
-        · simp [buildTree, payload, hVFalse, hpair] at hbuild
+        by_cases hVMid : LRHighShapeVCertificate.midpointAccepts
+            terms box payload.base = true
+        · simp [buildTree, payload, hVFalse, hVMid] at hbuild
           subst tree
           simpa [SubdivisionCertificate.check,
-            LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
-        · have hpairFalse : pairAccepts terms box payload = false :=
-            Bool.eq_false_of_not_eq_true hpair
-          generalize hdiscard : LRHighShapeMidpointAutoTree.autoDiscard
-            terms box payload.base = discardOption
-          cases discardOption with
-          | some data =>
-              simp [buildTree, payload, hVFalse, hpairFalse, hdiscard] at hbuild
-              subst tree
-              simpa [SubdivisionCertificate.check] using
-                LRHighShapeMidpointAutoTree.autoDiscard_check_of_eq
-                  terms box payload.base data hdiscard
-          | none =>
-              let axis := chooseAxis terms box payload
-              let cut := axisCut box axis
-              generalize hlower : buildTree terms sqrtFuel logFuel fuel
-                (box.lower axis cut) = lowerOption
-              cases lowerOption with
-              | none =>
-                  simp [buildTree, payload, hVFalse, hpairFalse, hdiscard,
-                    axis, cut, hlower] at hbuild
-              | some lower =>
-                  generalize hupper : buildTree terms sqrtFuel logFuel fuel
-                    (box.upper axis cut) = upperOption
-                  cases upperOption with
-                  | none =>
-                      simp [buildTree, payload, hVFalse, hpairFalse, hdiscard,
-                        axis, cut, hlower, hupper] at hbuild
-                  | some upper =>
-                      simp [buildTree, payload, hVFalse, hpairFalse, hdiscard,
-                        axis, cut, hlower, hupper] at hbuild
-                      subst tree
-                      simp only [SubdivisionCertificate.check,
-                        Bool.and_eq_true]
-                      exact ⟨ih _ _ hlower, ih _ _ hupper⟩
+            LRHighShapeCombinedAcceptData.check] using hVMid
+        · have hVMidFalse : LRHighShapeVCertificate.midpointAccepts
+              terms box payload.base = false :=
+            Bool.eq_false_of_not_eq_true hVMid
+          by_cases hpair : pairAccepts terms box payload = true
+          · simp [buildTree, payload, hVFalse, hVMidFalse, hpair] at hbuild
+            subst tree
+            simpa [SubdivisionCertificate.check,
+              LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
+          · have hpairFalse : pairAccepts terms box payload = false :=
+              Bool.eq_false_of_not_eq_true hpair
+            generalize hdiscard : LRHighShapeMidpointAutoTree.autoDiscard
+              terms box payload.base = discardOption
+            cases discardOption with
+            | some data =>
+                simp [buildTree, payload, hVFalse, hVMidFalse,
+                  hpairFalse, hdiscard] at hbuild
+                subst tree
+                simpa [SubdivisionCertificate.check] using
+                  LRHighShapeMidpointAutoTree.autoDiscard_check_of_eq
+                    terms box payload.base data hdiscard
+            | none =>
+                let axis := chooseAxis terms box payload
+                let cut := axisCut box axis
+                generalize hlower : buildTree terms sqrtFuel logFuel fuel
+                  (box.lower axis cut) = lowerOption
+                cases lowerOption with
+                | none =>
+                    simp [buildTree, payload, hVFalse, hVMidFalse,
+                      hpairFalse, hdiscard, axis, cut, hlower] at hbuild
+                | some lower =>
+                    generalize hupper : buildTree terms sqrtFuel logFuel fuel
+                      (box.upper axis cut) = upperOption
+                    cases upperOption with
+                    | none =>
+                        simp [buildTree, payload, hVFalse, hVMidFalse,
+                          hpairFalse, hdiscard, axis, cut, hlower,
+                          hupper] at hbuild
+                    | some upper =>
+                        simp [buildTree, payload, hVFalse, hVMidFalse,
+                          hpairFalse, hdiscard, axis, cut, hlower,
+                          hupper] at hbuild
+                        subst tree
+                        simp only [SubdivisionCertificate.check,
+                          Bool.and_eq_true]
+                        exact ⟨ih _ _ hlower, ih _ _ hupper⟩
 
 theorem alternative_of_buildTree_eq
     (terms sqrtFuel logFuel fuel : ℕ) (box : CertificateBox) (tree : Tree)

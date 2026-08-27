@@ -308,6 +308,63 @@ noncomputable def lrCertificateHalfMidpointNumeratorDerivChi
     (lrCertificateMDeriv point (lrCertificateVDerivChi point))
     (lrCertificateXDerivChi point)
 
+/-- Directional derivative of the half-midpoint numerator in cancellation
+coordinates.  This public form lets other checked evaluators reuse the
+already-established coordinate derivative identities. -/
+noncomputable def lrCertificateHalfMidpointNumeratorCurveDeriv
+    (point : CertificatePoint) (s' k' chi' : ℝ) : ℝ :=
+  let e' := s' * point.k + point.s * k'
+  let x' := -(chi' * lrCertificateE point + point.chi * e')
+  let y0' := chi' * lrCertificateE point + point.chi * e'
+  let v' := lrCertificateVDeriv point e' x'
+  lrCertificateHalfMidpointNumeratorDeriv point
+    (lrCertificateADeriv point e' v')
+    (lrCertificateDDeriv point s' e' v')
+    (lrCertificateGShapeDeriv point y0' e' v')
+    (lrCertificateOmegaDeriv point.s 0 s' 0)
+    (lrCertificatePWDeriv point s' y0' e' v')
+    (lrCertificateBFlowDeriv point s' e' v')
+    (lrCertificateMDeriv point v') x'
+
+theorem lrCertificateHalfMidpointNumeratorCurveDeriv_s
+    (point : CertificatePoint) :
+    lrCertificateHalfMidpointNumeratorCurveDeriv point 1 0 0 =
+      lrCertificateHalfMidpointNumeratorDerivS point := by
+  unfold lrCertificateHalfMidpointNumeratorCurveDeriv
+    lrCertificateHalfMidpointNumeratorDerivS lrCertificateADerivS
+    lrCertificateBFlowDerivS lrCertificateDDerivS
+    lrCertificateGShapeDerivS lrCertificateWDerivS
+    lrCertificatePWDerivS lrCertificateY0DerivS lrCertificateVDerivS
+    lrCertificateEDerivS lrCertificateXDerivS
+  dsimp only
+  ring
+
+theorem lrCertificateHalfMidpointNumeratorCurveDeriv_k
+    (point : CertificatePoint) :
+    lrCertificateHalfMidpointNumeratorCurveDeriv point 0 1 0 =
+      lrCertificateHalfMidpointNumeratorDerivK point := by
+  unfold lrCertificateHalfMidpointNumeratorCurveDeriv
+    lrCertificateHalfMidpointNumeratorDerivK lrCertificateADerivK
+    lrCertificateBFlowDerivK lrCertificateDDerivK
+    lrCertificateGShapeDerivK lrCertificateWDerivK
+    lrCertificatePWDerivK lrCertificateY0DerivK lrCertificateVDerivK
+    lrCertificateEDerivK lrCertificateXDerivK
+  dsimp only
+  ring
+
+theorem lrCertificateHalfMidpointNumeratorCurveDeriv_chi
+    (point : CertificatePoint) :
+    lrCertificateHalfMidpointNumeratorCurveDeriv point 0 0 1 =
+      lrCertificateHalfMidpointNumeratorDerivChi point := by
+  unfold lrCertificateHalfMidpointNumeratorCurveDeriv
+    lrCertificateHalfMidpointNumeratorDerivChi lrCertificateADerivChi
+    lrCertificateBFlowDerivChi lrCertificateDDerivChi
+    lrCertificateGShapeDerivChi lrCertificateWDerivChi
+    lrCertificatePWDerivChi lrCertificateY0DerivChi lrCertificateVDerivChi
+    lrCertificateEDerivChi lrCertificateXDerivChi
+  dsimp only
+  ring
+
 noncomputable def lrCertificateUTargetDerivS (point : CertificatePoint) : ℝ :=
   lrCertificateUTargetDeriv point
     (lrCertificateHalfMidpointNumeratorDerivS point)
