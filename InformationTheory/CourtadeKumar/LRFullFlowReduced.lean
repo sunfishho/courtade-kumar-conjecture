@@ -4,8 +4,10 @@ import InformationTheory.CourtadeKumar.LRFullFlowClosure
 /-!
 # Full LR flow after closing the small-odds branch
 
-Only the two large-odds, high-shape certificates `(U)` and `(T)` remain as
-inputs to the exhaustive LR differential theorem.
+The original interface leaves the two large-odds, high-shape certificates
+`(U)` and `(T)` as inputs.  The cancellation-preserving interface below
+replaces both with the single determinant reserve `V` used by the final
+audited ledger.
 -/
 
 open Set
@@ -23,6 +25,17 @@ theorem lrFlowNumeratorP_nonneg_target_of_midpoint_tangent
   lrFlowNumeratorP_nonneg_target_of_complete_shape_certificates
     lrHighShapeSmallVNumeratorTheorem hmidpoint htangent
       hR hp hv ht htarget
+
+/-- Reduced pointwise interface matching the final high-shape `V` ledger. -/
+theorem lrFlowNumeratorP_nonneg_target_of_highShape_V_reduced
+    (hV : LRHighShapeVTheorem)
+    {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
+    (hp : p ∈ Ioc (0 : ℝ) (1 / 2 : ℝ))
+    (hv : v ∈ Ioo (0 : ℝ) 1) (ht : t ∈ Ioo (0 : ℝ) 1)
+    (htarget : lrPrefixEll R p = lrSquareTarget R v t) :
+    0 ≤ lrFlowNumeratorP R p v t :=
+  lrFlowNumeratorP_nonneg_target_of_complete_shape_V
+    lrHighShapeSmallVNumeratorTheorem hV hR hp hv ht htarget
 
 theorem hasDerivAt_lrReserve_exactFlow_of_midpoint_tangent
     (hmidpoint : LRHighShapeMidpointTheorem)
