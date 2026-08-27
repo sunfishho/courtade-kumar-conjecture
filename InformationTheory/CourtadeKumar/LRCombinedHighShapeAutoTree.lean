@@ -57,10 +57,14 @@ def autoAccept (terms sqrtFuel logFuel : ℕ) (box : CertificateBox)
   else if LRHighShapeVCertificate.midpointAccepts terms box payload.base then
     some (.directVMidpoint payload.base)
   else
-    let centered := LRHighShapeVCenteredCertificate.auto
-      sqrtFuel logFuel box payload.base
+    let centeredPair := LRHighShapeCenteredPairCertificate.auto
+      sqrtFuel logFuel box payload
+    let centered : LRHighShapeVCenteredCertificate :=
+      { center := centeredPair.center.base, derivative := payload.base }
     if LRHighShapeVCenteredCertificate.accepts terms box centered then
       some (.directVCentered centered)
+    else if centeredPair.pairAccepts terms box then
+      some (.midpointTangentCentered centeredPair)
     else if pairAccepts terms box payload then
       some (.midpointTangent payload)
     else none
@@ -71,8 +75,10 @@ theorem autoAccept_check_of_eq
     (data : LRHighShapeCombinedAcceptData)
     (haccept : autoAccept terms sqrtFuel logFuel box payload = some data) :
     data.check terms box = true := by
-  let centered := LRHighShapeVCenteredCertificate.auto
-    sqrtFuel logFuel box payload.base
+  let centeredPair := LRHighShapeCenteredPairCertificate.auto
+    sqrtFuel logFuel box payload
+  let centered : LRHighShapeVCenteredCertificate :=
+    { center := centeredPair.center.base, derivative := payload.base }
   by_cases hV : LRHighShapeVCertificate.accepts
       terms box payload.base = true
   · simp [autoAccept, hV] at haccept
@@ -89,20 +95,28 @@ theorem autoAccept_check_of_eq
       terms box payload.base = false := Bool.eq_false_of_not_eq_true hVMid
   by_cases hVCentered : LRHighShapeVCenteredCertificate.accepts
       terms box centered = true
-  · simp [autoAccept, hVFalse, hVMidFalse, centered, hVCentered] at haccept
+  · simp [autoAccept, hVFalse, hVMidFalse, centeredPair,
+      centered, hVCentered] at haccept
     cases haccept
     simpa [LRHighShapeCombinedAcceptData.check] using hVCentered
   have hVCenteredFalse : LRHighShapeVCenteredCertificate.accepts
       terms box centered = false := Bool.eq_false_of_not_eq_true hVCentered
+  by_cases hPairCentered : centeredPair.pairAccepts terms box = true
+  · simp [autoAccept, hVFalse, hVMidFalse, centeredPair, centered,
+      hVCenteredFalse, hPairCentered] at haccept
+    cases haccept
+    simpa [LRHighShapeCombinedAcceptData.check] using hPairCentered
+  have hPairCenteredFalse : centeredPair.pairAccepts terms box = false :=
+    Bool.eq_false_of_not_eq_true hPairCentered
   by_cases hpair : pairAccepts terms box payload = true
-  · simp [autoAccept, hVFalse, hVMidFalse, centered,
-      hVCenteredFalse, hpair] at haccept
+  · simp [autoAccept, hVFalse, hVMidFalse, centeredPair, centered,
+      hVCenteredFalse, hPairCenteredFalse, hpair] at haccept
     cases haccept
     simpa [LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
   · have hpairFalse : pairAccepts terms box payload = false :=
       Bool.eq_false_of_not_eq_true hpair
-    simp [autoAccept, hVFalse, hVMidFalse, centered,
-      hVCenteredFalse, hpairFalse] at haccept
+    simp [autoAccept, hVFalse, hVMidFalse, centeredPair, centered,
+      hVCenteredFalse, hPairCenteredFalse, hpairFalse] at haccept
 
 def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option Tree
   | 0, box =>

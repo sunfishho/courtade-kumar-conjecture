@@ -2,6 +2,7 @@ import InformationTheory.CourtadeKumar.LRHybridHighShapeAssembly
 import InformationTheory.CourtadeKumar.LRHighShapeMidpointVFallback
 import InformationTheory.CourtadeKumar.LRHighShapeVMidpointEvaluator
 import InformationTheory.CourtadeKumar.LRHighShapeVCenteredEvaluator
+import InformationTheory.CourtadeKumar.LRHighShapeCenteredPairEvaluator
 import InformationTheory.CourtadeKumar.LRHighShapeTangentAutoTree
 
 /-!
@@ -29,6 +30,7 @@ inductive LRHighShapeCombinedAcceptData where
   | directVMidpoint (payload : LRHighShapeVCertificate)
   | directVCentered (payload : LRHighShapeVCenteredCertificate)
   | midpointTangent (payload : LRHighShapeTangentCertificate)
+  | midpointTangentCentered (payload : LRHighShapeCenteredPairCertificate)
 
 namespace LRHighShapeCombinedAcceptData
 
@@ -42,6 +44,7 @@ def check (terms : ℕ) (box : CertificateBox) :
   | .midpointTangent payload =>
       LRHighShapeMidpointCertificate.accepts terms box payload.base &&
         LRHighShapeTangentCertificate.accepts terms box payload
+  | .midpointTangentCentered payload => payload.pairAccepts terms box
 
 theorem sound (terms : ℕ) (box : CertificateBox)
     (data : LRHighShapeCombinedAcceptData)
@@ -79,6 +82,13 @@ theorem sound (terms : ℕ) (box : CertificateBox)
         (by simpa [SubdivisionCertificate.check] using hparts.2)
         point hpoint hrelevant
       exact Or.inr ⟨hU, hT⟩
+  | midpointTangentCentered payload =>
+      have hparts : payload.uAccepts terms box = true ∧
+          payload.tAccepts terms box = true := by
+        simpa [check, LRHighShapeCenteredPairCertificate.pairAccepts] using hcheck
+      exact Or.inr ⟨
+        (payload.u_pos_of_accepts terms hparts.1 hpoint).le,
+        (payload.t_pos_of_accepts terms hparts.2 hpoint).le⟩
 
 end LRHighShapeCombinedAcceptData
 
