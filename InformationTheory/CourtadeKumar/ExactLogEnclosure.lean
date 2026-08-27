@@ -73,5 +73,50 @@ theorem contains_logMantissaEnclosure
     exact_mod_cast hratio
   simpa [logMantissaEnclosure, hratioReal] using hcontains
 
+/-- The same positive-series construction specialized to `log 2`. -/
+def logTwoEnclosure (n : ℕ) : RationalEnclosure :=
+  logMantissaEnclosure n 2
+
+theorem contains_logTwoEnclosure (n : ℕ) :
+    (logTwoEnclosure n).Contains (Real.log 2) := by
+  exact contains_logMantissaEnclosure n (by norm_num)
+
+/-- Logarithm enclosure after the exact range reduction `x = 2^e r`. -/
+def logScaledMantissaEnclosure (n : ℕ) (e : ℤ) (r : ℚ) :
+    RationalEnclosure :=
+  add (scale (e : ℚ) (logTwoEnclosure n)) (logMantissaEnclosure n r)
+
+theorem contains_logScaledMantissaEnclosure
+    (n : ℕ) (e : ℤ) {r : ℚ} (hr : (1 : ℚ) ≤ r) :
+    (logScaledMantissaEnclosure n e r).Contains
+      (Real.log (((2 : ℝ) ^ e) * (r : ℝ))) := by
+  have htwo := contains_scale (e : ℚ) (contains_logTwoEnclosure n)
+  have hrlog := contains_logMantissaEnclosure n hr
+  have hsum := contains_add htwo hrlog
+  have hr0 : (r : ℝ) ≠ 0 := by
+    have : (0 : ℚ) < r := zero_lt_one.trans_le hr
+    exact_mod_cast this.ne'
+  have hpow0 : (2 : ℝ) ^ e ≠ 0 := zpow_ne_zero e (by norm_num)
+  have hformula :
+      Real.log (((2 : ℝ) ^ e) * (r : ℝ)) =
+        (e : ℝ) * Real.log 2 + Real.log (r : ℝ) := by
+    rw [Real.log_mul hpow0 hr0, Real.log_zpow]
+  rw [hformula]
+  simpa [logScaledMantissaEnclosure] using hsum
+
+/-- A supplied exact range-reduction identity transports the enclosure to
+the original positive rational input.  A concrete checker can verify `hx`
+by rational computation. -/
+theorem contains_log_of_rangeReduction
+    (n : ℕ) (e : ℤ) {r x : ℚ} (hr : (1 : ℚ) ≤ r)
+    (hx : x = (2 : ℚ) ^ e * r) :
+    (logScaledMantissaEnclosure n e r).Contains (Real.log (x : ℝ)) := by
+  have h := contains_logScaledMantissaEnclosure n e hr
+  have hxReal : (x : ℝ) = (2 : ℝ) ^ e * (r : ℝ) := by
+    have hxCast := congrArg (fun q : ℚ ↦ (q : ℝ)) hx
+    norm_num at hxCast ⊢
+    exact hxCast
+  simpa [hxReal] using h
+
 end RationalEnclosure
 end CourtadeKumar
