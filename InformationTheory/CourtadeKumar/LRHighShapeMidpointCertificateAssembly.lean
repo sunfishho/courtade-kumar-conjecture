@@ -103,6 +103,16 @@ def LRHighShapeCoreMidpointCoordinateTheorem : Prop :=
     point.k ≤ 4 →
     0 ≤ lrCertificateUTarget point
 
+/-- Coordinate theorem on the compact region remaining after both analytic
+tails have been removed. -/
+def LRHighShapeMiddleCoreMidpointCoordinateTheorem : Prop :=
+  ∀ point : CertificatePoint,
+    LRHighShapeInterior point →
+    LRHighShapeVRelevant point →
+    point.k ≤ 4 →
+    (1 / 128 < point.s ∨ 1 / 4 < point.k) →
+    0 ≤ lrCertificateUTarget point
+
 /-- A coordinate proof on `k ≤ 4` supplies the compact midpoint interface
 used by the analytic-tail assembly. -/
 theorem lrHighShapeCoreHalfMidpointTheorem_of_coordinateTheorem
@@ -119,6 +129,38 @@ theorem lrHighShapeCoreHalfMidpointTheorem_of_coordinateTheorem
     rw [div_le_iff₀ hsPos]
     simpa [lrUniformTailE] using hcore
   have htarget := hcoordinate point hinterior hrelevant hk
+  have hnormalized : 0 ≤ lrHighShapeUCertificateTarget point := by
+    rw [← lrCertificateUTarget_eq_highShapeTarget
+      hinterior.1 hinterior.2.1
+      ⟨hinterior.2.2.1.le, hinterior.2.2.2.le⟩]
+    exact htarget
+  have hePos : 0 < 1 - v ^ 2 * t ^ 2 := by
+    have hvtPos : 0 < v * t := mul_pos hv.1 ht.1
+    have hvtLt : v * t < 1 := calc
+      v * t < 1 * t := mul_lt_mul_of_pos_right hv.2 ht.1
+      _ < 1 := by simpa using ht.2
+    nlinarith [sq_pos_of_pos hvtPos]
+  exact lrFlowHalfMidpoint_nonneg_of_certificateTarget
+    hR hv.1 ht.1 hePos hnormalized
+
+/-- A coordinate proof on the reduced middle core supplies the exact
+middle-core flow interface. -/
+theorem lrHighShapeMiddleCoreHalfMidpointTheorem_of_coordinateTheorem
+    (hcoordinate : LRHighShapeMiddleCoreMidpointCoordinateTheorem) :
+    LRHighShapeMiddleCoreHalfMidpointTheorem := by
+  intro R v t hR hv ht htHigh hvHigh hJ hcore hmiddle
+  let point := lrFlowCertificatePoint R v t
+  have hinterior := lrFlowCertificatePoint_highShapeInterior hR hv ht
+  have hrelevant := lrFlowCertificatePoint_highShapeVRelevant
+    hR hv ht htHigh hvHigh hJ
+  have hsPos : 0 < 1 - R := sub_pos.mpr hR.2
+  have hk : point.k ≤ 4 := by
+    change (1 - v ^ 2 * t ^ 2) / (1 - R) ≤ 4
+    rw [div_le_iff₀ hsPos]
+    simpa [lrUniformTailE] using hcore
+  have hmiddlePoint : 1 / 128 < point.s ∨ 1 / 4 < point.k := by
+    simpa [point, lrFlowCertificatePoint, lrUniformTailE] using hmiddle
+  have htarget := hcoordinate point hinterior hrelevant hk hmiddlePoint
   have hnormalized : 0 ≤ lrHighShapeUCertificateTarget point := by
     rw [← lrCertificateUTarget_eq_highShapeTarget
       hinterior.1 hinterior.2.1

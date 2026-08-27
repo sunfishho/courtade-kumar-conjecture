@@ -1,6 +1,7 @@
 import InformationTheory.CourtadeKumar.LRFullFlowClosure
 import InformationTheory.CourtadeKumar.LRSmallVComplete
 import InformationTheory.CourtadeKumar.LRUniformTailClosure
+import InformationTheory.CourtadeKumar.LRLowerFaceAssembly
 
 /-!
 # Compact-core assembly for the high-shape midpoint certificate
@@ -27,6 +28,36 @@ def LRHighShapeCoreHalfMidpointTheorem : Prop :=
     lrUniformTailE v t ≤ 4 * (1 - R) →
     0 ≤ lrFlowNumeratorP R (lrFlowM v / 2) v t
 
+/-- After removing both analytic tails, finite replay is needed only outside
+the lower corner `s ≤ 1/128`, `k ≤ 1/4`. -/
+def LRHighShapeMiddleCoreHalfMidpointTheorem : Prop :=
+  ∀ (R v t : ℝ),
+    R ∈ Ioo (0 : ℝ) 1 →
+    v ∈ Ioo (0 : ℝ) 1 →
+    t ∈ Ioo (0 : ℝ) 1 →
+    17 / 20 ≤ t ^ 2 →
+    1 / 3 ≤ v →
+    0 < lrFlowJ R v t →
+    lrUniformTailE v t ≤ 4 * (1 - R) →
+    (1 / 128 < 1 - R ∨
+      1 / 4 < lrUniformTailE v t / (1 - R)) →
+    0 ≤ lrFlowNumeratorP R (lrFlowM v / 2) v t
+
+/-- The analytic lower face fills the corner omitted by the middle-core
+certificate. -/
+theorem lrHighShapeCoreHalfMidpointTheorem_of_middleCore
+    (hmiddle : LRHighShapeMiddleCoreHalfMidpointTheorem) :
+    LRHighShapeCoreHalfMidpointTheorem := by
+  intro R v t hR hv ht htHigh hvHigh hJ hcore
+  by_cases hsSmall : 1 - R ≤ 1 / 128
+  · by_cases hkSmall : lrUniformTailE v t / (1 - R) ≤ 1 / 4
+    · exact lrLowerFace_halfMidpoint_nonneg hR hv ht hJ hsSmall
+        (by simpa [lrUniformTailE] using hkSmall)
+    · exact hmiddle R v t hR hv ht htHigh hvHigh hJ hcore
+        (Or.inr (lt_of_not_ge hkSmall))
+  · exact hmiddle R v t hR hv ht htHigh hvHigh hJ hcore
+      (Or.inl (lt_of_not_ge hsSmall))
+
 /-- The compact replay and the analytic `k ≥ 4` tail exhaust the exact
 high-shape half-midpoint target. -/
 theorem lrHighShapeHalfMidpointTheorem_of_core
@@ -38,6 +69,14 @@ theorem lrHighShapeHalfMidpointTheorem_of_core
       (show v ∈ Ico (1 / 3 : ℝ) 1 from ⟨hvHigh, hv.2⟩)
       ht hx htail).le
   · exact hcore R v t hR hv ht hx hvHigh hJ (le_of_lt (lt_of_not_ge htail))
+
+/-- Complete high-shape midpoint theorem with only the middle compact
+certificate left as an input. -/
+theorem lrHighShapeHalfMidpointTheorem_of_middleCore
+    (hmiddle : LRHighShapeMiddleCoreHalfMidpointTheorem) :
+    LRHighShapeHalfMidpointTheorem :=
+  lrHighShapeHalfMidpointTheorem_of_core
+    (lrHighShapeCoreHalfMidpointTheorem_of_middleCore hmiddle)
 
 /-- Pointwise LR-flow closure after replacing the noncompact midpoint
 certificate by its compact `k ≤ 4` part. -/
