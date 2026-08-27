@@ -25,6 +25,15 @@ def checkedMidpointLeafAccepts {AcceptData : Type}
     (box : CertificateBox) (data : AcceptData) : Bool :=
   payloadCheck box data && (evaluate box data).check box
 
+/-- A direct interval leaf with a separately checked transcendental payload.
+This is useful when the interval extension over the whole leaf is already
+sharp enough and no midpoint/derivative correction is needed. -/
+def checkedEnclosureLeafAccepts {AcceptData : Type}
+    (payloadCheck : CertificateBox → AcceptData → Bool)
+    (enclose : CertificateBox → AcceptData → RationalEnclosure)
+    (box : CertificateBox) (data : AcceptData) : Bool :=
+  payloadCheck box data && (enclose box data).provesNonnegative
+
 /-- Soundness contract for a target-specific executable midpoint evaluator. -/
 structure MidpointLeafEvaluatorSound
     {AcceptData : Type}
@@ -46,6 +55,16 @@ structure CheckedMidpointLeafEvaluatorSound
     (evaluate box data).value.Contains (target box.midpoint)
   derivatives : ∀ box data, payloadCheck box data = true →
     BoxDerivativeEnclosures target box (evaluate box data)
+
+/-- Soundness contract for a direct interval extension whose auxiliary
+payload must first pass an executable validity check. -/
+structure CheckedEnclosureLeafEvaluatorSound
+    {AcceptData : Type}
+    (target : CertificatePoint → ℝ)
+    (payloadCheck : CertificateBox → AcceptData → Bool)
+    (enclose : CertificateBox → AcceptData → RationalEnclosure) where
+  value : ∀ box data, payloadCheck box data = true →
+    ∀ point, box.Contains point → (enclose box data).Contains (target point)
 
 theorem subdivisionCertificate_strictPositive
     {Relevant : CertificatePoint → Prop}
@@ -137,5 +156,35 @@ theorem subdivisionCertificate_nonnegative_checked
   intro point hpoint hRelevant
   exact (subdivisionCertificate_strictPositive_checked evaluate_sound discard_sound
     hcheck point hpoint hRelevant).le
+
+/-- End-to-end soundness for a payload-checked direct interval extension. -/
+theorem subdivisionCertificate_nonnegative_checkedEnclosure
+    {Relevant : CertificatePoint → Prop}
+    {target : CertificatePoint → ℝ}
+    {AcceptData DiscardData : Type}
+    {payloadCheck : CertificateBox → AcceptData → Bool}
+    {enclose : CertificateBox → AcceptData → RationalEnclosure}
+    {discardBox : CertificateBox → DiscardData → Bool}
+    (enclose_sound : CheckedEnclosureLeafEvaluatorSound
+      target payloadCheck enclose)
+    (discard_sound : ∀ box data, discardBox box data = true →
+      ∀ point, box.Contains point → ¬ Relevant point)
+    {box : CertificateBox}
+    {certificate : SubdivisionCertificate AcceptData DiscardData}
+    (hcheck : certificate.check
+      (checkedEnclosureLeafAccepts payloadCheck enclose)
+      discardBox box = true) :
+    ∀ point, box.Contains point → Relevant point → 0 ≤ target point := by
+  apply subdivisionCertificate_sound
+      (Relevant := Relevant) (Property := fun point ↦ 0 ≤ target point)
+      (acceptBox := checkedEnclosureLeafAccepts payloadCheck enclose)
+      (discardBox := discardBox)
+      (box := box) (certificate := certificate) ?_ discard_sound hcheck
+  intro leaf data hleaf point hpoint
+  have hparts : payloadCheck leaf data = true ∧
+      (enclose leaf data).provesNonnegative = true := by
+    simpa [checkedEnclosureLeafAccepts] using hleaf
+  exact RationalEnclosure.nonnegative_of_provesNonnegative hparts.2
+    (enclose_sound.value leaf data hparts.1 point hpoint)
 
 end CourtadeKumar
