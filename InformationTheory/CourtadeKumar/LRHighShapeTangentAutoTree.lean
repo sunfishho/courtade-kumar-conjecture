@@ -86,10 +86,14 @@ def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option
         | none =>
             let axis := chooseAxis terms box payload
             let cut := axisCut box axis
-            match buildTree terms sqrtFuel logFuel fuel (box.lower axis cut),
-                buildTree terms sqrtFuel logFuel fuel (box.upper axis cut) with
-            | some lower, some upper => some (.split axis cut lower upper)
-            | _, _ => none
+            match buildTree terms sqrtFuel logFuel fuel
+                (box.lower axis cut) with
+            | none => none
+            | some lower =>
+                match buildTree terms sqrtFuel logFuel fuel
+                    (box.upper axis cut) with
+                | none => none
+                | some upper => some (.split axis cut lower upper)
 
 def treeNodes : Tree → ℕ
   | .accept _ => 1
@@ -146,13 +150,13 @@ theorem buildTree_check_of_eq
             let cut := axisCut box axis
             generalize hlower : buildTree terms sqrtFuel logFuel fuel
               (box.lower axis cut) = lowerOption
-            generalize hupper : buildTree terms sqrtFuel logFuel fuel
-              (box.upper axis cut) = upperOption
             cases lowerOption with
             | none =>
                 simp [buildTree, payload, hfalse, hdiscard, axis, cut,
                   hlower] at hbuild
             | some lower =>
+                generalize hupper : buildTree terms sqrtFuel logFuel fuel
+                  (box.upper axis cut) = upperOption
                 cases upperOption with
                 | none =>
                     simp [buildTree, payload, hfalse, hdiscard, axis, cut,
