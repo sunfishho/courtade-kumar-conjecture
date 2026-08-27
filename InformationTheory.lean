@@ -64,6 +64,7 @@ import InformationTheory.CourtadeKumar.LRCompactVPZeroSeries
 import InformationTheory.CourtadeKumar.LRCompactVBEnclosure
 import InformationTheory.CourtadeKumar.LRCompactVWOneSeries
 import InformationTheory.CourtadeKumar.LRCompactVLeafChecker
+import InformationTheory.CourtadeKumar.LRCompactVPhysicalDiscard
 import InformationTheory.CourtadeKumar.TopCertificateData
 import InformationTheory.CourtadeKumar.TopCertificatePolynomial
 import InformationTheory.CourtadeKumar.TopFiniteClaim
