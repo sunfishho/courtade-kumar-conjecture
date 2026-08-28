@@ -35,6 +35,52 @@ def check (terms : ℕ) : List LRCombinedHighShapeCheckedRoot → Bool
   | [] => true
   | root :: roots => root.check terms && check terms roots
 
+/-- Generate one checked tree per proposed rational root.  Returning `none`
+is merely generator failure; returning data is followed by a kernel proof
+that every generated tree passes its executable checker. -/
+def build (terms sqrtFuel logFuel fuel : ℕ) :
+    List CertificateBox → Option (List LRCombinedHighShapeCheckedRoot)
+  | [] => some []
+  | box :: boxes =>
+      match LRCombinedHighShapeAutoTree.buildTree
+          terms sqrtFuel logFuel fuel box with
+      | none => none
+      | some tree =>
+          match build terms sqrtFuel logFuel fuel boxes with
+          | none => none
+          | some roots => some ({ box := box, tree := tree } :: roots)
+
+theorem build_check_of_eq
+    (terms sqrtFuel logFuel fuel : ℕ) (boxes : List CertificateBox)
+    (roots : List LRCombinedHighShapeCheckedRoot)
+    (hbuild : build terms sqrtFuel logFuel fuel boxes = some roots) :
+    check terms roots = true := by
+  induction boxes generalizing roots with
+  | nil =>
+      simp [build] at hbuild
+      subst roots
+      rfl
+  | cons box boxes ih =>
+      generalize htree : LRCombinedHighShapeAutoTree.buildTree
+        terms sqrtFuel logFuel fuel box = treeOption
+      cases treeOption with
+      | none =>
+          simp [build, htree] at hbuild
+      | some tree =>
+          generalize hroots : build terms sqrtFuel logFuel fuel boxes =
+            rootsOption
+          cases rootsOption with
+          | none =>
+              simp [build, htree, hroots] at hbuild
+          | some tail =>
+              simp only [build, htree, hroots, Option.some.injEq] at hbuild
+              subst roots
+              simp only [check, Bool.and_eq_true]
+              exact ⟨
+                LRCombinedHighShapeAutoTree.buildTree_check_of_eq
+                  terms sqrtFuel logFuel fuel box tree htree,
+                ih tail hroots⟩
+
 def Covers (roots : List LRCombinedHighShapeCheckedRoot)
     (point : CertificatePoint) : Prop :=
   ∃ root ∈ roots, root.box.Contains point
