@@ -68,6 +68,17 @@ theorem lrDeterminantClearedSingular_eq_firstBracket
   unfold lrDeterminantClearedSingular lrDeterminantFirstBracket
   ring
 
+/-- Sign form of (D5): once the cheaper first bracket and the four factors
+of its correction term are nonnegative, the full cleared singular target
+is nonnegative. -/
+theorem lrDeterminantClearedSingular_nonnegative_of_firstBracket
+    {B D1 G psi delta W c0 x T : ℝ}
+    (hfirst : 0 ≤ lrDeterminantFirstBracket B D1 G psi delta W)
+    (hc0 : 0 ≤ c0) (hT : 0 ≤ T) (hfactor : 0 ≤ B * x - D1) :
+    0 ≤ lrDeterminantClearedSingular B D1 G psi delta W c0 x T := by
+  rw [lrDeterminantClearedSingular_eq_firstBracket]
+  exact add_nonneg hfirst (mul_nonneg (mul_nonneg hc0 hT) hfactor)
+
 /-- The exact scaled identity (D5). -/
 theorem lrDeterminantClearedSingular_scaled_firstBracket
     {B D1 G psi delta W c0 x T R s H : ℝ}
