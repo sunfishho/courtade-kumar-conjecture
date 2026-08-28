@@ -206,6 +206,52 @@ lemma lrCertificateQSecond_lower {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
   rw [hid]
   linarith
 
+/-- The endpoint entropy scalar is concave on its full closed domain.  This
+form is useful when a derivative is singular at `0`, because a secant from
+the endpoint still controls the derivative at every positive point. -/
+theorem lrCertificateQ_concaveOn :
+    ConcaveOn ℝ (Icc (0 : ℝ) 1) lrCertificateQ := by
+  have hcontinuous : Continuous lrCertificateQ := by
+    rw [show lrCertificateQ = fun y : ℝ ↦
+        Real.log 2 - topPhi (Real.sqrt (1 - y)) from
+      funext lrCertificateQ_eq]
+    exact continuous_const.sub
+      (continuous_topPhi.comp
+        (Real.continuous_sqrt.comp (continuous_const.sub continuous_id)))
+  apply concaveOn_of_hasDerivWithinAt2_nonpos (convex_Icc 0 1)
+    hcontinuous.continuousOn
+  · intro y hy
+    rw [interior_Icc] at hy
+    exact (hasDerivAt_lrCertificateQ hy).hasDerivWithinAt
+  · intro y hy
+    rw [interior_Icc] at hy
+    exact (hasDerivAt_lrCertificateQPrime hy).hasDerivWithinAt
+  · intro y hy
+    rw [interior_Icc] at hy
+    exact lrCertificateQSecond_nonpos hy
+
+/-- Cancellation-safe endpoint bound for the formally singular factor
+`Q'(y)`: multiplication by `y` makes it no larger than `Q(y)`. -/
+lemma lrCertificateQ_mul_prime_le {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
+    y * lrCertificateQPrime y ≤ lrCertificateQ y := by
+  have hslope := lrCertificateQ_concaveOn.le_slope_of_hasDerivAt
+    (x := (0 : ℝ)) (y := y) (by simp) ⟨hy.1.le, hy.2.le⟩ hy.1
+    (hasDerivAt_lrCertificateQ hy)
+  rw [slope, lrCertificateQ_zero] at hslope
+  have hslope' : lrCertificateQPrime y ≤ lrCertificateQ y / y := by
+    simpa [div_eq_mul_inv, mul_comm] using hslope
+  rw [le_div_iff₀ hy.1] at hslope'
+  simpa [mul_comm] using hslope'
+
+/-- Closed-at-zero version of the endpoint product bound. -/
+lemma lrCertificateQ_mul_prime_mem {y : ℝ} (hy : y ∈ Ico (0 : ℝ) 1) :
+    y * lrCertificateQPrime y ∈ Icc (0 : ℝ) (lrCertificateQ y) := by
+  rcases eq_or_lt_of_le hy.1 with rfl | hyPos
+  · simp
+  · have hyOpen : y ∈ Ioo (0 : ℝ) 1 := ⟨hyPos, hy.2⟩
+    exact ⟨mul_nonneg hyPos.le (lrCertificateQPrime_pos hyOpen).le,
+      lrCertificateQ_mul_prime_le hyOpen⟩
+
 theorem lrCertificateQ_strictMonoOn :
     StrictMonoOn lrCertificateQ (Ioo (0 : ℝ) 1) := by
   apply strictMonoOn_of_deriv_pos (convex_Ioo (0 : ℝ) 1)

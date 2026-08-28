@@ -350,6 +350,44 @@ theorem sound (terms : ℕ) {input : RationalEnclosure}
       simpa [enclosure, hu0, hpointFalse,
         RationalEnclosure.Contains] using And.intro hlower hQUpper
 
+/-- The same endpoint payload also encloses the regularized derivative
+factor `y * Q'(y)`.  Concavity puts this factor between `0` and `Q(y)`, so
+no logarithm or derivative enclosure at `y = 0` is required. -/
+theorem mul_prime_sound (terms : ℕ) {input : RationalEnclosure}
+    {certificate : LRQZeroIntervalCertificate}
+    (hcheck : certificate.check input = true)
+    {y : ℝ} (hy : input.Contains y) :
+    (certificate.enclosure terms input).Contains
+      (y * lrCertificateQPrime y) := by
+  have hdomain : (0 : ℚ) ≤ input.lower ∧ input.lower ≤ input.upper ∧
+      input.upper < 1 := by
+    have hparts :
+        decide (0 ≤ input.lower ∧ input.lower ≤ input.upper ∧
+            input.upper < 1) = true ∧
+          (if input.upper = 0 then true
+            else certificate.upper.check input.upper ||
+              certificate.sqrtUpper.check
+                (RationalEnclosure.point input.upper)) = true := by
+      simpa [check] using hcheck
+    simpa using hparts.1
+  have hyNonneg : (0 : ℝ) ≤ y := by
+    have hlower : (0 : ℝ) ≤ (input.lower : ℝ) := by
+      exact_mod_cast hdomain.1
+    exact hlower.trans hy.1
+  have hyLt : y < 1 := by
+    have hupper : (input.upper : ℝ) < 1 := by
+      exact_mod_cast hdomain.2.2
+    exact hy.2.trans_lt hupper
+  have hregular := lrCertificateQ_mul_prime_mem ⟨hyNonneg, hyLt⟩
+  have hq := certificate.sound terms hcheck hy
+  have hlower : (certificate.enclosure terms input).lower = 0 := by
+    simp only [enclosure]
+    split
+    · rfl
+    · split <;> rfl
+  exact ⟨by rw [hlower]; simpa using hregular.1,
+    hregular.2.trans hq.2⟩
+
 end LRQZeroIntervalCertificate
 
 /-- Endpoint payloads for enclosing the decreasing function `Q'`. -/
