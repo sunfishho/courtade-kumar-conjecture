@@ -237,6 +237,165 @@ theorem buildTree_check_of_eq
                         Bool.and_eq_true]
                       exact ⟨ih _ _ hlower, ih _ _ hupper⟩
 
+/-! The closed-endpoint generator deliberately omits the regular evaluator.
+This gives a uniform tree whose leaves remain valid on boxes touching
+`s = 0`, and makes exact replay by generator equality especially compact. -/
+
+def endpointAutoAccept (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) :
+    Option LRGapBudgetSEDerivativeAcceptData :=
+  if LRGapBudgetSEDerivativeAcceptData.check terms sqrtFuel logFuel box
+      .endpoint then
+    some .endpoint
+  else if LRGapBudgetSEDerivativeAcceptData.check terms sqrtFuel logFuel box
+      .endpointRetainedQ then
+    some .endpointRetainedQ
+  else none
+
+theorem endpointAutoAccept_check_of_eq
+    (terms sqrtFuel logFuel : ℕ) (box : CertificateBox)
+    (data : LRGapBudgetSEDerivativeAcceptData)
+    (haccept : endpointAutoAccept terms sqrtFuel logFuel box = some data) :
+    data.check terms sqrtFuel logFuel box = true := by
+  by_cases hendpoint :
+      LRGapBudgetSEDerivativeAcceptData.check terms sqrtFuel logFuel box
+        .endpoint = true
+  · simp [endpointAutoAccept, hendpoint] at haccept
+    cases haccept
+    exact hendpoint
+  have hendpointFalse := Bool.eq_false_of_not_eq_true hendpoint
+  by_cases hretained :
+      LRGapBudgetSEDerivativeAcceptData.check terms sqrtFuel logFuel box
+        .endpointRetainedQ = true
+  · simp [endpointAutoAccept, hendpointFalse, hretained] at haccept
+    cases haccept
+    exact hretained
+  · have hretainedFalse := Bool.eq_false_of_not_eq_true hretained
+    simp [endpointAutoAccept, hendpointFalse, hretainedFalse] at haccept
+
+def buildEndpointTree (terms sqrtFuel logFuel : ℕ) :
+    ℕ → CertificateBox → Option Tree
+  | 0, box =>
+      match endpointAutoAccept terms sqrtFuel logFuel box with
+      | some data => some (.accept data)
+      | none =>
+          match autoDiscard box with
+          | some data => some (.discard data)
+          | none => none
+  | fuel + 1, box =>
+      match endpointAutoAccept terms sqrtFuel logFuel box with
+      | some data => some (.accept data)
+      | none =>
+          match autoDiscard box with
+          | some data => some (.discard data)
+          | none =>
+              let axis := chooseAxis box
+              let cut := axisCut box axis
+              match buildEndpointTree terms sqrtFuel logFuel fuel
+                  (box.lower axis cut) with
+              | none => none
+              | some lower =>
+                  match buildEndpointTree terms sqrtFuel logFuel fuel
+                      (box.upper axis cut) with
+                  | none => none
+                  | some upper => some (.split axis cut lower upper)
+
+theorem buildEndpointTree_check_of_eq
+    (terms sqrtFuel logFuel fuel : ℕ) (box : CertificateBox)
+    (tree : Tree)
+    (hbuild : buildEndpointTree terms sqrtFuel logFuel fuel box = some tree) :
+    tree.check
+      (LRGapBudgetSEDerivativeAcceptData.check terms sqrtFuel logFuel)
+      lrGapBudgetSEDiscardCheck box = true := by
+  induction fuel generalizing box tree with
+  | zero =>
+      change (match endpointAutoAccept terms sqrtFuel logFuel box with
+        | some data => some (.accept data)
+        | none =>
+          match autoDiscard box with
+          | some data => some (.discard data)
+          | none => none) = some tree at hbuild
+      generalize haccept : endpointAutoAccept terms sqrtFuel logFuel box =
+        acceptOption
+      cases acceptOption with
+      | some data =>
+          simp only [haccept, Option.some.injEq] at hbuild
+          subst tree
+          simpa [SubdivisionCertificate.check] using
+            endpointAutoAccept_check_of_eq terms sqrtFuel logFuel box data
+              haccept
+      | none =>
+          generalize hdiscard : autoDiscard box = discardOption
+          cases discardOption with
+          | none =>
+              simp only [haccept, hdiscard] at hbuild
+              contradiction
+          | some data =>
+              simp only [haccept, hdiscard, Option.some.injEq] at hbuild
+              subst tree
+              simpa [SubdivisionCertificate.check] using
+                autoDiscard_check_of_eq box data hdiscard
+  | succ fuel ih =>
+      change (match endpointAutoAccept terms sqrtFuel logFuel box with
+        | some data => some (.accept data)
+        | none =>
+          match autoDiscard box with
+          | some data => some (.discard data)
+          | none =>
+              let axis := chooseAxis box
+              let cut := axisCut box axis
+              match buildEndpointTree terms sqrtFuel logFuel fuel
+                  (box.lower axis cut) with
+              | none => none
+              | some lower =>
+                  match buildEndpointTree terms sqrtFuel logFuel fuel
+                      (box.upper axis cut) with
+                  | none => none
+                  | some upper => some (.split axis cut lower upper)) =
+        some tree at hbuild
+      generalize haccept : endpointAutoAccept terms sqrtFuel logFuel box =
+        acceptOption
+      cases acceptOption with
+      | some data =>
+          simp only [haccept, Option.some.injEq] at hbuild
+          subst tree
+          simpa [SubdivisionCertificate.check] using
+            endpointAutoAccept_check_of_eq terms sqrtFuel logFuel box data
+              haccept
+      | none =>
+          generalize hdiscard : autoDiscard box = discardOption
+          cases discardOption with
+          | some data =>
+              simp only [haccept, hdiscard, Option.some.injEq] at hbuild
+              subst tree
+              simpa [SubdivisionCertificate.check] using
+                autoDiscard_check_of_eq box data hdiscard
+          | none =>
+              let axis := chooseAxis box
+              let cut := axisCut box axis
+              generalize hlower : buildEndpointTree terms sqrtFuel logFuel fuel
+                (box.lower axis cut) = lowerOption
+              cases lowerOption with
+              | none =>
+                  simp only [haccept, hdiscard, axis, cut, hlower] at hbuild
+                  contradiction
+              | some lower =>
+                  generalize hupper :
+                    buildEndpointTree terms sqrtFuel logFuel fuel
+                      (box.upper axis cut) = upperOption
+                  cases upperOption with
+                  | none =>
+                      simp only [haccept, hdiscard, axis, cut, hlower,
+                        hupper] at hbuild
+                      contradiction
+                  | some upper =>
+                      simp only [haccept, hdiscard, axis, cut, hlower,
+                        hupper, Option.some.injEq] at hbuild
+                      subst tree
+                      simp only [SubdivisionCertificate.check,
+                        Bool.and_eq_true]
+                      exact ⟨ih _ _ hlower, ih _ _ hupper⟩
+
 theorem derivative_nonnegative_of_buildTree_eq
     (terms sqrtFuel logFuel fuel : ℕ) (box : CertificateBox)
     (tree : Tree)
