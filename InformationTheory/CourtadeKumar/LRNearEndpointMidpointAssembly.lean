@@ -1,6 +1,7 @@
 import InformationTheory.CourtadeKumar.LRSmallSBridgeCoreGeneratedData
 import InformationTheory.CourtadeKumar.LRHybridHighShapeAssembly
 import InformationTheory.CourtadeKumar.LRHighShapeMidpointTailAssembly
+import InformationTheory.CourtadeKumar.LRHighShapeRelevantKLower
 
 /-!
 # Near-endpoint midpoint assembly
@@ -35,6 +36,31 @@ def LRHighShapeNearEndpointMiddleCoreMidpointCoordinateTheorem : Prop :=
     (1 / 128 < point.s ∨ 1 / 4 < point.k) →
     point.s < 1 / 10 →
     0 ≤ lrCertificateUTarget point
+
+/-- The genuinely compact midpoint obligation.  Positive `J` supplies the
+listed lower bound on `k`; it is included explicitly here so a finite replay
+may use the closed rational root face `k = 1 / 65536`. -/
+def LRHighShapeNearEndpointCompactMidpointCoordinateTheorem : Prop :=
+  ∀ point : CertificatePoint,
+    LRHighShapeInterior point →
+    LRHighShapeVRelevant point →
+    1 / 65536 < point.k →
+    point.k ≤ 4 →
+    (1 / 128 < point.s ∨ 1 / 4 < point.k) →
+    1 / 16384 < point.s →
+    point.s < 1 / 10 →
+    0 ≤ lrCertificateUTarget point
+
+/-- Relevance removes the singular lower-`k` face, so a proof on the compact
+rational strip supplies the post-small-`s` midpoint interface. -/
+theorem postSmallSBridgeMidpointCoordinate_of_compact
+    (hcompact : LRHighShapeNearEndpointCompactMidpointCoordinateTheorem) :
+    LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem := by
+  intro point hinterior hrelevant hk hmiddle hsLower hsUpper
+  exact hcompact point hinterior hrelevant
+    (lrCertificate_k_gt_one_div_65536_of_postSmallS_relevant
+      hinterior hrelevant hsLower)
+    hk hmiddle hsLower hsUpper
 
 /-- The generated bridge fills `s ≤ 2⁻¹⁴`; only the post-bridge compact
 strip is passed in as a hypothesis. -/
@@ -138,6 +164,14 @@ theorem nearEndpointHalfMidpoint_of_postSmallSBridge
         (Or.inr (lt_of_not_ge hkSmall)) hnear
   · exact hmiddle R v t hR hv ht htHigh hvHigh hJ hcore
       (Or.inl (lt_of_not_ge hsSmall)) hnear
+
+/-- End-to-end near-endpoint midpoint theorem whose only certificate input is
+the compact rational strip. -/
+theorem nearEndpointHalfMidpoint_of_compact
+    (hcompact : LRHighShapeNearEndpointCompactMidpointCoordinateTheorem) :
+    LRHighShapeNearEndpointHalfMidpointTheorem :=
+  nearEndpointHalfMidpoint_of_postSmallSBridge
+    (postSmallSBridgeMidpointCoordinate_of_compact hcompact)
 
 end LRSmallSBridgeCoreCertificate
 end CourtadeKumar
