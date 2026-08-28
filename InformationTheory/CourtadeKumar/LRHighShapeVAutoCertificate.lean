@@ -87,7 +87,9 @@ namespace LRQZeroIntervalCertificate
 
 def auto (sqrtFuel logFuel : ℕ) (input : RationalEnclosure) :
     LRQZeroIntervalCertificate :=
-  { upper := LRQPointCertificate.auto sqrtFuel logFuel input.upper }
+  { upper := LRQPointCertificate.auto sqrtFuel logFuel input.upper
+    sqrtUpper := RationalEnclosure.autoSqrtCertificate sqrtFuel
+      (RationalEnclosure.point input.upper) }
 
 end LRQZeroIntervalCertificate
 

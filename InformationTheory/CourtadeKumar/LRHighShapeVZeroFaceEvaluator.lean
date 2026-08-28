@@ -11,6 +11,31 @@ the zero-endpoint value certificates exactly at those two nodes.
 
 namespace CourtadeKumar
 
+/-- Endpoint-specialized `χe`: its value uses the sharp product hull for
+nonnegative factors, while its derivative fields retain the ordinary AD
+product rule. -/
+def lrCertificateY0NonnegativeAD (box : CertificateBox) : IntervalAD :=
+  let raw := lrCertificateY0AD box
+  let value := RationalEnclosure.mulNonnegative box.chiInterval
+    (lrCertificateEAD box).value
+  { raw with value := value }
+
+theorem lrCertificateY0NonnegativeAD_sound {box : CertificateBox}
+    {point : CertificatePoint} (hpoint : box.Contains point)
+    (hchi : (0 : ℚ) ≤ box.chiLo)
+    (he : (0 : ℚ) ≤ (lrCertificateEAD box).value.lower) :
+    (lrCertificateY0NonnegativeAD box).Contains
+      (lrCertificateY0 point) (lrCertificateY0DerivS point)
+      (lrCertificateY0DerivK point) (lrCertificateY0DerivChi point) := by
+  have hraw := lrCertificateY0AD_sound hpoint
+  have hchiContains : box.chiInterval.Contains point.chi :=
+    ⟨hpoint.2.2.2.2.1, hpoint.2.2.2.2.2⟩
+  have heContains := (lrCertificateEAD_sound hpoint).1
+  have hvalue := RationalEnclosure.contains_mulNonnegative
+    hchi he hchiContains heContains
+  exact ⟨by simpa [lrCertificateY0NonnegativeAD, lrCertificateY0] using hvalue,
+    hraw.2⟩
+
 structure LRHighShapeVZeroFaceCertificate where
   base : LRHighShapeVCertificate
   qY0 : LRQZeroIntervalCertificate
@@ -23,9 +48,9 @@ def check (box : CertificateBox)
   let coordinate := certificate.base.kernel.coordinate
   let s := lrCertificateSAD box
   let e := lrCertificateEAD box
-  let y0 := lrCertificateY0AD box
+  let y0 := lrCertificateY0NonnegativeAD box
   let v := coordinate.vAD box
-  decide (
+  decide ((0 : ℚ) ≤ box.chiLo ∧ (0 : ℚ) ≤ e.value.lower) && decide (
     coordinate.check box = true ∧
     certificate.base.kernel.omegaZero.check s = true ∧
     certificate.omegaY0.check s y0 = true ∧
@@ -41,7 +66,7 @@ def evaluate (terms : ℕ) (box : CertificateBox)
   let coordinate := certificate.base.kernel.coordinate
   let s := lrCertificateSAD box
   let e := lrCertificateEAD box
-  let y0 := lrCertificateY0AD box
+  let y0 := lrCertificateY0NonnegativeAD box
   let x := (lrCertificateXAD box).value
   let v := (coordinate.vAD box).value
   let onePlusV := RationalEnclosure.add (RationalEnclosure.point 1) v
@@ -84,10 +109,26 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   let coordinate := certificate.base.kernel.coordinate
   let s := lrCertificateSAD box
   let e := lrCertificateEAD box
-  let y0 := lrCertificateY0AD box
+  let y0 := lrCertificateY0NonnegativeAD box
   let x := (lrCertificateXAD box).value
   let v := (coordinate.vAD box).value
   let ab := certificate.base.ab.evaluate terms box coordinate
+  have hchecked :
+      decide ((0 : ℚ) ≤ box.chiLo ∧ (0 : ℚ) ≤ e.value.lower) = true ∧
+      decide (
+      coordinate.check box = true ∧
+      certificate.base.kernel.omegaZero.check s = true ∧
+      certificate.omegaY0.check s y0 = true ∧
+      certificate.base.kernel.omegaE.check s e = true ∧
+      certificate.base.gShape.g0.check (coordinate.vAD box) = true ∧
+      certificate.qY0.check y0.value = true ∧
+      certificate.base.gShape.qE.value.check e.value = true ∧
+      certificate.base.ab.check box coordinate = true ∧
+      (0 : ℚ) < v.lower) = true := by
+    simpa [check, coordinate, s, e, y0, v] using hcheck
+  have hdomain : (0 : ℚ) ≤ box.chiLo ∧
+      (0 : ℚ) ≤ e.value.lower := by
+    simpa using hchecked.1
   have hparts :
       coordinate.check box = true ∧
       certificate.base.kernel.omegaZero.check s = true ∧
@@ -98,11 +139,12 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
       certificate.base.gShape.qE.value.check e.value = true ∧
       certificate.base.ab.check box coordinate = true ∧
       (0 : ℚ) < v.lower := by
-    simpa [check, coordinate, s, e, y0, v] using hcheck
+    simpa using hchecked.2
   have hs := IntervalAD.contains_variableS
     (show box.sInterval.Contains point.s from ⟨hpoint.1, hpoint.2.1⟩)
   have he := lrCertificateEAD_sound hpoint
-  have hy0 := lrCertificateY0AD_sound hpoint
+  have hy0 := lrCertificateY0NonnegativeAD_sound hpoint
+    hdomain.1 hdomain.2
   have hx := lrCertificateXAD_sound hpoint
   have hvAD := coordinate.vAD_sound hpoint hparts.1
   have hv : v.Contains (lrCertificateV point) := by
@@ -188,10 +230,17 @@ noncomputable def checkedEvaluatorSound (terms : ℕ) :
 def autoFromBase (sqrtFuel logFuel : ℕ) (box : CertificateBox)
     (base : LRHighShapeVCertificate) : LRHighShapeVZeroFaceCertificate :=
   let s := lrCertificateSAD box
-  let y0 := lrCertificateY0AD box
+  let y0 := lrCertificateY0NonnegativeAD box
+  -- Endpoint probabilities can be exponentially smaller than the other
+  -- chart variables.  Spend a small fixed precision reserve only in this
+  -- final fallback; the supplied base payload is not recomputed.
+  let endpointSqrtFuel := sqrtFuel + 8
+  let endpointLogFuel := logFuel + 8
   { base := base
-    qY0 := LRQZeroIntervalCertificate.auto sqrtFuel logFuel y0.value
-    omegaY0 := LROmegaZeroIntervalCertificate.auto sqrtFuel logFuel s y0 }
+    qY0 := LRQZeroIntervalCertificate.auto endpointSqrtFuel endpointLogFuel
+      y0.value
+    omegaY0 := LROmegaZeroIntervalCertificate.auto endpointSqrtFuel
+      endpointLogFuel s y0 }
 
 def auto (sqrtFuel logFuel : ℕ) (box : CertificateBox) :
     LRHighShapeVZeroFaceCertificate :=

@@ -108,6 +108,68 @@ lemma lrCertificateQ_nonneg {y : ℝ} (hy : y ∈ Icc (0 : ℝ) 1) :
   · linarith
   · linarith
 
+private lemma negMulLog_le_two_sqrt_sub_two_mul {p : ℝ}
+    (hp : p ∈ Ioc (0 : ℝ) 1) :
+    Real.negMulLog p ≤ 2 * Real.sqrt p - 2 * p := by
+  have hpPos : 0 < p := hp.1
+  have hsPos : 0 < Real.sqrt p := Real.sqrt_pos.2 hpPos
+  have hlog := Real.log_le_sub_one_of_pos (inv_pos.2 hsPos)
+  rw [Real.log_inv, Real.log_sqrt hpPos.le] at hlog
+  have hscaled := mul_le_mul_of_nonneg_left hlog hpPos.le
+  rw [Real.negMulLog_eq_neg]
+  have hsquare : Real.sqrt p ^ 2 = p := Real.sq_sqrt hpPos.le
+  field_simp [hsPos.ne'] at hscaled ⊢
+  nlinarith
+
+private lemma negMulLog_one_sub_le {p : ℝ} (hp : p ∈ Ico (0 : ℝ) 1) :
+    Real.negMulLog (1 - p) ≤ p := by
+  have hqPos : 0 < 1 - p := sub_pos.mpr hp.2
+  have hlog := Real.log_le_sub_one_of_pos (inv_pos.2 hqPos)
+  rw [Real.log_inv] at hlog
+  have hscaled := mul_le_mul_of_nonneg_left hlog hqPos.le
+  rw [Real.negMulLog_eq_neg]
+  field_simp [hqPos.ne'] at hscaled
+  nlinarith
+
+private lemma binEntropy_le_two_sqrt {p : ℝ} (hp : p ∈ Icc (0 : ℝ) 1) :
+    Real.binEntropy p ≤ 2 * Real.sqrt p := by
+  rcases hp with ⟨hp0, hp1⟩
+  by_cases hpz : p = 0
+  · subst p
+    simp
+  by_cases hpo : p = 1
+  · subst p
+    norm_num
+  have hpPos : 0 < p := lt_of_le_of_ne hp0 (Ne.symm hpz)
+  have hpLt : p < 1 := lt_of_le_of_ne hp1 hpo
+  have hfirst := negMulLog_le_two_sqrt_sub_two_mul ⟨hpPos, hp1⟩
+  have hsecond := negMulLog_one_sub_le ⟨hp0, hpLt⟩
+  rw [Real.binEntropy_eq_negMulLog_add_negMulLog_one_sub]
+  linarith
+
+/-- A log-free endpoint majorant.  It is intentionally coarse but tends to
+zero uniformly, unlike a generic logarithm payload at a vanishing input. -/
+lemma lrCertificateQ_le_two_sqrt {y : ℝ} (hy : y ∈ Icc (0 : ℝ) 1) :
+    lrCertificateQ y ≤ 2 * Real.sqrt y := by
+  let p := (1 - Real.sqrt (1 - y)) / 2
+  have hsNonneg : 0 ≤ Real.sqrt (1 - y) := Real.sqrt_nonneg _
+  have hsLe : Real.sqrt (1 - y) ≤ 1 := by
+    rw [Real.sqrt_le_one]
+    linarith [hy.1]
+  have hpMem : p ∈ Icc (0 : ℝ) 1 := by
+    dsimp [p]
+    constructor <;> linarith
+  have hpLeY : p ≤ y := by
+    have hsquare : Real.sqrt (1 - y) ^ 2 = 1 - y :=
+      Real.sq_sqrt (by linarith [hy.2])
+    dsimp [p]
+    nlinarith [sq_nonneg (Real.sqrt (1 - y) - 1)]
+  have hsqrtMono : Real.sqrt p ≤ Real.sqrt y :=
+    Real.sqrt_le_sqrt hpLeY
+  rw [lrCertificateQ, topJ_eq_binEntropy]
+  exact (binEntropy_le_two_sqrt hpMem).trans
+    (mul_le_mul_of_nonneg_left hsqrtMono (by norm_num))
+
 lemma lrCertificateQSecond_nonpos {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
     lrCertificateQSecond y ≤ 0 := by
   unfold lrCertificateQSecond

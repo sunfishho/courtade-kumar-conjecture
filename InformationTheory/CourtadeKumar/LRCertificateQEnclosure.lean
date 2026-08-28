@@ -250,18 +250,23 @@ nonnegative, and increasing.  Endpoint-facing value evaluators can use this
 certificate without pretending that a finite `Q'` enclosure exists. -/
 structure LRQZeroIntervalCertificate where
   upper : LRQPointCertificate
+  sqrtUpper : RationalEnclosure.SqrtCertificate
 
 namespace LRQZeroIntervalCertificate
 
 def check (input : RationalEnclosure)
     (certificate : LRQZeroIntervalCertificate) : Bool :=
   decide (input.lower = 0 ∧ input.lower ≤ input.upper ∧ input.upper < 1) &&
-    if input.upper = 0 then true else certificate.upper.check input.upper
+    if input.upper = 0 then true
+    else certificate.upper.check input.upper ||
+      certificate.sqrtUpper.check (RationalEnclosure.point input.upper)
 
 def enclosure (terms : ℕ) (input : RationalEnclosure)
     (certificate : LRQZeroIntervalCertificate) : RationalEnclosure :=
   if input.upper = 0 then RationalEnclosure.point 0
-  else ⟨0, (certificate.upper.enclosure terms).upper⟩
+  else if certificate.upper.check input.upper then
+    ⟨0, (certificate.upper.enclosure terms).upper⟩
+  else ⟨0, 2 * certificate.sqrtUpper.upper⟩
 
 theorem sound (terms : ℕ) {input : RationalEnclosure}
     {certificate : LRQZeroIntervalCertificate}
@@ -272,7 +277,9 @@ theorem sound (terms : ℕ) {input : RationalEnclosure}
       decide (input.lower = 0 ∧ input.lower ≤ input.upper ∧
           input.upper < 1) = true ∧
         (if input.upper = 0 then true
-          else certificate.upper.check input.upper) = true := by
+          else certificate.upper.check input.upper ||
+            certificate.sqrtUpper.check
+              (RationalEnclosure.point input.upper)) = true := by
     simpa [check] using hcheck
   have hdomain : input.lower = 0 ∧ input.lower ≤ input.upper ∧
       input.upper < 1 := by
@@ -289,9 +296,6 @@ theorem sound (terms : ℕ) {input : RationalEnclosure}
       simpa [hdomain.1] using hdomain.2.1
     have huPos : (0 : ℚ) < input.upper :=
       lt_of_le_of_ne huNonneg (Ne.symm hu0)
-    have hupperCheck : certificate.upper.check input.upper = true := by
-      simpa [hu0] using hparts.2
-    have hupper := certificate.upper.sound terms hupperCheck
     have huMem : (input.upper : ℝ) ∈ Ioo (0 : ℝ) 1 := by
       constructor
       · exact_mod_cast huPos
@@ -302,22 +306,45 @@ theorem sound (terms : ℕ) {input : RationalEnclosure}
       · exact hy.2.trans huMem.2.le
     have hlower : 0 ≤ lrCertificateQ y :=
       lrCertificateQ_nonneg hyMemClosed
-    have hupperValue :
-        lrCertificateQ y ≤
-          ((certificate.upper.enclosure terms).upper : ℝ) := by
-      by_cases hy0 : y = 0
-      · subst y
-        rw [lrCertificateQ_zero]
-        exact (lrCertificateQ_nonneg ⟨huMem.1.le, huMem.2.le⟩).trans hupper.2
-      · have hyPos : 0 < y := lt_of_le_of_ne hyMemClosed.1 (Ne.symm hy0)
-        have hyMem : y ∈ Ioo (0 : ℝ) 1 :=
-          ⟨hyPos, hy.2.trans_lt huMem.2⟩
-        have hmono : lrCertificateQ y ≤
-            lrCertificateQ (input.upper : ℝ) :=
-          lrCertificateQ_strictMonoOn.monotoneOn hyMem huMem hy.2
-        exact hmono.trans hupper.2
-    simpa [enclosure, hu0, RationalEnclosure.Contains] using
-      And.intro hlower hupperValue
+    by_cases hpoint : certificate.upper.check input.upper = true
+    · have hupper := certificate.upper.sound terms hpoint
+      have hupperValue :
+          lrCertificateQ y ≤
+            ((certificate.upper.enclosure terms).upper : ℝ) := by
+        by_cases hy0 : y = 0
+        · subst y
+          rw [lrCertificateQ_zero]
+          exact (lrCertificateQ_nonneg
+            ⟨huMem.1.le, huMem.2.le⟩).trans hupper.2
+        · have hyPos : 0 < y :=
+            lt_of_le_of_ne hyMemClosed.1 (Ne.symm hy0)
+          have hyMem : y ∈ Ioo (0 : ℝ) 1 :=
+            ⟨hyPos, hy.2.trans_lt huMem.2⟩
+          have hmono : lrCertificateQ y ≤
+              lrCertificateQ (input.upper : ℝ) :=
+            lrCertificateQ_strictMonoOn.monotoneOn hyMem huMem hy.2
+          exact hmono.trans hupper.2
+      simpa [enclosure, hu0, hpoint, RationalEnclosure.Contains] using
+        And.intro hlower hupperValue
+    · have hpointFalse : certificate.upper.check input.upper = false :=
+        Bool.eq_false_of_not_eq_true hpoint
+      have hsqrtCheck : certificate.sqrtUpper.check
+          (RationalEnclosure.point input.upper) = true := by
+        simpa [hu0, hpointFalse] using hparts.2
+      have hsqrt := certificate.sqrtUpper.sound hsqrtCheck
+        (RationalEnclosure.contains_point input.upper)
+      have hsqrtMono : Real.sqrt y ≤ Real.sqrt (input.upper : ℝ) :=
+        Real.sqrt_le_sqrt hy.2
+      have hQUpper : lrCertificateQ y ≤
+          2 * (certificate.sqrtUpper.upper : ℝ) := calc
+        lrCertificateQ y ≤ 2 * Real.sqrt y :=
+          lrCertificateQ_le_two_sqrt hyMemClosed
+        _ ≤ 2 * Real.sqrt (input.upper : ℝ) :=
+          mul_le_mul_of_nonneg_left hsqrtMono (by norm_num)
+        _ ≤ 2 * (certificate.sqrtUpper.upper : ℝ) :=
+          mul_le_mul_of_nonneg_left hsqrt.2 (by norm_num)
+      simpa [enclosure, hu0, hpointFalse,
+        RationalEnclosure.Contains] using And.intro hlower hQUpper
 
 end LRQZeroIntervalCertificate
 
