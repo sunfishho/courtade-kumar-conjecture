@@ -39,14 +39,12 @@ theorem evaluateY0SK_sound (terms : ℕ) {box : CertificateBox}
     (he : (0 : ℚ) ≤ (lrCertificateEAD box).value.lower)
     {point : CertificatePoint} (hpoint : box.Contains point) :
     let result := certificate.evaluateY0SK terms box
-    result.value.Contains
-        (lrCertificateOmega point.s (lrCertificateY0 point)) ∧
-      result.derivS.Contains
-        (lrCertificateOmegaDeriv point.s (lrCertificateY0 point)
-          1 (lrCertificateY0DerivS point)) ∧
-      result.derivK.Contains
-        (lrCertificateOmegaDeriv point.s (lrCertificateY0 point)
-          0 (lrCertificateY0DerivK point)) := by
+    ∃ derivChi : ℝ, result.Contains
+      (lrCertificateOmega point.s (lrCertificateY0 point))
+      (lrCertificateOmegaDeriv point.s (lrCertificateY0 point)
+        1 (lrCertificateY0DerivS point))
+      (lrCertificateOmegaDeriv point.s (lrCertificateY0 point)
+        0 (lrCertificateY0DerivK point)) derivChi := by
   dsimp only
   let s := lrCertificateSAD box
   let y := lrCertificateY0NonnegativeAD box
@@ -124,16 +122,24 @@ theorem evaluateY0SK_sound (terms : ℕ) {box : CertificateBox}
   have hcorrection := IntervalAD.contains_mul hfactor hqPrimeB
   have hresult := IntervalAD.contains_sub
     (IntervalAD.contains_sub hqB hqY) hcorrection
-  refine ⟨?_, ?_, ?_⟩
-  · convert hresult.1 using 1 <;>
-      simp [evaluateY0SK, s, y, b, qPrimeB, qB, qY, qPrimeBAD,
-        lrCertificateOmega] <;> ring
-  · convert hresult.2.1 using 1 <;>
-      simp [evaluateY0SK, s, y, b, qPrimeB, qB, qY, qPrimeBAD,
-        lrCertificateOmegaDeriv, lrCertificateBDeriv] <;> ring
-  · convert hresult.2.2.1 using 1 <;>
-      simp [evaluateY0SK, s, y, b, qPrimeB, qB, qY, qPrimeBAD,
-        lrCertificateOmegaDeriv, lrCertificateBDeriv] <;> ring
+  let derivChi :=
+    lrCertificateQPrime
+        (lrCertificateB point.s (lrCertificateY0 point)) *
+        lrCertificateBDeriv point.s (lrCertificateY0 point)
+          0 (lrCertificateY0DerivChi point) - 0 -
+      ((0 * (1 - lrCertificateY0 point) +
+          point.s * (0 - lrCertificateY0DerivChi point)) *
+          lrCertificateQPrime
+            (lrCertificateB point.s (lrCertificateY0 point)) +
+        point.s * (1 - lrCertificateY0 point) *
+          (lrCertificateQSecond
+              (lrCertificateB point.s (lrCertificateY0 point)) *
+            lrCertificateBDeriv point.s (lrCertificateY0 point)
+              0 (lrCertificateY0DerivChi point)))
+  refine ⟨derivChi, ?_⟩
+  convert hresult using 1 <;>
+    simp [lrCertificateOmega, lrCertificateOmegaDeriv,
+      lrCertificateBDeriv, derivChi] <;> ring
 
 end LROmegaZeroIntervalCertificate
 end CourtadeKumar
