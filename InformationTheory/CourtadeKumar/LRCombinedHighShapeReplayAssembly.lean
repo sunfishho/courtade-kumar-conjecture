@@ -23,7 +23,8 @@ def check (terms : ℕ) (root : LRCombinedHighShapeCheckedRoot) : Bool :=
 
 theorem sound (terms : ℕ) {root : LRCombinedHighShapeCheckedRoot}
     (hcheck : root.check terms = true) :
-    ∀ point, root.box.Contains point → LRHighShapeVRelevant point →
+    ∀ point, root.box.Contains point → LRHighShapeInterior point →
+      LRHighShapeVRelevant point →
       LRHighShapeCertificateAlternative point := by
   exact lrHighShapeCombinedSubdivisionCertificate_sound terms hcheck
 
@@ -103,11 +104,12 @@ theorem alternative_of_covers (terms : ℕ)
     {roots : List LRCombinedHighShapeCheckedRoot}
     (hcheck : check terms roots = true)
     {point : CertificatePoint} (hcover : Covers roots point)
+    (hinterior : LRHighShapeInterior point)
     (hrelevant : LRHighShapeVRelevant point) :
     LRHighShapeCertificateAlternative point := by
   rcases hcover with ⟨root, hmem, hcontains⟩
   exact root.sound terms (checked_of_mem terms hcheck hmem)
-    point hcontains hrelevant
+    point hcontains hinterior hrelevant
 
 /-- A finite checked replay plus a geometric coverage proof supplies the
 entire near-endpoint coordinate interface consumed by the analytic flow
@@ -122,7 +124,7 @@ theorem nearEndpointTheorem_of_checked_replay
     LRHighShapeNearEndpointCombinedCoordinateTheorem := by
   intro point hinterior hrelevant hs
   exact alternative_of_covers terms hcheck
-    (hcoverage point hinterior hrelevant hs) hrelevant
+    (hcoverage point hinterior hrelevant hs) hinterior hrelevant
 
 /-- Direct end-to-end use of generated replay data: once the compact ledger,
 the aggregate Boolean check, and rational-root coverage are supplied, the

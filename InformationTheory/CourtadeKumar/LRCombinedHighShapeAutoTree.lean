@@ -83,10 +83,13 @@ def autoAccept (terms sqrtFuel logFuel : ℕ) (box : CertificateBox)
     else if pairAccepts terms box payload then
       some (.midpointTangent payload)
     else
-      let zeroFace := LRHighShapeVZeroFaceCertificate.autoFromBase
+      let zeroFaceCentered :=
+        LRHighShapeVZeroFaceSKCenteredCertificate.autoFromBase
         sqrtFuel logFuel box payload.base
-      if zeroFace.accepts terms box then
-        some (.directVZeroFace zeroFace)
+      if zeroFaceCentered.accepts terms box then
+        some (.directVZeroFaceSKCentered zeroFaceCentered)
+      else if zeroFaceCentered.derivative.accepts terms box then
+        some (.directVZeroFace zeroFaceCentered.derivative)
       else none
 
 theorem autoAccept_check_of_eq
@@ -99,7 +102,8 @@ theorem autoAccept_check_of_eq
     sqrtFuel logFuel box payload
   let centered : LRHighShapeVCenteredCertificate :=
     { center := centeredPair.center.base, derivative := payload.base }
-  let zeroFace := LRHighShapeVZeroFaceCertificate.autoFromBase
+  let zeroFaceCentered :=
+    LRHighShapeVZeroFaceSKCenteredCertificate.autoFromBase
     sqrtFuel logFuel box payload.base
   by_cases hV : LRHighShapeVCertificate.rawAccepts
       terms box payload.base = true
@@ -137,17 +141,25 @@ theorem autoAccept_check_of_eq
     simpa [LRHighShapeCombinedAcceptData.check, pairAccepts] using hpair
   have hpairFalse : pairAccepts terms box payload = false :=
     Bool.eq_false_of_not_eq_true hpair
-  by_cases hZero : zeroFace.accepts terms box = true
-  · simp [autoAccept, hVFalse, centeredPair, centered, zeroFace,
+  by_cases hZeroCentered : zeroFaceCentered.accepts terms box = true
+  · simp [autoAccept, hVFalse, centeredPair, centered, zeroFaceCentered,
       hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse,
-      hZero] at haccept
+      hZeroCentered] at haccept
+    cases haccept
+    simpa [LRHighShapeCombinedAcceptData.check] using hZeroCentered
+  have hZeroCenteredFalse : zeroFaceCentered.accepts terms box = false :=
+    Bool.eq_false_of_not_eq_true hZeroCentered
+  by_cases hZero : zeroFaceCentered.derivative.accepts terms box = true
+  · simp [autoAccept, hVFalse, centeredPair, centered, zeroFaceCentered,
+      hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse,
+      hZeroCenteredFalse, hZero] at haccept
     cases haccept
     simpa [LRHighShapeCombinedAcceptData.check] using hZero
-  · have hZeroFalse : zeroFace.accepts terms box = false :=
+  · have hZeroFalse : zeroFaceCentered.derivative.accepts terms box = false :=
       Bool.eq_false_of_not_eq_true hZero
-    simp [autoAccept, hVFalse, centeredPair, centered, zeroFace,
+    simp [autoAccept, hVFalse, centeredPair, centered, zeroFaceCentered,
       hPairCenteredFalse, hVCenteredFalse, hVMidFalse, hpairFalse,
-      hZeroFalse] at haccept
+      hZeroCenteredFalse, hZeroFalse] at haccept
 
 def buildTree (terms sqrtFuel logFuel : ℕ) : ℕ → CertificateBox → Option Tree
   | 0, box =>
@@ -284,7 +296,8 @@ theorem buildTree_check_of_eq
 theorem alternative_of_buildTree_eq
     (terms sqrtFuel logFuel fuel : ℕ) (box : CertificateBox) (tree : Tree)
     (hbuild : buildTree terms sqrtFuel logFuel fuel box = some tree) :
-    ∀ point, box.Contains point → LRHighShapeVRelevant point →
+    ∀ point, box.Contains point → LRHighShapeInterior point →
+      LRHighShapeVRelevant point →
       LRHighShapeCertificateAlternative point := by
   exact lrHighShapeCombinedSubdivisionCertificate_sound terms
     (buildTree_check_of_eq terms sqrtFuel logFuel fuel box tree hbuild)
