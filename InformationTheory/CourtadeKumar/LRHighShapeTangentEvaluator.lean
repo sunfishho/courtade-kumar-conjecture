@@ -922,16 +922,46 @@ def accepts (terms : ℕ) (box : CertificateBox)
     (certificate : LRHighShapeTangentCertificate) : Bool :=
   checkedMidpointLeafAccepts payloadCheck (evaluate terms) box certificate
 
+/-- Soundness data for the cancellation-sensitive components computed by
+`evaluateAll`.  Exposing these components lets downstream certificates form
+new exact linear combinations without repeating the elementary enclosure
+proofs. -/
+structure EvaluationSound (terms : ℕ) (box : CertificateBox)
+    (point : CertificatePoint)
+    (certificate : LRHighShapeTangentCertificate) : Prop where
+  target : (certificate.evaluateAD terms box).Contains
+    (lrCertificateTTarget point)
+    (lrCertificateTTargetDerivS point)
+    (lrCertificateTTargetDerivK point)
+    (lrCertificateTTargetDerivChi point)
+  gap : (certificate.evaluateAll terms box).gap.Contains
+    (lrCertificateGap point)
+    (lrCertificateGapDeriv point 1
+      (lrCertificateY0DerivS point) (lrCertificateEDerivS point)
+      (lrCertificateVDerivS point))
+    (lrCertificateGapDeriv point 0
+      (lrCertificateY0DerivK point) (lrCertificateEDerivK point)
+      (lrCertificateVDerivK point))
+    (lrCertificateGapDeriv point 0
+      (lrCertificateY0DerivChi point) (lrCertificateEDerivChi point)
+      (lrCertificateVDerivChi point))
+  halfSlope : (certificate.evaluateAll terms box).halfSlope.Contains
+    (lrCertificateHalfSlope point)
+    (lrCertificateHalfSlopeDeriv point 1 (lrCertificateVDerivS point))
+    (lrCertificateHalfSlopeDeriv point 0 (lrCertificateVDerivK point))
+    (lrCertificateHalfSlopeDeriv point 0 (lrCertificateVDerivChi point))
+  midpoint : (certificate.base.mAD box).Contains
+    (lrCertificateM point)
+    (lrCertificateMDeriv point (lrCertificateVDerivS point))
+    (lrCertificateMDeriv point (lrCertificateVDerivK point))
+    (lrCertificateMDeriv point (lrCertificateVDerivChi point))
+
 set_option maxHeartbeats 800000 in
-theorem evaluateAD_sound (terms : ℕ) {box : CertificateBox}
+theorem evaluateAll_sound (terms : ℕ) {box : CertificateBox}
     {point : CertificatePoint}
     {certificate : LRHighShapeTangentCertificate}
     (hpoint : box.Contains point) (hcheck : certificate.check box = true) :
-    (certificate.evaluateAD terms box).Contains
-      (lrCertificateTTarget point)
-      (lrCertificateTTargetDerivS point)
-      (lrCertificateTTargetDerivK point)
-      (lrCertificateTTargetDerivChi point) := by
+    EvaluationSound terms box point certificate := by
   let coordinate := certificate.base.kernel.coordinate
   let v := coordinate.vAD box
   let s := lrCertificateSAD box
@@ -1227,19 +1257,46 @@ theorem evaluateAD_sound (terms : ℕ) {box : CertificateBox}
         (IntervalAD.contains_mul (IntervalAD.contains_const 4) hw) hjNamed)
       hgapNamed)
     (IntervalAD.contains_mul hhalfSlopeNamed hmidpointNumeratorNamed)
-  unfold evaluateAD evaluateAll
-  dsimp only
-  convert htarget using 1 <;>
-    simp only [lrCertificateTTargetDerivS, lrCertificateTTargetDerivK,
-      lrCertificateTTargetDerivChi,
-      lrCertificateTTargetCoordinateDeriv,
-      lrCertificateTTarget, lrCertificateTTargetDeriv,
-      lrCertificateGap, lrCertificateGapDeriv,
-      lrCertificateGShapeDerivS, lrCertificateGShapeDerivK,
-      lrCertificateGShapeDerivChi,
-      lrCertificatePWDerivS, lrCertificatePWDerivK,
-      lrCertificatePWDerivChi] <;>
-    ring
+  have htargetNamed : (certificate.evaluateAD terms box).Contains
+      (lrCertificateTTarget point)
+      (lrCertificateTTargetDerivS point)
+      (lrCertificateTTargetDerivK point)
+      (lrCertificateTTargetDerivChi point) := by
+    unfold evaluateAD evaluateAll
+    dsimp only
+    convert htarget using 1 <;>
+      simp only [lrCertificateTTargetDerivS, lrCertificateTTargetDerivK,
+        lrCertificateTTargetDerivChi,
+        lrCertificateTTargetCoordinateDeriv,
+        lrCertificateTTarget, lrCertificateTTargetDeriv,
+        lrCertificateGap, lrCertificateGapDeriv,
+        lrCertificateGShapeDerivS, lrCertificateGShapeDerivK,
+        lrCertificateGShapeDerivChi,
+        lrCertificatePWDerivS, lrCertificatePWDerivK,
+        lrCertificatePWDerivChi] <;>
+      ring
+  refine
+    { target := htargetNamed
+      gap := ?_
+      halfSlope := ?_
+      midpoint := hm }
+  · unfold evaluateAll
+    dsimp only
+    exact hgapNamed
+  · unfold evaluateAll
+    dsimp only
+    exact hhalfSlopeNamed
+
+theorem evaluateAD_sound (terms : ℕ) {box : CertificateBox}
+    {point : CertificatePoint}
+    {certificate : LRHighShapeTangentCertificate}
+    (hpoint : box.Contains point) (hcheck : certificate.check box = true) :
+    (certificate.evaluateAD terms box).Contains
+      (lrCertificateTTarget point)
+      (lrCertificateTTargetDerivS point)
+      (lrCertificateTTargetDerivK point)
+      (lrCertificateTTargetDerivChi point) :=
+  (certificate.evaluateAll_sound terms hpoint hcheck).target
 
 theorem evaluate_value_sound (terms : ℕ) {box : CertificateBox}
     {point : CertificatePoint}
