@@ -36,18 +36,18 @@ noncomputable def logFactor (s chi : ℝ) : ℝ :=
 
 /-- The normalized elementary minorant to be certified on the small boundary
 box.  It has no singular `log s`: the entire remainder payment has already
-been bounded by its value at `s = 1/16`. -/
+been bounded by its value at `s = 1/10`. -/
 noncomputable def lowerModel (s chi : ℝ) : ℝ :=
   -32 * (1 - s) * s * (1 - chi) ^ 2 /
       (x s chi ^ 2 * (1 + v s chi) ^ 2) -
     (1 + v s chi) / v s chi *
       (Real.log 2 + 2 * logFactor s chi) +
     (1 / 4 : ℝ) *
-      (coreCoeff s chi * (Real.log 64 + 1) -
+      (coreCoeff s chi * (Real.log 40 + 1) -
         leftCoeff s chi * Real.log (leftCoeff s chi) -
         rightCoeff s / v s chi * Real.log (rightCoeff s) +
         4 * slopeCoeff s chi * Real.log 2) -
-    (1 / 12 : ℝ) * Real.log 64
+    (2 / 15 : ℝ) * Real.log 40
 
 lemma boundary_B_left (s chi : ℝ) :
     lrCertificateB s (chi * (4 * s)) = s * leftCoeff s chi := by
@@ -60,11 +60,11 @@ lemma boundary_B_right (s : ℝ) :
   ring
 
 lemma boundary_geometry
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     0 < x s chi ∧ x s chi ≤ 1 ∧
       v s chi ∈ Icc (1 / 2 : ℝ) 1 := by
-  have hsFour : 4 * s < 1 / 4 := by nlinarith [hs.2]
+  have hsFour : 4 * s ≤ 2 / 5 := by nlinarith [hs.2]
   have hprodNonneg : 0 ≤ 4 * chi * s :=
     mul_nonneg (mul_nonneg (by norm_num) hchi.1) hs.1.le
   have hprodLe : 4 * chi * s ≤ 4 * s := by
@@ -101,7 +101,7 @@ lemma boundary_geometry
   exact ⟨hxPos, hxLe, hvHalf, hvLe⟩
 
 lemma one_sub_v_eq
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     1 - v s chi =
       4 * s * (1 - chi) / (x s chi * (1 + v s chi)) := by
@@ -127,7 +127,7 @@ lemma one_sub_v_eq
       ring
 
 lemma coefficient_bounds
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     0 < leftCoeff s chi ∧ 0 < rightCoeff s ∧
       0 < slopeCoeff s chi ∧ slopeCoeff s chi ≤ 4 ∧
@@ -228,52 +228,154 @@ lemma lrLowerFaceR0_le_mul_prime
   simp only [slope_def_field, lrLowerFaceR0_zero, sub_zero] at hslope
   simpa [mul_comm] using (div_le_iff₀ hs.1).mp hslope
 
+/-- The elementary `p_y` bounds used in the remainder estimate remain valid
+through the entire boundary range `y ≤ 1/10`. -/
+lemma lrLowerFaceP_bounds_tenth
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) (1 / 10 : ℝ)) :
+    y / 4 ≤ lrLowerFaceP y ∧
+      lrLowerFaceP y ≤ y / 3 ∧
+      lrLowerFaceP y ≤ 1 / 30 := by
+  have hyUnit : y ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hy.1, hy.2.trans_lt (by norm_num)⟩
+  let p := lrLowerFaceP y
+  let z := Real.sqrt (1 - y)
+  have hgeom := lrLowerFaceP_geometry hyUnit
+  change p ∈ Ioo (0 : ℝ) (1 / 2) ∧
+    1 - 2 * p = z ∧ y = 4 * p * (1 - p) at hgeom
+  have hp := hgeom.1
+  have hzPos : 0 < z := Real.sqrt_pos.2 (by linarith [hy.2])
+  have hzLe : z ≤ 1 := by linarith [hgeom.2.1, hp.1]
+  have hzHalf : 1 / 2 ≤ z := by
+    have hzSq : z ^ 2 = 1 - y := by
+      dsimp [z]
+      exact Real.sq_sqrt (by linarith [hy.2])
+    nlinarith [hy.2]
+  have hpFormula : p = y / (2 * (1 + z)) := by
+    have hden : 1 + z ≠ 0 := by linarith [hzPos]
+    rw [show y = 4 * p * (1 - p) from hgeom.2.2,
+      show 1 + z = 2 * (1 - p) by linarith [hgeom.2.1]]
+    field_simp [hden, (by linarith [hp.2] : 1 - p ≠ 0)]
+    ring
+  have hdenUpper : 2 * (1 + z) ≤ 4 := by linarith
+  have hdenLower : 3 ≤ 2 * (1 + z) := by linarith
+  have hdenPos : 0 < 2 * (1 + z) := by linarith
+  have hLower : y / 4 ≤ p := by
+    rw [hpFormula, div_le_div_iff₀ (by norm_num) hdenPos]
+    nlinarith [hy.1]
+  have hUpper : p ≤ y / 3 := by
+    rw [hpFormula, div_le_div_iff₀ hdenPos (by norm_num)]
+    nlinarith [hy.1]
+  exact ⟨hLower, hUpper, hUpper.trans (by nlinarith [hy.2])⟩
+
+/-- The derivative payment bound has no genuine `1/16` obstruction; the
+same proof works on the full `y ≤ 1/10` boundary interval. -/
+lemma lrLowerFaceR0Prime_upper_tenth
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) (1 / 10 : ℝ)) :
+    lrLowerFaceR0Prime y ≤ y / 3 * Real.log (4 / y) := by
+  have hyUnit : y ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hy.1, hy.2.trans_lt (by norm_num)⟩
+  let p := lrLowerFaceP y
+  have hgeom := lrLowerFaceP_geometry hyUnit
+  change p ∈ Ioo (0 : ℝ) (1 / 2) ∧
+    1 - 2 * p = Real.sqrt (1 - y) ∧
+      y = 4 * p * (1 - p) at hgeom
+  have hp := hgeom.1
+  have hpbounds := lrLowerFaceP_bounds_tenth hy
+  change y / 4 ≤ p ∧ p ≤ y / 3 ∧ p ≤ 1 / 30 at hpbounds
+  have hpOnePos : 0 < 1 - p := sub_pos.mpr (hp.2.trans (by norm_num))
+  have hlogOne : Real.log (1 - p) ≤ 0 :=
+    Real.log_nonpos hpOnePos.le (by linarith [hp.1])
+  have hnum :
+      (1 - p) * Real.log (1 - p) - p * Real.log p ≤
+        p * Real.log (1 / p) := by
+    rw [Real.log_div (by norm_num : (1 : ℝ) ≠ 0) hp.1.ne']
+    norm_num
+    nlinarith [mul_nonpos_of_nonneg_of_nonpos hpOnePos.le hlogOne]
+  have hden : 1 ≤ 2 * (1 - 2 * p) := by
+    nlinarith [hpbounds.2.2]
+  have hdenPos : 0 < 2 * (1 - 2 * p) :=
+    lt_of_lt_of_le zero_lt_one hden
+  have hquot :
+      ((1 - p) * Real.log (1 - p) - p * Real.log p) /
+          (2 * (1 - 2 * p)) ≤ p * Real.log (1 / p) := by
+    rw [div_le_iff₀ hdenPos]
+    have hprodNonneg : 0 ≤ p * Real.log (1 / p) := by
+      exact mul_nonneg hp.1.le (Real.log_nonneg (by
+        rw [one_le_div₀ hp.1]
+        exact hp.2.le.trans (by norm_num)))
+    have hscale := mul_le_mul_of_nonneg_right hden hprodNonneg
+    calc
+      (1 - p) * Real.log (1 - p) - p * Real.log p ≤
+          p * Real.log (1 / p) := hnum
+      _ = 1 * (p * Real.log (1 / p)) := by ring
+      _ ≤ (2 * (1 - 2 * p)) * (p * Real.log (1 / p)) := hscale
+      _ = p * Real.log (1 / p) * (2 * (1 - 2 * p)) := by ring
+  have hinvOrder : 1 / p ≤ 4 / y := by
+    rw [div_le_div_iff₀ hp.1 hy.1]
+    nlinarith [hpbounds.1]
+  have hlogOrder := Real.log_le_log
+    (div_pos (by norm_num) hp.1) hinvOrder
+  have hlogPos : 0 ≤ Real.log (4 / y) :=
+    Real.log_nonneg (by rw [one_le_div₀ hy.1]; linarith [hy.2])
+  have hprod : p * Real.log (1 / p) ≤
+      y / 3 * Real.log (4 / y) := by
+    calc
+      p * Real.log (1 / p) ≤ p * Real.log (4 / y) :=
+        mul_le_mul_of_nonneg_left hlogOrder hp.1.le
+      _ ≤ y / 3 * Real.log (4 / y) :=
+        mul_le_mul_of_nonneg_right hpbounds.2.1 hlogPos
+  rw [show lrLowerFaceR0Prime y =
+      ((1 - p) * Real.log (1 - p) - p * Real.log p) /
+        (2 * (1 - 2 * p)) by
+    simpa [p] using lrLowerFaceR0Prime_eq_p hyUnit]
+  exact hquot.trans hprod
+
 /-- Endpoint tangent bound for the only residual singular product. -/
-lemma mul_log_four_div_le_log64_div16
-    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 16 : ℝ)) :
-    s * Real.log (4 / s) ≤ Real.log 64 / 16 := by
+lemma mul_log_four_div_le_log40_div10
+    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ)) :
+    s * Real.log (4 / s) ≤ Real.log 40 / 10 := by
   have hsNe := hs.1.ne'
-  let u : ℝ := 1 / (16 * s)
+  let u : ℝ := 1 / (10 * s)
   have hu : 0 < u := by
     unfold u
     exact one_div_pos.mpr (mul_pos (by norm_num) hs.1)
-  have hfactor : 4 / s = 64 * u := by
+  have hfactor : 4 / s = 40 * u := by
     unfold u
     field_simp [hsNe]
     ring
-  have hlogSplit : Real.log (4 / s) = Real.log 64 + Real.log u := by
-    rw [hfactor, Real.log_mul (by norm_num : (64 : ℝ) ≠ 0) hu.ne']
+  have hlogSplit : Real.log (4 / s) = Real.log 40 + Real.log u := by
+    rw [hfactor, Real.log_mul (by norm_num : (40 : ℝ) ≠ 0) hu.ne']
   have hlogU := Real.log_le_sub_one_of_pos hu
-  have hlog64 : 1 ≤ Real.log 64 := by
-    have hexp : Real.exp 1 < (64 : ℝ) :=
+  have hlog40 : 1 ≤ Real.log 40 := by
+    have hexp : Real.exp 1 < (40 : ℝ) :=
       Real.exp_one_lt_d9.trans (by norm_num)
-    exact ((Real.lt_log_iff_exp_lt (by norm_num : (0 : ℝ) < 64)).2 hexp).le
+    exact ((Real.lt_log_iff_exp_lt (by norm_num : (0 : ℝ) < 40)).2 hexp).le
   rw [hlogSplit]
   have hscaled := mul_le_mul_of_nonneg_left hlogU hs.1.le
-  have huIdentity : s * u = 1 / 16 := by
+  have huIdentity : s * u = 1 / 10 := by
     unfold u
     field_simp [hsNe]
   rw [mul_sub, mul_one, huIdentity] at hscaled
-  have hend := mul_le_mul_of_nonneg_right hs.2 (sub_nonneg.mpr hlog64)
+  have hend := mul_le_mul_of_nonneg_right hs.2 (sub_nonneg.mpr hlog40)
   nlinarith
 
-/-- Uniform normalized payment for `r₀` on `0 < s ≤ 1/16`. -/
+/-- Uniform normalized payment for `r₀` on `0 < s ≤ 1/10`. -/
 lemma remainder_normalized_payment
-    {s : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ)) :
-    lrLowerFaceR0 s ≤ s * ((1 / 48 : ℝ) * Real.log 64) := by
+    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ)) :
+    lrLowerFaceR0 s ≤ s * ((1 / 30 : ℝ) * Real.log 40) := by
   have hsUnit : s ∈ Ioo (0 : ℝ) 1 :=
-    ⟨hs.1, hs.2.trans (by norm_num)⟩
+    ⟨hs.1, hs.2.trans_lt (by norm_num)⟩
   have hconvex := lrLowerFaceR0_le_mul_prime hsUnit
-  have hprime := lrLowerFaceR0Prime_upper hs
+  have hprime := lrLowerFaceR0Prime_upper_tenth hs
   have hscaled := mul_le_mul_of_nonneg_left hprime hs.1.le
-  have hlog := mul_log_four_div_le_log64_div16 ⟨hs.1, hs.2.le⟩
+  have hlog := mul_log_four_div_le_log40_div10 hs
   calc
     lrLowerFaceR0 s ≤ s * lrLowerFaceR0Prime s := hconvex
     _ ≤ s * (s / 3 * Real.log (4 / s)) := hscaled
     _ = s / 3 * (s * Real.log (4 / s)) := by ring
-    _ ≤ s / 3 * (Real.log 64 / 16) := by
+    _ ≤ s / 3 * (Real.log 40 / 10) := by
       exact mul_le_mul_of_nonneg_left hlog (div_nonneg hs.1.le (by norm_num))
-    _ = s * ((1 / 48 : ℝ) * Real.log 64) := by ring
+    _ = s * ((1 / 30 : ℝ) * Real.log 40) := by ring
 
 lemma lrCertificateQ_eq_q0_add_r0 (y : ℝ) :
     lrCertificateQ y = lrLowerFaceQ0 y + lrLowerFaceR0 y := by
@@ -281,12 +383,12 @@ lemma lrCertificateQ_eq_q0_add_r0 (y : ℝ) :
   ring
 
 lemma boundary_B_mem_Ioo
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     lrCertificateB s (chi * (4 * s)) ∈ Ioo (0 : ℝ) 1 ∧
       lrCertificateB s (4 * s) ∈ Ioo (0 : ℝ) 1 := by
   have hsUnit : s ∈ Ioo (0 : ℝ) 1 :=
-    ⟨hs.1, hs.2.trans (by norm_num)⟩
+    ⟨hs.1, hs.2.trans_lt (by norm_num)⟩
   have hyLeftNonneg : 0 ≤ chi * (4 * s) :=
     mul_nonneg hchi.1 (mul_nonneg (by norm_num) hs.1.le)
   have hyLeftLt : chi * (4 * s) < 1 := by
@@ -309,19 +411,19 @@ lemma boundary_B_mem_Ioo
   exact ⟨hB _ hyLeftNonneg hyLeftLt,
     hB _ hyRight.1.le hyRight.2⟩
 
-lemma log64_le_log_four_div
-    {s : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ)) :
-    Real.log 64 ≤ Real.log (4 / s) := by
-  have harg : (64 : ℝ) ≤ 4 / s := by
+lemma log40_le_log_four_div
+    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ)) :
+    Real.log 40 ≤ Real.log (4 / s) := by
+  have harg : (40 : ℝ) ≤ 4 / s := by
     rw [le_div_iff₀ hs.1]
     nlinarith [hs.2]
   exact Real.log_le_log (by norm_num) harg
 
 lemma q0_collection_lower
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     s / 4 *
-        (coreCoeff s chi * (Real.log 64 + 1) -
+        (coreCoeff s chi * (Real.log 40 + 1) -
           leftCoeff s chi * Real.log (leftCoeff s chi) -
           rightCoeff s / v s chi * Real.log (rightCoeff s) +
           4 * slopeCoeff s chi * Real.log 2) ≤
@@ -333,10 +435,10 @@ lemma q0_collection_lower
   have hcoeff := coefficient_bounds hs hchi
   have hvPos : 0 < v s chi :=
     (by norm_num : (0 : ℝ) < 1 / 2).trans_le hgeom.2.2.1
-  have hlog := log64_le_log_four_div hs
+  have hlog := log40_le_log_four_div hs
   have hcoreLog := mul_le_mul_of_nonneg_left hlog hcoeff.2.2.2.2
   have hinside :
-      coreCoeff s chi * (Real.log 64 + 1) -
+      coreCoeff s chi * (Real.log 40 + 1) -
           leftCoeff s chi * Real.log (leftCoeff s chi) -
           rightCoeff s / v s chi * Real.log (rightCoeff s) +
           4 * slopeCoeff s chi * Real.log 2 ≤
@@ -349,7 +451,7 @@ lemma q0_collection_lower
     (div_nonneg hs.1.le (by norm_num : (0 : ℝ) ≤ 4))
   calc
     s / 4 *
-        (coreCoeff s chi * (Real.log 64 + 1) -
+        (coreCoeff s chi * (Real.log 40 + 1) -
           leftCoeff s chi * Real.log (leftCoeff s chi) -
           rightCoeff s / v s chi * Real.log (rightCoeff s) +
           4 * slopeCoeff s chi * Real.log 2) ≤
@@ -366,9 +468,9 @@ lemma q0_collection_lower
       exact q0_collection_eq hs.1 hcoeff.1 hcoeff.2.1 hvPos
 
 lemma remainder_collection_lower
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
-    -s * ((1 / 12 : ℝ) * Real.log 64) ≤
+    -s * ((2 / 15 : ℝ) * Real.log 40) ≤
       lrLowerFaceR0 (s * leftCoeff s chi) +
         lrLowerFaceR0 (s * rightCoeff s) / v s chi -
         slopeCoeff s chi * lrLowerFaceR0 s := by
@@ -386,20 +488,20 @@ lemma remainder_collection_lower
   have hrRightDiv : 0 ≤ lrLowerFaceR0 (s * rightCoeff s) / v s chi :=
     div_nonneg hrRight hvPos.le
   have hrS : 0 ≤ lrLowerFaceR0 s :=
-    lrLowerFaceR0_nonneg ⟨hs.1, hs.2.trans (by norm_num)⟩
+    lrLowerFaceR0_nonneg ⟨hs.1, hs.2.trans_lt (by norm_num)⟩
   have hA := mul_le_mul_of_nonneg_right hcoeff.2.2.2.1 hrS
   have hrem := remainder_normalized_payment hs
   have hfour := mul_le_mul_of_nonneg_left hrem (by norm_num : (0 : ℝ) ≤ 4)
   have hcost : slopeCoeff s chi * lrLowerFaceR0 s ≤
-      s * ((1 / 12 : ℝ) * Real.log 64) := by
+      s * ((2 / 15 : ℝ) * Real.log 40) := by
     calc
       slopeCoeff s chi * lrLowerFaceR0 s ≤ 4 * lrLowerFaceR0 s := hA
-      _ ≤ 4 * (s * ((1 / 48 : ℝ) * Real.log 64)) := hfour
-      _ = s * ((1 / 12 : ℝ) * Real.log 64) := by ring
+      _ ≤ 4 * (s * ((1 / 30 : ℝ) * Real.log 40)) := hfour
+      _ = s * ((2 / 15 : ℝ) * Real.log 40) := by ring
   linarith
 
 lemma g0_collection_lower
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     s * (-32 * (1 - s) * s * (1 - chi) ^ 2 /
         (x s chi ^ 2 * (1 + v s chi) ^ 2)) ≤
@@ -410,7 +512,7 @@ lemma g0_collection_lower
     have : 0 < v s chi :=
       (by norm_num : (0 : ℝ) < 1 / 2).trans_le hgeom.2.2.1
     linarith
-  have hsOne : s < 1 := hs.2.trans (by norm_num)
+  have hsOne : s < 1 := hs.2.trans_lt (by norm_num)
   have hmul := mul_le_mul_of_nonneg_left hg0
     (sub_nonneg.mpr hsOne.le)
   calc
@@ -452,7 +554,7 @@ lemma boundary_gap_split (s chi : ℝ) :
 /-- The elementary model is a rigorous normalized lower bound for the true
 `k=4` gap budget. -/
 theorem lowerModel_mul_le_gap
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1) :
     s * lowerModel s chi ≤ lrGapBudgetSEChi s (4 * s) chi := by
   have hg0 := g0_collection_lower hs hchi
@@ -464,7 +566,7 @@ theorem lowerModel_mul_le_gap
   nlinarith
 
 theorem gap_nonnegative_of_lowerModel
-    {s chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) (1 / 16 : ℝ))
+    {s chi : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 10 : ℝ))
     (hchi : chi ∈ Icc (0 : ℝ) 1)
     (hlower : 0 ≤ lowerModel s chi) :
     0 ≤ lrGapBudgetSEChi s (4 * s) chi := by

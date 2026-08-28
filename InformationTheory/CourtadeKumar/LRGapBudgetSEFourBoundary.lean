@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRGapBudgetSEEndpointValueCertificate
+import InformationTheory.CourtadeKumar.LRGapBudgetSEFourBoundaryModelCertificate
 
 /-!
 # Checked subdivision on the `e = 4s` boundary
@@ -116,12 +117,12 @@ theorem discardCheck_sound (box : Box) (data : DiscardData)
           4 * chi * s := by nlinarith
       exact (not_le_of_gt (hreal.trans_le hmono)) hrelevant
 
-def acceptCheck (terms sqrtFuel logFuel : ℕ) (box : Box) : Bool :=
+def endpointAcceptCheck (terms sqrtFuel logFuel : ℕ) (box : Box) : Bool :=
   LRGapBudgetSEEndpointValueCertificate.autoAccepts
     terms sqrtFuel logFuel box.hull
 
-theorem acceptCheck_sound (terms sqrtFuel logFuel : ℕ) (box : Box)
-    (hcheck : acceptCheck terms sqrtFuel logFuel box = true) :
+theorem endpointAcceptCheck_sound (terms sqrtFuel logFuel : ℕ) (box : Box)
+    (hcheck : endpointAcceptCheck terms sqrtFuel logFuel box = true) :
     ∀ s chi, box.Contains s chi →
       0 ≤ lrGapBudgetSEChi s (4 * s) chi := by
   intro s chi hpoint
@@ -133,11 +134,81 @@ theorem acceptCheck_sound (terms sqrtFuel logFuel : ℕ) (box : Box)
     ⟨hhull.2.2.1, hhull.2.2.2.1⟩
     ⟨hhull.2.2.2.2.1, hhull.2.2.2.2.2⟩
 
+def analyticAcceptCheck (terms sqrtFuel logFuel : ℕ) (box : Box) : Bool :=
+  decide (0 ≤ box.sLo ∧ box.sHi ≤ 1 / 10 ∧
+      0 ≤ box.chiLo ∧ box.chiHi ≤ 1) &&
+    LRGapBudgetSEFourBoundaryModelCertificate.autoAccepts
+      terms sqrtFuel logFuel box.hull.sInterval box.hull.chiInterval
+
+lemma boundary_value_zero (chi : ℝ) :
+    lrGapBudgetSEChi 0 (4 * 0) chi = 0 := by
+  simp [lrGapBudgetSEChi, lrCertificateG0, lrCertificateQ,
+    lrCertificateB, topJ]
+  norm_num
+
+theorem analyticAcceptCheck_sound (terms sqrtFuel logFuel : ℕ) (box : Box)
+    (hcheck : analyticAcceptCheck terms sqrtFuel logFuel box = true) :
+    ∀ s chi, box.Contains s chi →
+      0 ≤ lrGapBudgetSEChi s (4 * s) chi := by
+  have hparts :
+      (0 ≤ box.sLo ∧ box.sHi ≤ 1 / 10 ∧
+        0 ≤ box.chiLo ∧ box.chiHi ≤ 1) ∧
+      LRGapBudgetSEFourBoundaryModelCertificate.autoAccepts
+        terms sqrtFuel logFuel box.hull.sInterval
+          box.hull.chiInterval = true := by
+    simpa [analyticAcceptCheck] using hcheck
+  intro s chi hpoint
+  have hhull := box.hull_contains hpoint
+  have hlower :=
+    LRGapBudgetSEFourBoundaryModelCertificate.autoAccepts_sound
+      terms sqrtFuel logFuel box.hull.sInterval box.hull.chiInterval
+      hparts.2 s chi ⟨hhull.1, hhull.2.1⟩
+        ⟨hhull.2.2.2.2.1, hhull.2.2.2.2.2⟩
+  have hsNonnegRat : (0 : ℚ) ≤ box.sLo := hparts.1.1
+  have hsHiRat : box.sHi ≤ (1 / 10 : ℚ) := hparts.1.2.1
+  have hchiLoRat : (0 : ℚ) ≤ box.chiLo := hparts.1.2.2.1
+  have hchiHiRat : box.chiHi ≤ (1 : ℚ) := hparts.1.2.2.2
+  have hsNonneg : (0 : ℝ) ≤ s := by
+    have hlo : (0 : ℝ) ≤ (box.sLo : ℝ) := by exact_mod_cast hsNonnegRat
+    exact hlo.trans hpoint.1
+  have hsLe : s ≤ (1 / 10 : ℝ) := by
+    have hcast : (box.sHi : ℝ) ≤ (((1 / 10 : ℚ) : ℝ)) := by
+      exact_mod_cast hsHiRat
+    have hhi : (box.sHi : ℝ) ≤ (1 / 10 : ℝ) := by
+      norm_num at hcast ⊢
+      exact hcast
+    exact hpoint.2.1.trans hhi
+  have hchiMem : chi ∈ Set.Icc (0 : ℝ) 1 := by
+    constructor
+    · have hlo : (0 : ℝ) ≤ (box.chiLo : ℝ) := by exact_mod_cast hchiLoRat
+      exact hlo.trans hpoint.2.2.1
+    · have hhi : (box.chiHi : ℝ) ≤ 1 := by exact_mod_cast hchiHiRat
+      exact hpoint.2.2.2.trans hhi
+  rcases hsNonneg.eq_or_lt with rfl | hsPos
+  · rw [boundary_value_zero]
+  · exact LRGapBudgetSEFourBoundaryAnalytic.gap_nonnegative_of_lowerModel
+      ⟨hsPos, hsLe⟩ hchiMem hlower
+
+def acceptCheck (terms sqrtFuel logFuel : ℕ) (box : Box) : Bool :=
+  endpointAcceptCheck terms sqrtFuel logFuel box ||
+    analyticAcceptCheck terms sqrtFuel logFuel box
+
+theorem acceptCheck_sound (terms sqrtFuel logFuel : ℕ) (box : Box)
+    (hcheck : acceptCheck terms sqrtFuel logFuel box = true) :
+    ∀ s chi, box.Contains s chi →
+      0 ≤ lrGapBudgetSEChi s (4 * s) chi := by
+  have hparts : endpointAcceptCheck terms sqrtFuel logFuel box = true ∨
+      analyticAcceptCheck terms sqrtFuel logFuel box = true := by
+    simpa [acceptCheck, Bool.or_eq_true] using hcheck
+  rcases hparts with hendpoint | hanalytic
+  · exact endpointAcceptCheck_sound terms sqrtFuel logFuel box hendpoint
+  · exact analyticAcceptCheck_sound terms sqrtFuel logFuel box hanalytic
+
 inductive Tree where
   | accept
   | discard (data : DiscardData)
   | split (axis : Axis) (cut : ℚ) (lower upper : Tree)
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def Tree.check (terms sqrtFuel logFuel : ℕ) : Box → Tree → Bool
   | box, .accept => acceptCheck terms sqrtFuel logFuel box
@@ -234,6 +305,13 @@ def Tree.nodes : Tree → ℕ
   | .accept => 1
   | .discard _ => 1
   | .split _ _ lower upper => 1 + lower.nodes + upper.nodes
+
+theorem Tree.check_split_iff (terms sqrtFuel logFuel : ℕ)
+    (box : Box) (axis : Axis) (cut : ℚ) (lower upper : Tree) :
+    (Tree.split axis cut lower upper).check terms sqrtFuel logFuel box = true ↔
+      lower.check terms sqrtFuel logFuel (box.lower axis cut) = true ∧
+        upper.check terms sqrtFuel logFuel (box.upper axis cut) = true := by
+  simp only [Tree.check, Bool.and_eq_true]
 
 theorem buildTree_check_of_eq (terms sqrtFuel logFuel fuel : ℕ)
     (box : Box) (tree : Tree)
