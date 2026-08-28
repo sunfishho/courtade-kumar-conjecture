@@ -127,4 +127,85 @@ theorem lrGapBudgetSEChiDerivE_nonnegative_of_endpointMinorant
     0 ≤ lrGapBudgetSEChiDerivE s e chi :=
   hminorant.trans (lrGapBudgetSEChiDerivEEndpointMinorant_le hs he hchi)
 
+/-- A stronger endpoint-safe model which retains the regular value term
+`-Q(B(s,e)) v' / v²`.  Unlike the discarded `Q'` terms, this expression
+stays finite when `s = 0` and can be enclosed by the zero-aware `Q` value
+certificate. -/
+noncomputable def lrGapBudgetSEChiDerivEEndpointRetainedQMinorant
+    (s e chi : ℝ) : ℝ :=
+  let x := 1 - chi * e
+  let v := Real.sqrt ((1 - e) / x)
+  let v' := (chi - 1) / (2 * v * x ^ 2)
+  lrGapBudgetSEChiDerivEEndpointMinorant s e chi -
+    lrCertificateQ (lrCertificateB s e) * v' / v ^ 2
+
+/-- The retained-`Q` endpoint model is still a lower bound for the exact
+derivative; the gap now consists only of the two `Q' ≥ 1/2` remainders. -/
+theorem lrGapBudgetSEChiDerivEEndpointRetainedQMinorant_le
+    {s e chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) 1)
+    (he : e ∈ Ioo (0 : ℝ) 1) (hchi : chi ∈ Ioo (0 : ℝ) 1) :
+    lrGapBudgetSEChiDerivEEndpointRetainedQMinorant s e chi ≤
+      lrGapBudgetSEChiDerivE s e chi := by
+  have hchiE : chi * e ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos hchi.1 he.1
+    · calc
+        chi * e < 1 * e := mul_lt_mul_of_pos_right hchi.2 he.1
+        _ = e := one_mul _
+        _ < 1 := he.2
+  have hby0 := lrCertificateB_mem_Ioo hs hchiE
+  have hbe := lrCertificateB_mem_Ioo hs he
+  have hqBy0 : (1 / 2 : ℝ) ≤
+      lrCertificateQPrime (lrCertificateB s (chi * e)) :=
+    lrCertificateQPrime_half_le hby0
+  have hqBe : (1 / 2 : ℝ) ≤
+      lrCertificateQPrime (lrCertificateB s e) :=
+    lrCertificateQPrime_half_le hbe
+  set x : ℝ := 1 - chi * e with hxDef
+  have hxPos : 0 < x := by
+    rw [hxDef]
+    exact sub_pos.mpr hchiE.2
+  set v : ℝ := Real.sqrt ((1 - e) / x) with hvDef
+  have hvPos : 0 < v := by
+    rw [hvDef]
+    exact Real.sqrt_pos.2 (div_pos (sub_pos.mpr he.2) hxPos)
+  set v' : ℝ := (chi - 1) / (2 * v * x ^ 2) with hvPrimeDef
+  have hfirst : 0 ≤
+      (lrCertificateQPrime (lrCertificateB s (chi * e)) - 1 / 2) *
+        (1 - s) * chi := by
+    exact mul_nonneg
+      (mul_nonneg (sub_nonneg.mpr hqBy0) (sub_nonneg.mpr hs.2.le))
+      hchi.1.le
+  have hsecond : 0 ≤
+      (lrCertificateQPrime (lrCertificateB s e) - 1 / 2) *
+        (1 - s) / v := by
+    exact div_nonneg
+      (mul_nonneg (sub_nonneg.mpr hqBe) (sub_nonneg.mpr hs.2.le)) hvPos.le
+  have hidentity :
+      lrGapBudgetSEChiDerivE s e chi -
+          lrGapBudgetSEChiDerivEEndpointRetainedQMinorant s e chi =
+        (lrCertificateQPrime (lrCertificateB s (chi * e)) - 1 / 2) *
+            (1 - s) * chi +
+          (lrCertificateQPrime (lrCertificateB s e) - 1 / 2) *
+            (1 - s) / v := by
+    unfold lrGapBudgetSEChiDerivE
+      lrGapBudgetSEChiDerivEEndpointRetainedQMinorant
+      lrGapBudgetSEChiDerivEEndpointMinorant
+    dsimp only
+    rw [← hxDef, ← hvDef, ← hvPrimeDef]
+    field_simp [hvPos.ne']
+    ring
+  rw [← sub_nonneg]
+  rw [hidentity]
+  exact add_nonneg hfirst hsecond
+
+theorem lrGapBudgetSEChiDerivE_nonnegative_of_endpointRetainedQMinorant
+    {s e chi : ℝ} (hs : s ∈ Ioo (0 : ℝ) 1)
+    (he : e ∈ Ioo (0 : ℝ) 1) (hchi : chi ∈ Ioo (0 : ℝ) 1)
+    (hminorant :
+      0 ≤ lrGapBudgetSEChiDerivEEndpointRetainedQMinorant s e chi) :
+    0 ≤ lrGapBudgetSEChiDerivE s e chi :=
+  hminorant.trans
+    (lrGapBudgetSEChiDerivEEndpointRetainedQMinorant_le hs he hchi)
+
 end CourtadeKumar
