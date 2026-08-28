@@ -121,6 +121,31 @@ theorem lrCertificateW_pos {point : CertificatePoint}
   rw [lrCertificateW_eq_lrWKernel hinterior.1]
   exact lrWKernel_one_pos hR
 
+/-- The compensation coefficient `delta = (1-vx)/(1+v)` is nonnegative
+throughout the regular physical chart. -/
+theorem lrDeterminantDelta_nonnegative {point : CertificatePoint}
+    (hinterior : LRHighShapeInterior point) :
+    0 ≤ lrDeterminantDelta point := by
+  have hv := lrCertificateV_mem_Ioo hinterior
+  have hx : lrCertificateX point ∈ Ioo (0 : ℝ) 1 := by
+    have hprodPos : 0 < point.chi * lrCertificateE point :=
+      mul_pos hinterior.2.2.1 hinterior.2.1.1
+    have hprodLt : point.chi * lrCertificateE point < 1 := by
+      calc
+        point.chi * lrCertificateE point < 1 * lrCertificateE point :=
+          mul_lt_mul_of_pos_right hinterior.2.2.2 hinterior.2.1.1
+        _ < 1 := by simpa using hinterior.2.1.2
+    unfold lrCertificateX
+    constructor <;> linarith
+  have hproduct : lrCertificateV point * lrCertificateX point ≤ 1 :=
+    calc
+      lrCertificateV point * lrCertificateX point ≤
+          1 * lrCertificateX point :=
+        mul_le_mul_of_nonneg_right hv.2.le hx.1.le
+      _ ≤ 1 := by simpa using hx.2.le
+  unfold lrDeterminantDelta
+  exact div_nonneg (sub_nonneg.mpr hproduct) (by linarith [hv.1])
+
 theorem lrCertificateHalfSlope_pos {point : CertificatePoint}
     (hinterior : LRHighShapeInterior point) :
     0 < lrCertificateHalfSlope point := by

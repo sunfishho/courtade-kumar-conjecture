@@ -34,10 +34,31 @@ def LRDeterminantClearedSingularAt (point : CertificatePoint) : Prop :=
     (lrDeterminantC0 point) (lrCertificateX point)
     (lrDeterminantT point)
 
+/-- The reduced numerator (A1) used by the analytic bridges after discarding
+the complete favorable `4 * delta * B * W` atom. -/
+def LRDeterminantReducedClearedAt (point : CertificatePoint) : Prop :=
+  0 ≤ lrDeterminantReducedCleared
+    (lrCertificateBFlow point) (lrDeterminantD1 point)
+    (lrCertificateGShape point) (lrDeterminantPsi point)
+    (lrDeterminantC0 point) (lrCertificateX point)
+    (lrDeterminantT point)
+
 /-- The two scalar certificate formats accepted in the audited region table. -/
 def LRDeterminantAdmittedTarget (point : CertificatePoint) : Prop :=
   LRDeterminantFirstBracketAt point ∨
     LRDeterminantClearedSingularAt point
+
+/-- A reduced analytic target is an admitted determinant certificate. -/
+theorem lrDeterminantAdmittedTarget_of_reducedCleared
+    {point : CertificatePoint}
+    (hinterior : LRHighShapeInterior point)
+    (hreduced : LRDeterminantReducedClearedAt point) :
+    LRDeterminantAdmittedTarget point := by
+  right
+  exact lrDeterminantClearedSingular_nonnegative_of_reduced hreduced
+    (lrDeterminantDelta_nonnegative hinterior)
+    (lrCertificateBFlow_pos hinterior).le
+    (lrCertificateW_pos hinterior).le
 
 /-- Either audited determinant certificate format implies the coordinate
 tangent target.  In the cleared-determinant branch, the coefficient sign is

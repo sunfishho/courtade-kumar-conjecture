@@ -27,6 +27,33 @@ noncomputable def lrDeterminantFirstBracket
     (B D1 G psi delta W : ℝ) : ℝ :=
   B * (psi - G + 4 * delta * W) + D1 * psi
 
+/-- The reduced cleared numerator (A1), obtained by removing the favorable
+atom `4 * delta * B * W` from the fully cleared determinant. -/
+noncomputable def lrDeterminantReducedCleared
+    (B D1 G psi c0 x T : ℝ) : ℝ :=
+  D1 * G + (B + D1) * (psi - G) + c0 * (B * x - D1) * T
+
+/-- Exact reduced-target decomposition (A1).  Keeping the coefficient
+`B + D1` here is essential for the entropy-remainder payment. -/
+theorem lrDeterminantClearedSingular_eq_reduced
+    (B D1 G psi delta W c0 x T : ℝ) :
+    lrDeterminantClearedSingular B D1 G psi delta W c0 x T =
+      lrDeterminantReducedCleared B D1 G psi c0 x T +
+        4 * delta * B * W := by
+  unfold lrDeterminantClearedSingular lrDeterminantReducedCleared
+  ring
+
+/-- It is sign-safe to prove only the reduced cleared numerator whenever
+the discarded atom has nonnegative factors. -/
+theorem lrDeterminantClearedSingular_nonnegative_of_reduced
+    {B D1 G psi delta W c0 x T : ℝ}
+    (hreduced : 0 ≤ lrDeterminantReducedCleared B D1 G psi c0 x T)
+    (hdelta : 0 ≤ delta) (hB : 0 ≤ B) (hW : 0 ≤ W) :
+    0 ≤ lrDeterminantClearedSingular B D1 G psi delta W c0 x T := by
+  rw [lrDeterminantClearedSingular_eq_reduced]
+  exact add_nonneg hreduced
+    (mul_nonneg (mul_nonneg (mul_nonneg (by norm_num) hdelta) hB) hW)
+
 /-- Exact difference (D3) between the full and singular normalized
 determinants. -/
 theorem lrDeterminantNormalized_sub_singular
