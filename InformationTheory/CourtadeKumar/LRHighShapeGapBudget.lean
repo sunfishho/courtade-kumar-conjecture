@@ -19,6 +19,64 @@ noncomputable def lrCertificateGapBudget (point : CertificatePoint) : ℝ :=
   lrCertificateGap point -
     lrCertificateHalfSlope point * (lrCertificateM point / 2)
 
+/-- Cancellation-free form of the gap budget.  Unlike the original
+`(s,k,chi)` presentation, this expression only depends on `k` through the
+bounded physical defect `e = s*k`. -/
+noncomputable def lrGapBudgetSEChi (s e chi : ℝ) : ℝ :=
+  let x := 1 - chi * e
+  let v := Real.sqrt ((1 - e) / x)
+  let logFactor := Real.log 2 + Real.log (1 + v) - Real.log (2 + v)
+  (1 - s) * lrCertificateG0 v +
+      lrCertificateQ (lrCertificateB s (chi * e)) +
+      lrCertificateQ (lrCertificateB s e) / v -
+    s * (1 + v) / v * (Real.log 2 + 2 * logFactor) -
+    2 * (2 + v) / (1 + v) *
+      (lrCertificateQ s - s * Real.log 2)
+
+/-- Derivative of the bounded-coordinate budget in the physical defect `e`,
+with `s` and `chi` held fixed. -/
+noncomputable def lrGapBudgetSEChiDerivE (s e chi : ℝ) : ℝ :=
+  let x := 1 - chi * e
+  let v := Real.sqrt ((1 - e) / x)
+  let v' := (chi - 1) / (2 * v * x ^ 2)
+  let by0 := lrCertificateB s (chi * e)
+  let be := lrCertificateB s e
+  let by0' := (1 - s) * chi
+  let be' := 1 - s
+  let logFactor := Real.log 2 + Real.log (1 + v) - Real.log (2 + v)
+  let logFactor' := v' / (1 + v) - v' / (2 + v)
+  let ratio := (1 + v) / v
+  let ratio' := -v' / v ^ 2
+  (1 - s) * lrCertificateG0Prime v * v' +
+      lrCertificateQPrime by0 * by0' +
+      (lrCertificateQPrime be * be' * v -
+        lrCertificateQ be * v') / v ^ 2 -
+    s * (ratio' * (Real.log 2 + 2 * logFactor) +
+      ratio * (2 * logFactor')) +
+    2 * v' / (1 + v) ^ 2 *
+      (lrCertificateQ s - s * Real.log 2)
+
+/-- Exact bounded-coordinate expansion of the certificate gap budget. -/
+theorem lrCertificateGapBudget_eq_SEChi
+    {point : CertificatePoint} (hv : 0 < lrCertificateV point) :
+    lrCertificateGapBudget point =
+      lrGapBudgetSEChi point.s (lrCertificateE point) point.chi := by
+  have hvPlus : 1 + lrCertificateV point ≠ 0 := by linarith
+  have hvEq :
+      Real.sqrt ((1 - lrCertificateE point) /
+        (1 - point.chi * lrCertificateE point)) =
+          lrCertificateV point := by
+    rw [show 1 - point.chi * lrCertificateE point =
+      lrCertificateX point by rfl]
+    rfl
+  unfold lrCertificateGapBudget lrCertificateGap lrCertificateSquareTarget
+    lrCertificatePrefixAtM lrCertificateHalfSlope lrCertificateM
+    lrGapBudgetSEChi lrCertificateY0
+  dsimp only
+  rw [hvEq]
+  field_simp [hv.ne', hvPlus]
+  ring
+
 /-- Exact identification of the coordinate gap budget with the flow budget. -/
 theorem lrCertificateGapBudget_eq_flow
     {point : CertificatePoint}
@@ -92,6 +150,53 @@ noncomputable def lrCertificateGapBudgetDerivS
 noncomputable def lrCertificateGapBudgetDerivChi
     (point : CertificatePoint) : ℝ :=
   lrCertificateGapBudgetCurveDeriv point 0 0 1
+
+/-- The old unbounded-coordinate derivative is `s` times the derivative in
+the bounded defect coordinate `e=s*k`. -/
+theorem lrCertificateGapBudgetDerivK_eq_s_mul_derivE
+    {point : CertificatePoint} (hv : 0 < lrCertificateV point)
+    (hx : 0 < lrCertificateX point) :
+    lrCertificateGapBudgetDerivK point =
+      point.s * lrGapBudgetSEChiDerivE point.s
+        (lrCertificateE point) point.chi := by
+  have hvPlus : 1 + lrCertificateV point ≠ 0 := by linarith
+  have htwoPlus : 2 + lrCertificateV point ≠ 0 := by linarith
+  have hxEq : 1 - point.chi * lrCertificateE point =
+      lrCertificateX point := rfl
+  have hvEq :
+      Real.sqrt ((1 - lrCertificateE point) /
+        (1 - point.chi * lrCertificateE point)) =
+          lrCertificateV point := by
+    rw [hxEq]
+    rfl
+  have hvDeriv : lrCertificateVDeriv point point.s
+      (-(point.chi * point.s)) =
+      point.s * ((point.chi - 1) /
+        (2 * lrCertificateV point * lrCertificateX point ^ 2)) := by
+    unfold lrCertificateVDeriv
+      lrCertificateVRadicandDeriv lrCertificateX
+    field_simp [hv.ne', hx.ne']
+    ring
+  unfold lrCertificateGapBudgetDerivK lrCertificateGapBudgetCurveDeriv
+    lrGapBudgetSEChiDerivE lrCertificateGapDeriv
+    lrCertificateSquareTargetDeriv lrCertificatePrefixAtMDeriv
+    lrCertificateHalfSlopeDeriv lrCertificateMDeriv
+    lrCertificateHalfSlope lrCertificateM lrCertificateBDeriv
+    lrCertificateY0
+  dsimp only
+  simp only [zero_mul, zero_add, add_zero, mul_one, neg_zero]
+  rw [hvEq, hxEq, hvDeriv]
+  field_simp [hv.ne', hvPlus, htwoPlus, hx.ne']
+  ring
+
+theorem lrCertificateGapBudgetDerivK_nonneg_of_derivE
+    {point : CertificatePoint} (hs : 0 ≤ point.s)
+    (hv : 0 < lrCertificateV point) (hx : 0 < lrCertificateX point)
+    (hderivE : 0 ≤ lrGapBudgetSEChiDerivE point.s
+      (lrCertificateE point) point.chi) :
+    0 ≤ lrCertificateGapBudgetDerivK point := by
+  rw [lrCertificateGapBudgetDerivK_eq_s_mul_derivE hv hx]
+  exact mul_nonneg hs hderivE
 
 theorem hasDerivAt_lrCertificateGapBudget_k
     {point : CertificatePoint} (hpoint : LRHighShapeInterior point) :
