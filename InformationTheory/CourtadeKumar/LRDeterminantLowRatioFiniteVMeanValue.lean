@@ -340,29 +340,31 @@ The intended implementation evaluates `cancellationTarget`; the semantic
 contract is stated using the equal `chartTarget`. -/
 structure Oracle where
   Payload : Type
+  DerivativePayload : Type
   check : CertificateBox → Payload → Bool
+  derivativeCheck : CertificateBox → DerivativePayload → Bool
   value : CertificateBox → Payload → RationalEnclosure
-  derivS : CertificateBox → Payload → RationalEnclosure
-  derivK : CertificateBox → Payload → RationalEnclosure
+  derivS : CertificateBox → DerivativePayload → RationalEnclosure
+  derivK : CertificateBox → DerivativePayload → RationalEnclosure
   value_sound : ∀ box payload, check box payload = true →
     ∀ coordinate, box.Contains coordinate →
       (value box payload).Contains (chartTarget coordinate)
-  derivS_sound : ∀ box payload, check box payload = true →
+  derivS_sound : ∀ box payload, derivativeCheck box payload = true →
     ∀ coordinate, box.Contains coordinate →
       (derivS box payload).Contains (chartDerivS coordinate)
-  derivK_sound : ∀ box payload, check box payload = true →
+  derivK_sound : ∀ box payload, derivativeCheck box payload = true →
     ∀ coordinate, box.Contains coordinate →
       (derivK box payload).Contains (chartDerivK coordinate)
 
 structure CenteredPayload (oracle : Oracle) where
   center : oracle.Payload
-  derivative : oracle.Payload
+  derivative : oracle.DerivativePayload
 
 def payloadCheck (oracle : Oracle) (box : CertificateBox)
     (payload : CenteredPayload oracle) : Bool :=
   chartBoxCheck box &&
     oracle.check (centerSKBox box) payload.center &&
-    oracle.check box payload.derivative
+    oracle.derivativeCheck box payload.derivative
 
 def evaluate (oracle : Oracle) (box : CertificateBox)
     (payload : CenteredPayload oracle) : MidpointSKCertificate :=
@@ -376,7 +378,7 @@ def accepts (oracle : Oracle) (box : CertificateBox)
 
 noncomputable def derivativeEnclosures (oracle : Oracle)
     {box : CertificateBox} {payload : CenteredPayload oracle}
-    (hderivative : oracle.check box payload.derivative = true)
+    (hderivative : oracle.derivativeCheck box payload.derivative = true)
     (hdomain : chartBoxCheck box = true) :
     BoxSKDerivativeEnclosuresOn chartTarget box
       (evaluate oracle box payload) (fun h ↦ 0 < h ∧ h < 1) := by
@@ -415,7 +417,7 @@ theorem positive_of_accepts (oracle : Oracle)
   have hpayloadParts :
       (chartBoxCheck box = true ∧
         oracle.check (centerSKBox box) payload.center = true) ∧
-      oracle.check box payload.derivative = true := by
+      oracle.derivativeCheck box payload.derivative = true := by
     simpa [payloadCheck] using hacceptParts.1
   have hvalue : ∀ anchor, box.Contains anchor →
       (evaluate oracle box payload).value.Contains
@@ -497,7 +499,7 @@ theorem normalized_nonnegative
         have hpayloadParts :
             (chartBoxCheck box = true ∧
               oracle.check (centerSKBox box) payload.center = true) ∧
-            oracle.check box payload.derivative = true := by
+            oracle.derivativeCheck box payload.derivative = true := by
           simpa [payloadCheck] using hacceptParts.1
         have hopenParts :
             (0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧

@@ -20,7 +20,7 @@ raw hull, transports its two smooth partial derivatives back through
 This hybrid keeps the narrow historical value expression while avoiding a
 second proof of the very large sharp `A/C` derivative assembly.
 
-There is no trusted datum in `Payload`: all fields are checked Boolean
+There is no trusted datum in either payload: all fields are checked Boolean
 certificates.  `BasicSoundness` below names the one fact which the current
 upper-`K` module previously proved only inside its final theorem:
 simultaneous soundness of its `e`, `v`, `Y`, `B`, and `delta` AD nodes.  The
@@ -78,12 +78,15 @@ theorem cancellationTarget_eq_sharp
 
 /-! ## Payload, Boolean checker, and exact interval expression -/
 
-/-- The sharp payload is extended only by `log Y` for the value formula.
-The final field supplies an independently checked closed-face derivative
-pass; it is still untrusted finite data. -/
+/-- The center-value payload extends the sharp graph only by `log Y`. -/
 structure Payload where
   sharp : LRUpperKReplayCertificate.Payload
   logY : RationalEnclosure.LogIntervalCertificate
+
+/-- The whole-box derivative payload combines the sharp denominator graph
+with the independently checked closed-face derivative pass. -/
+structure DerivativePayload where
+  sharp : LRUpperKReplayCertificate.Payload
   derivative : LRHighShapeVZeroFaceCertificate
 
 /-- Decode a chart box to a raw axis-aligned hull.  This hull is used only
@@ -96,6 +99,80 @@ def rawHull (box : CertificateBox) : CertificateBox where
   kHi := (LRUpperKReplayCertificate.physicalKAD box).value.upper
   chiLo := (LRUpperKReplayCertificate.physicalChiAD box).value.lower
   chiHi := (LRUpperKReplayCertificate.physicalChiAD box).value.upper
+
+/-- The monotone raw hull contains the physical point decoded from every
+chart point, provided the three chart coordinates have nonnegative lower
+endpoints.  This is the common geometric bridge used by both the derivative
+oracle and chart-lifted discard certificates. -/
+theorem rawHull_contains_decode_of_nonnegative
+    {box : CertificateBox} {coordinate : CertificatePoint}
+    (hsNonnegative : (0 : ℚ) ≤
+      (LRUpperKReplayCertificate.sAD box).value.lower)
+    (hKNonnegative : (0 : ℚ) ≤
+      (LRUpperKReplayCertificate.ratioAD box).value.lower)
+    (hhNonnegative : (0 : ℚ) ≤
+      (LRUpperKReplayCertificate.hAD box).value.lower)
+    (hcoordinate : box.Contains coordinate) :
+    (rawHull box).Contains
+      (lrDeterminantKChartDecode coordinate) := by
+  have hs := IntervalAD.contains_variableS
+    (show box.sInterval.Contains coordinate.s from
+      ⟨hcoordinate.1, hcoordinate.2.1⟩)
+  have hK := IntervalAD.contains_variableK
+    (show box.kInterval.Contains coordinate.k from
+      ⟨hcoordinate.2.2.1, hcoordinate.2.2.2.1⟩)
+  have hh := IntervalAD.contains_variableChi
+    (show box.chiInterval.Contains coordinate.chi from
+      ⟨hcoordinate.2.2.2.2.1, hcoordinate.2.2.2.2.2⟩)
+  have hk := LRUpperKReplayCertificate.mulNonnegativeAD_sound
+    hsNonnegative hKNonnegative hs hK
+  have hchi := LRUpperKReplayCertificate.mulNonnegativeAD_sound
+    hhNonnegative hhNonnegative hh hh
+  exact ⟨hcoordinate.1, hcoordinate.2.1,
+    (by simpa [rawHull, LRUpperKReplayCertificate.physicalKAD,
+        LRUpperKReplayCertificate.sAD,
+        LRUpperKReplayCertificate.ratioAD,
+        lrDeterminantKChartDecode] using hk.1.1),
+    (by simpa [rawHull, LRUpperKReplayCertificate.physicalKAD,
+        LRUpperKReplayCertificate.sAD,
+        LRUpperKReplayCertificate.ratioAD,
+        lrDeterminantKChartDecode] using hk.1.2),
+    (by simpa [rawHull, LRUpperKReplayCertificate.physicalChiAD,
+        LRUpperKReplayCertificate.hAD,
+        lrDeterminantKChartDecode, pow_two] using hchi.1.1),
+    (by simpa [rawHull, LRUpperKReplayCertificate.physicalChiAD,
+        LRUpperKReplayCertificate.hAD,
+        lrDeterminantKChartDecode, pow_two] using hchi.1.2)⟩
+
+/-- The executable chart-domain check supplies the nonnegativity hypotheses
+needed by `rawHull_contains_decode_of_nonnegative`. -/
+theorem rawHull_contains_decode_of_chartBoxCheck
+    {box : CertificateBox} {coordinate : CertificatePoint}
+    (hbox : LRLowRatioFiniteVMeanValue.chartBoxCheck box = true)
+    (hcoordinate : box.Contains coordinate) :
+    (rawHull box).Contains
+      (lrDeterminantKChartDecode coordinate) := by
+  have hparts :
+      (0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧
+      (0 : ℚ) < box.kLo ∧ box.kLo ≤ box.kHi ∧
+        box.sHi * box.sHi * box.kHi < 1 ∧
+      (0 : ℚ) ≤ box.chiLo ∧ box.chiLo ≤ box.chiHi ∧
+        box.chiHi ≤ 1 := by
+    simpa [LRLowRatioFiniteVMeanValue.chartBoxCheck] using hbox
+  rcases hparts with
+    ⟨hsPositive, _hsOrder, _hsUpper, hKPositive, _hKOrder,
+      _heUpper, hhNonnegative, _hhOrder, _hhUpper⟩
+  exact rawHull_contains_decode_of_nonnegative
+    (by simpa [LRUpperKReplayCertificate.sAD,
+        CertificateBox.sInterval, IntervalAD.variableS] using
+      hsPositive.le)
+    (by simpa [LRUpperKReplayCertificate.ratioAD,
+        CertificateBox.kInterval, IntervalAD.variableK] using
+      hKPositive.le)
+    (by simpa [LRUpperKReplayCertificate.hAD,
+        CertificateBox.chiInterval, IntervalAD.variableChi] using
+      hhNonnegative)
+    hcoordinate
 
 def DAD (terms : ℕ) (box : CertificateBox) (payload : Payload) : IntervalAD :=
   IntervalAD.mul (IntervalAD.const (1 / 2))
@@ -138,8 +215,7 @@ def payloadCheck (terms : ℕ) (box : CertificateBox)
   LRUpperKReplayCertificate.payloadCheck box payload.sharp &&
     payload.logY.check (LRUpperKReplayCertificate.yAD box).value &&
     decide ((0 : ℚ) <
-      (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower) &&
-    payload.derivative.skCheck (rawHull box)
+      (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower)
 
 structure Valid (terms : ℕ) (box : CertificateBox)
     (payload : Payload) : Prop where
@@ -148,22 +224,50 @@ structure Valid (terms : ℕ) (box : CertificateBox)
   logY : payload.logY.check (LRUpperKReplayCertificate.yAD box).value = true
   bFlowPositive : (0 : ℚ) <
     (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower
-  derivative : payload.derivative.skCheck (rawHull box) = true
 
 theorem payloadCheck_sound {terms : ℕ} {box : CertificateBox}
     {payload : Payload} (hcheck : payloadCheck terms box payload = true) :
     Valid terms box payload := by
   have hparts :
-      ((LRUpperKReplayCertificate.payloadCheck box payload.sharp = true ∧
-          payload.logY.check (LRUpperKReplayCertificate.yAD box).value = true) ∧
+      (LRUpperKReplayCertificate.payloadCheck box payload.sharp = true ∧
+        payload.logY.check (LRUpperKReplayCertificate.yAD box).value = true) ∧
+      decide ((0 : ℚ) <
+        (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower) = true := by
+    simpa [payloadCheck] using hcheck
+  exact
+    { sharpCheck := hparts.1.1
+      sharp := LRUpperKReplayCertificate.payloadCheck_sound hparts.1.1
+      logY := hparts.1.2
+      bFlowPositive := by simpa using hparts.2 }
+
+def derivativePayloadCheck (terms : ℕ) (box : CertificateBox)
+    (payload : DerivativePayload) : Bool :=
+  LRUpperKReplayCertificate.payloadCheck box payload.sharp &&
+    decide ((0 : ℚ) <
+      (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower) &&
+    payload.derivative.skCheck (rawHull box)
+
+structure DerivativeValid (terms : ℕ) (box : CertificateBox)
+    (payload : DerivativePayload) : Prop where
+  sharpCheck : LRUpperKReplayCertificate.payloadCheck box payload.sharp = true
+  sharp : LRUpperKReplayCertificate.Valid box payload.sharp
+  bFlowPositive : (0 : ℚ) <
+    (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower
+  derivative : payload.derivative.skCheck (rawHull box) = true
+
+theorem derivativePayloadCheck_sound {terms : ℕ} {box : CertificateBox}
+    {payload : DerivativePayload}
+    (hcheck : derivativePayloadCheck terms box payload = true) :
+    DerivativeValid terms box payload := by
+  have hparts :
+      (LRUpperKReplayCertificate.payloadCheck box payload.sharp = true ∧
         decide ((0 : ℚ) <
           (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp).value.lower) = true) ∧
       payload.derivative.skCheck (rawHull box) = true := by
-    simpa [payloadCheck] using hcheck
+    simpa [derivativePayloadCheck] using hcheck
   exact
-    { sharpCheck := hparts.1.1.1
-      sharp := LRUpperKReplayCertificate.payloadCheck_sound hparts.1.1.1
-      logY := hparts.1.1.2
+    { sharpCheck := hparts.1.1
+      sharp := LRUpperKReplayCertificate.payloadCheck_sound hparts.1.1
       bFlowPositive := by simpa using hparts.1.2
       derivative := hparts.2 }
 
@@ -561,7 +665,7 @@ theorem directAD_value_sound (terms : ℕ)
 /-- Transport the raw direct-`V` evaluator through `k=s*K`.  The third AD
 field is synthetic and deliberately unused. -/
 def chartVAD (terms : ℕ) (box : CertificateBox)
-    (payload : Payload) : IntervalAD :=
+    (payload : DerivativePayload) : IntervalAD :=
   let rawResult := payload.derivative.evaluateSKAD terms (rawHull box)
   { value := rawResult.value
     derivS := RationalEnclosure.add rawResult.derivS
@@ -570,7 +674,7 @@ def chartVAD (terms : ℕ) (box : CertificateBox)
     derivChi := RationalEnclosure.point 0 }
 
 def normalizedDerivativeAD (terms : ℕ) (box : CertificateBox)
-    (payload : Payload) : IntervalAD :=
+    (payload : DerivativePayload) : IntervalAD :=
   IntervalAD.divPositive (chartVAD terms box payload)
     (LRUpperKReplayCertificate.mulNonnegativeAD
       (LRUpperKReplayCertificate.bFlowAD terms box payload.sharp)
@@ -630,8 +734,8 @@ theorem vTargetCurveDeriv_chartK (coordinate : CertificatePoint) :
 
 theorem chartVAD_sound (terms : ℕ)
     (hbasic : BasicSoundness terms)
-    {box : CertificateBox} {payload : Payload}
-    (hcheck : payloadCheck terms box payload = true)
+    {box : CertificateBox} {payload : DerivativePayload}
+    (hcheck : derivativePayloadCheck terms box payload = true)
     {coordinate : CertificatePoint} (hcoordinate : box.Contains coordinate) :
     let raw := lrDeterminantKChartDecode coordinate
     (chartVAD terms box payload).Contains
@@ -639,7 +743,7 @@ theorem chartVAD_sound (terms : ℕ)
       (lrCertificateVTargetCurveDeriv raw 1 coordinate.k 0)
       (lrCertificateVTargetCurveDeriv raw 0 coordinate.s 0) 0 := by
   dsimp only
-  have hvalid := payloadCheck_sound hcheck
+  have hvalid := derivativePayloadCheck_sound hcheck
   have _hcore := hbasic hvalid.sharpCheck hcoordinate
   have hs := IntervalAD.contains_variableS
     (show box.sInterval.Contains coordinate.s from
@@ -647,24 +751,9 @@ theorem chartVAD_sound (terms : ℕ)
   have hK := IntervalAD.contains_variableK
     (show box.kInterval.Contains coordinate.k from
       ⟨hcoordinate.2.2.1, hcoordinate.2.2.2.1⟩)
-  have hk := LRUpperKReplayCertificate.mulNonnegativeAD_sound hvalid.sharp.sPositive.le
-    hvalid.sharp.ratioPositive.le hs hK
-  have hh := IntervalAD.contains_variableChi
-    (show box.chiInterval.Contains coordinate.chi from
-      ⟨hcoordinate.2.2.2.2.1, hcoordinate.2.2.2.2.2⟩)
-  have hchi := LRUpperKReplayCertificate.mulNonnegativeAD_sound hvalid.sharp.hNonnegative
-    hvalid.sharp.hNonnegative hh hh
-  have hrawContains : (rawHull box).Contains
-      (lrDeterminantKChartDecode coordinate) := by
-    exact ⟨hcoordinate.1, hcoordinate.2.1,
-      (by simpa [rawHull, LRUpperKReplayCertificate.physicalKAD,
-          LRUpperKReplayCertificate.sAD, LRUpperKReplayCertificate.ratioAD, lrDeterminantKChartDecode] using hk.1.1),
-      (by simpa [rawHull, LRUpperKReplayCertificate.physicalKAD,
-          LRUpperKReplayCertificate.sAD, LRUpperKReplayCertificate.ratioAD, lrDeterminantKChartDecode] using hk.1.2),
-      (by simpa [rawHull, LRUpperKReplayCertificate.physicalChiAD,
-          LRUpperKReplayCertificate.hAD, lrDeterminantKChartDecode, pow_two] using hchi.1.1),
-      (by simpa [rawHull, LRUpperKReplayCertificate.physicalChiAD,
-          LRUpperKReplayCertificate.hAD, lrDeterminantKChartDecode, pow_two] using hchi.1.2)⟩
+  have hrawContains := rawHull_contains_decode_of_nonnegative
+    hvalid.sharp.sPositive.le hvalid.sharp.ratioPositive.le
+    hvalid.sharp.hNonnegative hcoordinate
   have hraw := payload.derivative.evaluateSKAD_sound terms
     hvalid.derivative hrawContains
   have hS := RationalEnclosure.contains_add hraw.2.1
@@ -680,14 +769,14 @@ theorem chartVAD_sound (terms : ℕ)
 
 theorem normalizedDerivativeAD_sound (terms : ℕ)
     (hbasic : BasicSoundness terms)
-    {box : CertificateBox} {payload : Payload}
-    (hcheck : payloadCheck terms box payload = true)
+    {box : CertificateBox} {payload : DerivativePayload}
+    (hcheck : derivativePayloadCheck terms box payload = true)
     {coordinate : CertificatePoint} (hcoordinate : box.Contains coordinate) :
     (normalizedDerivativeAD terms box payload).derivS.Contains
         (LRLowRatioFiniteVMeanValue.chartDerivS coordinate) ∧
       (normalizedDerivativeAD terms box payload).derivK.Contains
         (LRLowRatioFiniteVMeanValue.chartDerivK coordinate) := by
-  have hvalid := payloadCheck_sound hcheck
+  have hvalid := derivativePayloadCheck_sound hcheck
   have hcore := hbasic hvalid.sharpCheck hcoordinate
   let raw := lrDeterminantKChartDecode coordinate
   have hv := chartVAD_sound terms hbasic hcheck hcoordinate
@@ -716,7 +805,9 @@ theorem normalizedDerivativeAD_sound (terms : ℕ)
 noncomputable def oracle (terms : ℕ) (hbasic : BasicSoundness terms) :
     LRLowRatioFiniteVMeanValue.Oracle where
   Payload := Payload
+  DerivativePayload := DerivativePayload
   check := payloadCheck terms
+  derivativeCheck := derivativePayloadCheck terms
   value := fun box payload ↦ (directAD terms box payload).value
   derivS := fun box payload ↦
     (normalizedDerivativeAD terms box payload).derivS
@@ -742,7 +833,12 @@ def auto (sqrtFuel logFuel : ℕ) (box : CertificateBox) : Payload :=
   let sharp := LRUpperKReplayCertificate.auto sqrtFuel logFuel box
   { sharp := sharp
     logY := RationalEnclosure.autoLogIntervalCertificate logFuel
-      (LRUpperKReplayCertificate.yAD box).value
+      (LRUpperKReplayCertificate.yAD box).value }
+
+def autoDerivative (sqrtFuel logFuel : ℕ) (box : CertificateBox) :
+    DerivativePayload :=
+  let sharp := LRUpperKReplayCertificate.auto sqrtFuel logFuel box
+  { sharp := sharp
     derivative := LRHighShapeVZeroFaceCertificate.auto sqrtFuel logFuel
       (rawHull box) }
 
@@ -752,7 +848,92 @@ def autoCentered (terms sqrtFuel logFuel : ℕ) (box : CertificateBox) :
     LRLowRatioFiniteVMeanValue.CenteredPayload (concreteOracle terms) where
   center := auto sqrtFuel logFuel
     (LRLowRatioFiniteVMeanValue.centerSKBox box)
-  derivative := auto sqrtFuel logFuel box
+  derivative := autoDerivative sqrtFuel logFuel box
+
+/-! ## Executable automatic leaf projections -/
+
+/-- The two expensive automatically generated payloads shared by the
+mean-value payload check and midpoint evaluation. -/
+structure AutoMeanAnalysis where
+  center : Payload
+  derivative : DerivativePayload
+
+def autoMeanAnalysis (sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) : AutoMeanAnalysis where
+  center := auto sqrtFuel logFuel
+    (LRLowRatioFiniteVMeanValue.centerSKBox box)
+  derivative := autoDerivative sqrtFuel logFuel box
+
+def AutoMeanAnalysis.evaluation (analysis : AutoMeanAnalysis) (terms : ℕ)
+    (box : CertificateBox) : MidpointSKCertificate :=
+  { value := (directAD terms
+      (LRLowRatioFiniteVMeanValue.centerSKBox box) analysis.center).value
+    derivS :=
+      (normalizedDerivativeAD terms box analysis.derivative).derivS
+    derivK :=
+      (normalizedDerivativeAD terms box analysis.derivative).derivK }
+
+def AutoMeanAnalysis.payloadsCheck (analysis : AutoMeanAnalysis) (terms : ℕ)
+    (box : CertificateBox) : Bool :=
+  LRLowRatioFiniteVMeanValue.chartBoxCheck box &&
+    payloadCheck terms (LRLowRatioFiniteVMeanValue.centerSKBox box)
+      analysis.center &&
+    derivativePayloadCheck terms box analysis.derivative
+
+/-- The deterministic midpoint evaluation, projected directly from the
+concrete oracle's computational fields.  Keeping this definition free of the
+oracle's proof fields makes it suitable for external topology generation. -/
+def autoEvaluation (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) : MidpointSKCertificate :=
+  (autoMeanAnalysis sqrtFuel logFuel box).evaluation terms box
+
+/-- The executable domain and payload check for an automatic mean-value
+leaf. -/
+def autoMeanPayloadCheck (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) : Bool :=
+  (autoMeanAnalysis sqrtFuel logFuel box).payloadsCheck terms box
+
+/-- Deterministic correlated mean-value acceptance Boolean. -/
+def autoMeanAccepts (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) : Bool :=
+  let analysis := autoMeanAnalysis sqrtFuel logFuel box
+  analysis.payloadsCheck terms box &&
+    (analysis.evaluation terms box).check box
+
+/-- Deterministic natural whole-box acceptance Boolean. -/
+def autoNaturalAccepts (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) : Bool :=
+  let payload := auto sqrtFuel logFuel box
+  payloadCheck terms box payload &&
+    (directAD terms box payload).value.provesNonnegative
+
+theorem autoEvaluation_eq (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) :
+    autoEvaluation terms sqrtFuel logFuel box =
+      LRLowRatioFiniteVMeanValue.evaluate (concreteOracle terms) box
+        (autoCentered terms sqrtFuel logFuel box) := by
+  rfl
+
+theorem autoMeanPayloadCheck_eq (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) :
+    autoMeanPayloadCheck terms sqrtFuel logFuel box =
+      LRLowRatioFiniteVMeanValue.payloadCheck (concreteOracle terms) box
+        (autoCentered terms sqrtFuel logFuel box) := by
+  rfl
+
+theorem autoMeanAccepts_eq (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) :
+    autoMeanAccepts terms sqrtFuel logFuel box =
+      LRLowRatioFiniteVMeanValue.accepts (concreteOracle terms) box
+        (autoCentered terms sqrtFuel logFuel box) := by
+  rfl
+
+theorem autoNaturalAccepts_eq (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) :
+    autoNaturalAccepts terms sqrtFuel logFuel box =
+      LRLowRatioFiniteVMeanValue.leafAccepts (concreteOracle terms) box
+        (.natural (auto sqrtFuel logFuel box)) := by
+  rfl
 
 end LRLowRatioFiniteVConcreteOracle
 end CourtadeKumar
