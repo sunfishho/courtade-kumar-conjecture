@@ -414,4 +414,274 @@ theorem lrCertificateQ_E_le_GShape
     ⟨hinterior.2.2.1.le, hinterior.2.2.2.le⟩]
   exact hbound
 
+/-- Closed-sixteenth version of the elementary entropy-coordinate bounds
+`y/4 ≤ p_y ≤ y/3`. -/
+lemma lrLowerFaceP_bounds_sixteenth
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) (1 / 16 : ℝ)) :
+    y / 4 ≤ lrLowerFaceP y ∧
+      lrLowerFaceP y ≤ y / 3 := by
+  have hyUnit : y ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hy.1, hy.2.trans_lt (by norm_num)⟩
+  let p := lrLowerFaceP y
+  let z := Real.sqrt (1 - y)
+  have hgeom := lrLowerFaceP_geometry hyUnit
+  change p ∈ Ioo (0 : ℝ) (1 / 2) ∧
+    1 - 2 * p = z ∧ y = 4 * p * (1 - p) at hgeom
+  have hp := hgeom.1
+  have hzPos : 0 < z := Real.sqrt_pos.2 (by linarith [hy.2])
+  have hzLe : z ≤ 1 := by linarith [hgeom.2.1, hp.1]
+  have hzHalf : 1 / 2 ≤ z := by
+    have hzSq : z ^ 2 = 1 - y := by
+      dsimp [z]
+      exact Real.sq_sqrt (by linarith [hy.2])
+    nlinarith [hy.2]
+  have hpFormula : p = y / (2 * (1 + z)) := by
+    have hden : 1 + z ≠ 0 := by linarith [hzPos]
+    rw [show y = 4 * p * (1 - p) from hgeom.2.2,
+      show 1 + z = 2 * (1 - p) by linarith [hgeom.2.1]]
+    field_simp [hden, (by linarith [hp.2] : 1 - p ≠ 0)]
+    ring
+  have hdenUpper : 2 * (1 + z) ≤ 4 := by linarith
+  have hdenLower : 3 ≤ 2 * (1 + z) := by linarith
+  have hdenPos : 0 < 2 * (1 + z) := by linarith
+  constructor
+  · change y / 4 ≤ p
+    rw [hpFormula, div_le_div_iff₀ (by norm_num) hdenPos]
+    nlinarith [hy.1]
+  · change p ≤ y / 3
+    rw [hpFormula, div_le_div_iff₀ hdenPos (by norm_num)]
+    nlinarith [hy.1]
+
+/-- The exact entropy remainder is bounded by its first `p² log(1/p)`
+term. -/
+lemma lrLowerFaceR0_le_p_sq_log
+    {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
+    let p := lrLowerFaceP y
+    lrLowerFaceR0 y ≤ p ^ 2 * Real.log (1 / p) := by
+  let p := lrLowerFaceP y
+  have hgeom := lrLowerFaceP_geometry hy
+  change p ∈ Ioo (0 : ℝ) (1 / 2) ∧ _ at hgeom
+  have hp := hgeom.1
+  have hpOnePos : 0 < 1 - p :=
+    sub_pos.mpr (hp.2.trans (by norm_num))
+  have hlog := Real.one_sub_inv_le_log_of_pos hpOnePos
+  have hneg : -Real.log (1 - p) ≤ p / (1 - p) := by
+    have hid : 1 - (1 - p)⁻¹ = -p / (1 - p) := by
+      field_simp [hpOnePos.ne']
+      ring
+    rw [hid] at hlog
+    calc
+      -Real.log (1 - p) ≤ -(-p / (1 - p)) := neg_le_neg hlog
+      _ = p / (1 - p) := by ring
+  have hscaled := mul_le_mul_of_nonneg_left hneg (sq_nonneg (1 - p))
+  have hsecond :
+      (1 - p) * Real.negMulLog (1 - p) ≤ p * (1 - p) := by
+    simp only [Real.negMulLog_eq_neg]
+    rw [div_eq_mul_inv] at hscaled
+    have hcancel : (1 - p) ^ 2 * (p * (1 - p)⁻¹) =
+        p * (1 - p) := by
+      field_simp [hpOnePos.ne']
+    rw [hcancel] at hscaled
+    nlinarith
+  rw [lrLowerFaceR0_eq_pFormula hy]
+  unfold lrLowerFaceR0PFormula
+  change p * Real.negMulLog p +
+      (1 - p) * Real.negMulLog (1 - p) - p * (1 - p) ≤
+    p ^ 2 * Real.log (1 / p)
+  have hfirst : p * Real.negMulLog p =
+      p ^ 2 * Real.log (1 / p) := by
+    simp only [Real.negMulLog_eq_neg]
+    rw [Real.log_div (by norm_num : (1 : ℝ) ≠ 0) hp.1.ne',
+      Real.log_one]
+    ring
+  rw [← hfirst]
+  linarith
+
+/-- Quantitative entropy-remainder bound used in the thick scalar
+comparison. -/
+lemma lrLowerFaceR0_upper_sixteenth
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) (1 / 16 : ℝ)) :
+    lrLowerFaceR0 y ≤ y ^ 2 / 9 * Real.log (4 / y) := by
+  have hyUnit : y ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hy.1, hy.2.trans_lt (by norm_num)⟩
+  let p := lrLowerFaceP y
+  have hpBounds := lrLowerFaceP_bounds_sixteenth hy
+  change y / 4 ≤ p ∧ p ≤ y / 3 at hpBounds
+  have hgeom := lrLowerFaceP_geometry hyUnit
+  change p ∈ Ioo (0 : ℝ) (1 / 2) ∧ _ at hgeom
+  have hp := hgeom.1
+  have hinvOrder : 1 / p ≤ 4 / y := by
+    rw [div_le_div_iff₀ hp.1 hy.1]
+    nlinarith [hpBounds.1]
+  have hlogOrder := Real.log_le_log (div_pos (by norm_num) hp.1) hinvOrder
+  have hlogP : 0 ≤ Real.log (1 / p) :=
+    Real.log_nonneg (by
+      rw [one_le_div₀ hp.1]
+      exact hp.2.le.trans (by norm_num))
+  have hpSq : p ^ 2 ≤ y ^ 2 / 9 := by
+    nlinarith [hpBounds.2, hp.1, hy.1]
+  calc
+    lrLowerFaceR0 y ≤ p ^ 2 * Real.log (1 / p) :=
+      lrLowerFaceR0_le_p_sq_log hyUnit
+    _ ≤ (y ^ 2 / 9) * Real.log (1 / p) :=
+      mul_le_mul_of_nonneg_right hpSq hlogP
+    _ ≤ (y ^ 2 / 9) * Real.log (4 / y) :=
+      mul_le_mul_of_nonneg_left hlogOrder (by positivity)
+
+lemma lrLowerFaceR0_nonnegative_closed
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) 1) :
+    0 ≤ lrLowerFaceR0 y := by
+  rcases hy.2.eq_or_lt with rfl | hyLt
+  · unfold lrLowerFaceR0 lrLowerFaceQ0
+    rw [lrCertificateQ_eq]
+    norm_num [topPhi_zero]
+    rw [show Real.log 4 = 2 * Real.log 2 by
+      rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.log_pow]
+      norm_num]
+    nlinarith [Real.log_two_gt_d9]
+  · exact lrLowerFaceR0_nonneg ⟨hy.1, hyLt⟩
+
+/-- The logarithmic core is a lower bound for `Q` on the closed physical
+interval. -/
+lemma lrLowerFaceQ0_le_Q
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) 1) :
+    lrLowerFaceQ0 y ≤ lrCertificateQ y := by
+  have hr := lrLowerFaceR0_nonnegative_closed hy
+  unfold lrLowerFaceR0 at hr
+  linarith
+
+/-- Matching upper bound for `Q` at arguments at most `1/16`. -/
+lemma lrCertificateQ_upper_sixteenth
+    {y : ℝ} (hy : y ∈ Ioc (0 : ℝ) (1 / 16 : ℝ)) :
+    lrCertificateQ y ≤
+      y / 4 * ((1 + 4 * y / 9) * Real.log (4 / y) + 1) := by
+  have hr := lrLowerFaceR0_upper_sixteenth hy
+  unfold lrLowerFaceR0 lrLowerFaceQ0 at hr
+  linarith
+
+/-- Scalar assertion of the quantitative thick-reserve lemma. -/
+theorem six_mul_Q_le_one_sub_mul_Q_sixteen
+    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 16 : ℝ)) :
+    6 * lrCertificateQ s ≤
+      (1 - s) * lrCertificateQ (16 * s) := by
+  let L := Real.log (4 / s)
+  let lam := Real.log 2
+  have hsUnit : s ∈ Ioc (0 : ℝ) 1 :=
+    ⟨hs.1, hs.2.trans (by norm_num)⟩
+  have h16 : 16 * s ∈ Ioc (0 : ℝ) 1 := by
+    constructor
+    · exact mul_pos (by norm_num) hs.1
+    · nlinarith [hs.2]
+  have hUpper := lrCertificateQ_upper_sixteenth hs
+  have hLower := lrLowerFaceQ0_le_Q h16
+  have hlogScale : Real.log (4 / (16 * s)) = L - 4 * lam := by
+    dsimp [L, lam]
+    rw [show 4 / (16 * s) = (4 / s) / 16 by
+      field_simp [hs.1.ne'],
+      Real.log_div (div_ne_zero (by norm_num) hs.1.ne')
+        (by norm_num : (16 : ℝ) ≠ 0),
+      show Real.log 16 = 4 * Real.log 2 by
+        rw [show (16 : ℝ) = 2 ^ 4 by norm_num, Real.log_pow]
+        norm_num]
+  have hratio : (64 : ℝ) ≤ 4 / s := by
+    rw [le_div_iff₀ hs.1]
+    nlinarith [hs.2]
+  have hL : 6 * lam ≤ L := by
+    have hlog := Real.log_le_log (by norm_num : (0 : ℝ) < 64) hratio
+    rw [show Real.log 64 = 6 * Real.log 2 by
+      rw [show (64 : ℝ) = 2 ^ 6 by norm_num, Real.log_pow]
+      norm_num] at hlog
+    simpa [L, lam] using hlog
+  have hlamNonneg : 0 ≤ lam := by
+    dsimp [lam]
+    exact (Real.log_pos (by norm_num : (1 : ℝ) < 2)).le
+  have hlamUpper : lam < 7 / 10 := by
+    dsimp [lam]
+    nlinarith [Real.log_two_lt_d9]
+  have hcoefL : 0 ≤ 10 - 56 * s / 3 := by
+    nlinarith [hs.2]
+  have hLscaled := mul_le_mul_of_nonneg_left hL hcoefL
+  have htail : 0 ≤ (3 - 48 * s) * lam :=
+    mul_nonneg (by nlinarith [hs.2]) hlamNonneg
+  have hQcal : 0 ≤
+      16 * (1 - s) * (L - 4 * lam + 1) -
+        6 * ((1 + 4 * s / 9) * L + 1) := by
+    calc
+      0 ≤ 9 - 7 * lam := by nlinarith
+      _ ≤ 10 - 16 * s - (4 + 48 * s) * lam := by
+        nlinarith [hs.2]
+      _ = (10 - 56 * s / 3) * (6 * lam) -
+          64 * (1 - s) * lam + 10 - 16 * s := by ring
+      _ ≤ (10 - 56 * s / 3) * L -
+          64 * (1 - s) * lam + 10 - 16 * s := by linarith
+      _ = 16 * (1 - s) * (L - 4 * lam + 1) -
+          6 * ((1 + 4 * s / 9) * L + 1) := by ring
+  have hscaled := mul_nonneg
+    (div_nonneg hs.1.le (by norm_num : (0 : ℝ) ≤ 4)) hQcal
+  have hcore :
+      6 * (s / 4 * ((1 + 4 * s / 9) * L + 1)) ≤
+        (1 - s) *
+          (16 * s / 4 * (L - 4 * lam + 1)) := by
+    nlinarith
+  unfold lrLowerFaceQ0 at hLower
+  rw [hlogScale] at hLower
+  change lrCertificateQ s ≤
+      s / 4 * ((1 + 4 * s / 9) * L + 1) at hUpper
+  calc
+    6 * lrCertificateQ s ≤
+        6 * (s / 4 * ((1 + 4 * s / 9) * L + 1)) :=
+      mul_le_mul_of_nonneg_left hUpper (by norm_num)
+    _ ≤ (1 - s) *
+        (16 * s / 4 * (L - 4 * lam + 1)) := hcore
+    _ ≤ (1 - s) * lrCertificateQ (16 * s) :=
+      mul_le_mul_of_nonneg_left hLower (sub_nonneg.mpr hsUnit.2)
+
+/-- The thick reserve consumes at most half of `G_t` whenever `k ≥ 16`. -/
+theorem lrDeterminantT_ge_half_GShape_of_k_ge_sixteen
+    {point : CertificatePoint}
+    (hinterior : LRHighShapeInterior point)
+    (hrelevant : LRHighShapeVRelevant point)
+    (hk : 16 ≤ point.k) :
+    lrCertificateGShape point / 2 ≤ lrDeterminantT point := by
+  have hs := hinterior.1
+  have he := hinterior.2.1
+  have hEGe : 16 * point.s ≤ lrCertificateE point := by
+    unfold lrCertificateE
+    nlinarith [mul_nonneg hs.1.le (sub_nonneg.mpr hk)]
+  have hsSmall : point.s ∈ Ioc (0 : ℝ) (1 / 16 : ℝ) := by
+    constructor
+    · exact hs.1
+    · nlinarith [hEGe, he.2]
+  have h16Mem : 16 * point.s ∈ Ioo (0 : ℝ) 1 :=
+    ⟨mul_pos (by norm_num) hs.1, hEGe.trans_lt he.2⟩
+  have hQ16E := lrCertificateQ_strictMonoOn.monotoneOn
+    h16Mem he hEGe
+  have hQE := lrCertificateQ_E_le_GShape hinterior
+  have hscalar := six_mul_Q_le_one_sub_mul_Q_sixteen hsSmall
+  have hR : 0 < lrCertificateR point := by
+    unfold lrCertificateR
+    linarith [hs.2]
+  change 6 * lrCertificateQ point.s ≤
+      lrCertificateR point * lrCertificateQ (16 * point.s) at hscalar
+  have hloss : 3 * lrCertificateQ point.s / lrCertificateR point ≤
+      lrCertificateQ (16 * point.s) / 2 := by
+    rw [div_le_iff₀ hR]
+    nlinarith
+  have hT := lrDeterminantT_thick_lower hinterior hrelevant
+  linarith
+
+/-- Normalized consequence `Theta = T/G_t ≥ 1/2` used by the analytic
+determinant bridges. -/
+theorem lrDeterminantTheta_ge_half_of_k_ge_sixteen
+    {point : CertificatePoint}
+    (hinterior : LRHighShapeInterior point)
+    (hrelevant : LRHighShapeVRelevant point)
+    (hk : 16 ≤ point.k) :
+    1 / 2 ≤ lrDeterminantT point / lrCertificateGShape point := by
+  have hG := lrCertificateGShape_pos hinterior
+  rw [le_div_iff₀ hG]
+  have hhalf := lrDeterminantT_ge_half_GShape_of_k_ge_sixteen
+    hinterior hrelevant hk
+  nlinarith
+
 end CourtadeKumar
