@@ -23,14 +23,16 @@ namespace CourtadeKumar
 /-! ## Restricted certificate interfaces -/
 
 /-- A determinant-row theorem restricted to the part of the row with
-`k <= 4`.  This is the exact strength needed by the gap-budget core/tail
-split. -/
+`s < k <= 4`.  The strict lower-ratio witness is available after the
+low-ratio branch has been removed, and retaining it prevents the finite
+rows from being strengthened over an irrelevant overlap. -/
 def LRDeterminantKLeFourRegionCertificateTheorem
     (Region : CertificatePoint → Prop) : Prop :=
   ∀ point : CertificatePoint,
     LRHighShapeInterior point →
     LRHighShapeVRelevant point →
     Region point →
+    point.s < point.k →
     point.k ≤ 4 →
     LRDeterminantAdmittedTarget point
 
@@ -40,7 +42,7 @@ theorem lrDeterminantKLeFourRegionCertificate_of_unrestricted
     {Region : CertificatePoint → Prop}
     (hregion : LRDeterminantRegionCertificateTheorem Region) :
     LRDeterminantKLeFourRegionCertificateTheorem Region := by
-  intro point hinterior hrelevant hpoint _hk
+  intro point hinterior hrelevant hpoint _hK _hk
   exact hregion point hinterior hrelevant hpoint
 
 /-- The only genuinely deep determinant band left after reusing the low-`k`
@@ -145,6 +147,7 @@ theorem lrCertificateTTarget_nonnegative_of_kLeFour_determinantCovered
     {point : CertificatePoint}
     (hinterior : LRHighShapeInterior point)
     (hrelevant : LRHighShapeVRelevant point)
+    (hK : point.s < point.k)
     (hkFour : point.k ≤ 4)
     (hcovered : LRDeterminantCovered point) :
     0 ≤ lrCertificateTTarget point := by
@@ -165,25 +168,25 @@ theorem lrCertificateTTarget_nonnegative_of_kLeFour_determinantCovered
     norm_num at himpossible
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.fixed1To32 point hinterior hrelevant hfixed1To32 hkFour)
+      (finite.fixed1To32 point hinterior hrelevant hfixed1To32 hK hkFour)
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.kCorridor point hinterior hrelevant hkCorridor hkFour)
+      (finite.kCorridor point hinterior hrelevant hkCorridor hK hkFour)
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.fixed1To128 point hinterior hrelevant hfixed1To128 hkFour)
+      (finite.fixed1To128 point hinterior hrelevant hfixed1To128 hK hkFour)
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.upperK point hinterior hrelevant hupperK hkFour)
+      (finite.upperK point hinterior hrelevant hupperK hK hkFour)
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.fixed64 point hinterior hrelevant hfixed64 hkFour)
+      (finite.fixed64 point hinterior hrelevant hfixed64 hK hkFour)
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.fixed32 point hinterior hrelevant hfixed32 hkFour)
+      (finite.fixed32 point hinterior hrelevant hfixed32 hK hkFour)
   · exact lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
-      (finite.fixed16 point hinterior hrelevant hfixed16 hkFour)
+      (finite.fixed16 point hinterior hrelevant hfixed16 hK hkFour)
 
 /-- A near-endpoint low-ratio theorem and the restricted determinant inputs
 give exactly the tangent-core interface consumed by the verified `k >= 4`
@@ -195,11 +198,11 @@ theorem nearEndpointCoreTangentCoordinateTheorem_of_restrictedDeterminant
     (finite : LRDeterminantKLeFourFiniteRegionLedger) :
     LRHighShapeNearEndpointCoreTangentCoordinateTheorem := by
   intro point hinterior hrelevant hsUpper hkFour
-  rcases lrHighShape_lowRatio_or_determinantCovered
-      hinterior hrelevant hsUpper with hlowRatio | hcovered
+  rcases lrHighShape_lowRatio_or_K_gt_one_and_determinantCovered
+      hinterior hrelevant hsUpper with hlowRatio | ⟨hK, hcovered⟩
   · exact lowRatio point hinterior hrelevant hsUpper hlowRatio
   · exact lrCertificateTTarget_nonnegative_of_kLeFour_determinantCovered
-      deepOneToFour lowK finite hinterior hrelevant hkFour hcovered
+      deepOneToFour lowK finite hinterior hrelevant hK hkFour hcovered
 
 /-- End-to-end restricted tangent-core assembly from the already proved
 small-`s` low-ratio theorem, the finite direct-`V` input, and the restricted

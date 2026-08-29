@@ -149,20 +149,36 @@ theorem lrHighShape_determinantCovered_of_K_gt_one
     (Or.inr (Or.inr (Or.inr
       ⟨hs16Lower, hsUpper.le, hk16Lower, hk16⟩))))))))
 
-/-- The full near-endpoint split used immediately before (D13): relevance
-places `K` above `1/4`; the `K ≤ 1` branch is isolated, and every remaining
-point belongs to one of the ten audited determinant regions. -/
+/-- The strong near-endpoint split used immediately before (D13).  The
+determinant branch retains the strict inequality `s < k` that is already
+known after excluding the low-ratio region.  Keeping this witness avoids
+asking later finite rows to certify their irrelevant `k ≤ s` overlap. -/
+theorem lrHighShape_lowRatio_or_K_gt_one_and_determinantCovered
+    {point : CertificatePoint}
+    (hinterior : LRHighShapeInterior point)
+    (hrelevant : LRHighShapeVRelevant point)
+    (hsUpper : point.s < 1 / 10) :
+    LRDeterminantLowRatioRegion point ∨
+      (point.s < point.k ∧ LRDeterminantCovered point) := by
+  have hkLower :=
+    lrCertificate_k_gt_quarter_s_of_relevant hinterior hrelevant
+  by_cases hkUpper : point.k ≤ point.s
+  · exact Or.inl ⟨hkLower, hkUpper⟩
+  · have hK : point.s < point.k := lt_of_not_ge hkUpper
+    exact Or.inr ⟨hK,
+      lrHighShape_determinantCovered_of_K_gt_one
+        hinterior hsUpper hK⟩
+
+/-- Backwards-compatible form of the near-endpoint split. -/
 theorem lrHighShape_lowRatio_or_determinantCovered
     {point : CertificatePoint}
     (hinterior : LRHighShapeInterior point)
     (hrelevant : LRHighShapeVRelevant point)
     (hsUpper : point.s < 1 / 10) :
     LRDeterminantLowRatioRegion point ∨ LRDeterminantCovered point := by
-  have hkLower :=
-    lrCertificate_k_gt_quarter_s_of_relevant hinterior hrelevant
-  by_cases hkUpper : point.k ≤ point.s
-  · exact Or.inl ⟨hkLower, hkUpper⟩
-  · exact Or.inr (lrHighShape_determinantCovered_of_K_gt_one
-      hinterior hsUpper (lt_of_not_ge hkUpper))
+  rcases lrHighShape_lowRatio_or_K_gt_one_and_determinantCovered
+      hinterior hrelevant hsUpper with hlow | ⟨_, hcovered⟩
+  · exact Or.inl hlow
+  · exact Or.inr hcovered
 
 end CourtadeKumar
