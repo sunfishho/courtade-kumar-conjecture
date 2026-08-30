@@ -281,28 +281,22 @@ def evaluateAD (bits terms : ℕ) (box : CertificateBox)
   LRUpperKRoundedEvaluatorArithmetic.evaluateAD bits
     (nodes bits terms box sharp corners values)
 
-theorem evaluateAD_sound (bits terms : ℕ)
+theorem evaluateAD_sound_of_sharp_nodes (bits terms : ℕ)
     {box : CertificateBox} {sharp : SharpPayload}
     {corners : CornerPayload} {values : Values}
-    (hdomain : LRUpperKReplayCertificate.openChartBoxCheck box = true)
     (hsharp : LRUpperKHistoricalACAD.check terms box sharp = true)
-    (hcorners : LRUpperKExplicitCornerPayload.check box corners = true)
-    (hvalues : CoversExact terms box corners values)
+    {coordinate : CertificatePoint} (hcoordinate : box.Contains coordinate)
+    (hsharpNodes : SharpNodeEnclosures terms box sharp values coordinate)
     (hvRounded : (0 : ℚ) <
       (nodes bits terms box sharp corners values).v.value.lower)
     (heRounded : (0 : ℚ) <
-      (nodes bits terms box sharp corners values).e.value.lower)
-    {coordinate : CertificatePoint} (hcoordinate : box.Contains coordinate) :
+      (nodes bits terms box sharp corners values).e.value.lower) :
     (evaluateAD bits terms box sharp corners values).Contains
       (lrFiniteDeterminantUpperKReplayTarget
         (lrDeterminantKChartDecode coordinate))
       (LRUpperKReplayCertificate.targetChartDerivS coordinate)
       (LRUpperKReplayCertificate.targetChartDerivK coordinate)
       (LRUpperKHistoricalThreeCoordinateBase.targetChartDerivH coordinate) := by
-  have hcornerFacts :=
-    LRUpperKExplicitCornerPayload.checked_of_check hcorners
-  have hsharpNodes := sharpNodeEnclosures_of_checked terms
-    hdomain hsharp hcornerFacts hvalues hcoordinate
   have hcommon :=
     LRUpperKHistoricalCommonComponents.commonComponentsAt_of_checked terms
       hsharp hcoordinate
@@ -399,6 +393,31 @@ theorem evaluateAD_sound (bits terms : ℕ)
       coordinate hePoint hvPoint
   exact LRUpperKHistoricalEvaluatorAssembly.contains_upperKTarget_of_encloses
     hencloses hjet
+
+theorem evaluateAD_sound (bits terms : ℕ)
+    {box : CertificateBox} {sharp : SharpPayload}
+    {corners : CornerPayload} {values : Values}
+    (hdomain : LRUpperKReplayCertificate.openChartBoxCheck box = true)
+    (hsharp : LRUpperKHistoricalACAD.check terms box sharp = true)
+    (hcorners : LRUpperKExplicitCornerPayload.check box corners = true)
+    (hvalues : CoversExact terms box corners values)
+    (hvRounded : (0 : ℚ) <
+      (nodes bits terms box sharp corners values).v.value.lower)
+    (heRounded : (0 : ℚ) <
+      (nodes bits terms box sharp corners values).e.value.lower)
+    {coordinate : CertificatePoint} (hcoordinate : box.Contains coordinate) :
+    (evaluateAD bits terms box sharp corners values).Contains
+      (lrFiniteDeterminantUpperKReplayTarget
+        (lrDeterminantKChartDecode coordinate))
+      (LRUpperKReplayCertificate.targetChartDerivS coordinate)
+      (LRUpperKReplayCertificate.targetChartDerivK coordinate)
+      (LRUpperKHistoricalThreeCoordinateBase.targetChartDerivH coordinate) := by
+  have hcornerFacts :=
+    LRUpperKExplicitCornerPayload.checked_of_check hcorners
+  have hsharpNodes := sharpNodeEnclosures_of_checked terms
+    hdomain hsharp hcornerFacts hvalues hcoordinate
+  exact evaluateAD_sound_of_sharp_nodes bits terms hsharp
+    hcoordinate hsharpNodes hvRounded heRounded
 
 def evaluation (bits terms : ℕ) (box : CertificateBox)
     (centerSharp derivativeSharp : SharpPayload)
