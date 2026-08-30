@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKRoundedExplicitCornerEvaluator
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKAutoCornerCorrectness
 
 /-!
 # Reusable cached upper-`K` corner-value evaluator
@@ -29,6 +30,26 @@ structure Values where
 /-- Form a monotone corner hull from independently cached scalar enclosures. -/
 def cornerHull (lower upper : RationalEnclosure) : RationalEnclosure :=
   { lower := lower.lower, upper := upper.upper }
+
+/-- The eight scalar endpoint hulls from which the four monotone corner
+values are assembled.  Keeping these endpoints separate lets generated
+replays reuse a scalar value across every leaf which asks for the same exact
+`(A/C,s,y)` call. -/
+structure ScalarValues where
+  aY0Lower : RationalEnclosure
+  aY0Upper : RationalEnclosure
+  cY0Lower : RationalEnclosure
+  cY0Upper : RationalEnclosure
+  aELower : RationalEnclosure
+  aEUpper : RationalEnclosure
+  cELower : RationalEnclosure
+  cEUpper : RationalEnclosure
+
+def ScalarValues.assemble (values : ScalarValues) : Values :=
+  { aY0 := cornerHull values.aY0Lower values.aY0Upper
+    cY0 := cornerHull values.cY0Lower values.cY0Upper
+    aE := cornerHull values.aELower values.aEUpper
+    cE := cornerHull values.cELower values.cEUpper }
 
 theorem aCornerI_covers_of_scalar_covers (terms : ℕ)
     {box : CertificateBox} {input : RationalEnclosure}
@@ -72,6 +93,67 @@ structure CoversExact (terms : ℕ) (box : CertificateBox)
   cE : Covers values.cE
     (LRUpperKExplicitCornerPayload.cCornerI terms box
       (LRUpperKReplayCertificate.eAD box).value corners.cE)
+
+/-- Assemble an exact cached-corner cover from eight independently reusable
+outer hulls of the deterministic scalar calls. -/
+theorem coversExact_auto (terms sqrtFuel logFuel : ℕ)
+    (box : CertificateBox) (values : ScalarValues)
+    (haY0Lower : Covers values.aY0Lower
+      (LRUpperKHistoricalACValues.aAutoI terms sqrtFuel logFuel
+        box.sHi (LRUpperKReplayCertificate.y0AD box).value.lower))
+    (haY0Upper : Covers values.aY0Upper
+      (LRUpperKHistoricalACValues.aAutoI terms sqrtFuel logFuel
+        box.sLo (LRUpperKReplayCertificate.y0AD box).value.upper))
+    (hcY0Lower : Covers values.cY0Lower
+      (LRUpperKHistoricalACValues.cAutoI terms sqrtFuel logFuel
+        box.sHi (LRUpperKReplayCertificate.y0AD box).value.upper))
+    (hcY0Upper : Covers values.cY0Upper
+      (LRUpperKHistoricalACValues.cAutoI terms sqrtFuel logFuel
+        box.sLo (LRUpperKReplayCertificate.y0AD box).value.lower))
+    (haELower : Covers values.aELower
+      (LRUpperKHistoricalACValues.aAutoI terms sqrtFuel logFuel
+        box.sHi (LRUpperKReplayCertificate.eAD box).value.lower))
+    (haEUpper : Covers values.aEUpper
+      (LRUpperKHistoricalACValues.aAutoI terms sqrtFuel logFuel
+        box.sLo (LRUpperKReplayCertificate.eAD box).value.upper))
+    (hcELower : Covers values.cELower
+      (LRUpperKHistoricalACValues.cAutoI terms sqrtFuel logFuel
+        box.sHi (LRUpperKReplayCertificate.eAD box).value.upper))
+    (hcEUpper : Covers values.cEUpper
+      (LRUpperKHistoricalACValues.cAutoI terms sqrtFuel logFuel
+        box.sLo (LRUpperKReplayCertificate.eAD box).value.lower)) :
+    CoversExact terms box
+      (LRUpperKExplicitCornerPayload.auto sqrtFuel logFuel box)
+      values.assemble := by
+  refine
+    { aY0 := aCornerI_covers_of_scalar_covers terms ?_ ?_
+      cY0 := cCornerI_covers_of_scalar_covers terms ?_ ?_
+      aE := aCornerI_covers_of_scalar_covers terms ?_ ?_
+      cE := cCornerI_covers_of_scalar_covers terms ?_ ?_ }
+  · simpa [LRUpperKHistoricalACValues.aAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.aPairAuto] using haY0Lower
+  · simpa [LRUpperKHistoricalACValues.aAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.aPairAuto] using haY0Upper
+  · simpa [LRUpperKHistoricalACValues.cAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.cPairAuto] using hcY0Lower
+  · simpa [LRUpperKHistoricalACValues.cAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.cPairAuto] using hcY0Upper
+  · simpa [LRUpperKHistoricalACValues.aAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.aPairAuto] using haELower
+  · simpa [LRUpperKHistoricalACValues.aAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.aPairAuto] using haEUpper
+  · simpa [LRUpperKHistoricalACValues.cAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.cPairAuto] using hcELower
+  · simpa [LRUpperKHistoricalACValues.cAutoI,
+      LRUpperKExplicitCornerPayload.auto,
+      LRUpperKExplicitCornerPayload.cPairAuto] using hcEUpper
 
 def aY0AD (terms : ℕ) (box : CertificateBox)
     (sharp : SharpPayload) (values : Values) : IntervalAD :=
