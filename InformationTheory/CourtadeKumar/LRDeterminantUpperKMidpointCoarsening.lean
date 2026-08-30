@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKExplicitCornerEvaluator
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKEnclosureCovers
 
 /-!
 # Coarse midpoint certificates for the explicit upper-K evaluator
@@ -13,17 +14,6 @@ namespace CourtadeKumar
 namespace LRUpperKMidpointCoarsening
 
 open LRUpperKHistoricalOpenMidpointLeaf
-
-/-- `outer` contains every real number contained by `inner`. -/
-def Covers (outer inner : RationalEnclosure) : Prop :=
-  outer.lower ≤ inner.lower ∧ inner.upper ≤ outer.upper
-
-theorem contains_of_covers {outer inner : RationalEnclosure} {x : ℝ}
-    (hcovers : Covers outer inner) (hinner : inner.Contains x) :
-    outer.Contains x := by
-  constructor
-  · exact le_trans (by exact_mod_cast hcovers.1) hinner.1
-  · exact le_trans hinner.2 (by exact_mod_cast hcovers.2)
 
 /-- Componentwise outer containment for interval-AD nodes. -/
 def ADCovers (outer inner : IntervalAD) : Prop :=

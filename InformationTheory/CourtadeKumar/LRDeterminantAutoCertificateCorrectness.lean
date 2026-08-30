@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.LRHighShapeVAutoCertificate
+import InformationTheory.CourtadeKumar.LRDeterminantAutoCertificateCore
 
 /-!
 # Correctness of deterministic elementary certificates

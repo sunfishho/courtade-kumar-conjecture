@@ -2,6 +2,7 @@ import InformationTheory.CourtadeKumar.LRDeterminantUpperKHistoricalACScalarSoun
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKDyadicOuterRounding
 import InformationTheory.CourtadeKumar.LRDeterminantAutoQCertificateCorrectness
 import InformationTheory.CourtadeKumar.LRDeterminantFastQPointCertificate
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKPointSoundCore
 
 /-!
 # Shared point certificates for upper-`K` scalar values
@@ -20,31 +21,6 @@ open Set
 open LRUpperKReplayCertificate
 open LRUpperKHistoricalACValues
 open LRUpperKMidpointCoarsening
-
-structure Values where
-  q : RationalEnclosure
-  qPrime : RationalEnclosure
-
-structure Sound (terms : ℕ) (z : ℚ) (values : Values) : Prop where
-  q : values.q.Contains (lrCertificateQ (z : ℝ))
-  qPrime : values.qPrime.Contains (lrCertificateQPrime (z : ℝ))
-
-/-- One serialized point certificate supplies both cached scalar nodes. -/
-theorem sound_of_certificate (terms : ℕ) {z : ℚ}
-    {certificate : LRQPointCertificate} {values : Values}
-    (hz : z ∈ Ioo (0 : ℚ) 1)
-    (hcheck : certificate.primeCheck z = true)
-    (hq : Covers values.q (certificate.enclosure terms))
-    (hqPrime : Covers values.qPrime (certificate.primeEnclosure terms)) :
-    Sound terms z values := by
-  have hparts : certificate.check z = true ∧
-      (0 : ℚ) < certificate.sqrtEnclosure.lower := by
-    simpa [LRQPointCertificate.primeCheck] using hcheck
-  exact
-    { q := contains_of_covers hq (certificate.sound terms
-        hparts.1)
-      qPrime := contains_of_covers hqPrime
-        (certificate.prime_sound terms hz hcheck) }
 
 /-- Compute one shared `Q/Q'` point entry directly.  Generated leaves prove
 only the smaller `autoPrimeSucceeds` predicate, rather than unfolding the
@@ -95,6 +71,36 @@ theorem fastAutoValues_sound (bits terms logFuel : ℕ) {z : ℚ}
   · simpa [fastAutoValues] using
       LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
         ((LRQFastPointCertificate.auto logFuel z).primeEnclosure terms)
+
+/-- Fast values whose polynomial square-root enclosure is itself rounded
+before logarithm normalization.  This keeps every generated mantissa small. -/
+def roundedFastAutoValues (bits terms sqrtBits logFuel : ℕ)
+    (z : ℚ) : Values :=
+  let certificate := LRQFastPointCertificate.roundedAuto sqrtBits logFuel z
+  { q := LRUpperKDyadicOuterRounding.outerEnclosure bits
+      (certificate.enclosure terms)
+    qPrime := LRUpperKDyadicOuterRounding.outerEnclosure bits
+      (certificate.primeEnclosure terms) }
+
+theorem roundedFastAutoValues_sound
+    (bits terms sqrtBits logFuel : ℕ) {z : ℚ}
+    (hz : z ∈ Ioo (0 : ℚ) 1)
+    (hzUpper : z ≤ 1 / 16)
+    (hsucceeds : LRQFastPointCertificate.roundedAutoPrimeSucceeds
+      sqrtBits logFuel z = true) :
+    Sound terms z
+      (roundedFastAutoValues bits terms sqrtBits logFuel z) := by
+  apply sound_of_certificate terms hz
+    (LRQFastPointCertificate.roundedAuto_primeCheck_of_succeeds
+      sqrtBits logFuel hz.1.le hzUpper hsucceeds)
+  · simpa [roundedFastAutoValues] using
+      LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
+        ((LRQFastPointCertificate.roundedAuto sqrtBits logFuel z).enclosure
+          terms)
+  · simpa [roundedFastAutoValues] using
+      LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
+        ((LRQFastPointCertificate.roundedAuto sqrtBits logFuel z).primeEnclosure
+          terms)
 
 def bPoint (s y : ℚ) : ℚ := s + (1 - s) * y
 

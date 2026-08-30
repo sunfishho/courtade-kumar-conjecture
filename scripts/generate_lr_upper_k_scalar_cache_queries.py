@@ -220,10 +220,12 @@ def point_uses(box: ExactBox) -> set[Fraction]:
     result: set[Fraction] = set()
     for use in scalar_uses(box):
         s, y = use.key.s, use.key.y
+        if y == 0:
+            continue
         b = s + (1 - s) * y
         if use.key.kind == "a":
             result.update((s, b))
-        elif y != 0:
+        else:
             result.update((s, y, b))
     return result
 
@@ -232,9 +234,11 @@ def raw_point_occurrences(box: ExactBox) -> int:
     """Count point uses before sharing equal points inside a leaf."""
     result = 0
     for use in scalar_uses(box):
+        if use.key.y == 0:
+            continue
         if use.key.kind == "a":
             result += 2
-        elif use.key.y != 0:
+        else:
             result += 3
     return result
 

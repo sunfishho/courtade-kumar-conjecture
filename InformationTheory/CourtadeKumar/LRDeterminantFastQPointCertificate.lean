@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRDeterminantAutoCertificateCorrectness
 import InformationTheory.CourtadeKumar.LRCertificateQEnclosure
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKDyadicOuterRoundingCore
 
 /-!
 # Fast point certificates for the small upper-`K` range
@@ -95,8 +96,72 @@ theorem sqrtCertificate_check {y : ℚ}
     sqrtLower_sq_le hy0 hy, sqrtUpper_nonneg hy0 hy,
     le_sqrtUpper_sq hy0⟩
 
+theorem roundDown_nonneg (bits : ℕ) {x : ℚ} (hx : 0 ≤ x) :
+    0 ≤ LRUpperKDyadicOuterRounding.roundDown bits x := by
+  unfold LRUpperKDyadicOuterRounding.roundDown
+  apply div_nonneg
+  · exact_mod_cast Int.floor_nonneg.mpr
+      (mul_nonneg hx (LRUpperKDyadicOuterRounding.scale_pos bits).le)
+  · exact (LRUpperKDyadicOuterRounding.scale_pos bits).le
+
+/-- A bounded dyadic representation prevents the degree-seven polynomial
+denominators from propagating into every logarithm mantissa. -/
+def roundedSqrtCertificate (bits : ℕ) (y : ℚ) :
+    RationalEnclosure.SqrtCertificate :=
+  { lower := LRUpperKDyadicOuterRounding.roundDown bits (sqrtLower y)
+    upper := LRUpperKDyadicOuterRounding.roundUp bits (sqrtUpper y) }
+
+theorem roundedSqrtCertificate_check (bits : ℕ) {y : ℚ}
+    (hy0 : 0 ≤ y) (hy : y ≤ 1 / 16) :
+    (roundedSqrtCertificate bits y).check
+      (LRQPointCertificate.sqrtInput y) = true := by
+  have hLower0 := sqrtLower_nonneg hy0 hy
+  have hUpper0 := sqrtUpper_nonneg hy0 hy
+  have hRoundLower0 := roundDown_nonneg bits hLower0
+  have hRoundUpper0 :
+      0 ≤ LRUpperKDyadicOuterRounding.roundUp bits (sqrtUpper y) :=
+    hUpper0.trans (LRUpperKDyadicOuterRounding.le_roundUp bits _)
+  have hLowerSq :
+      LRUpperKDyadicOuterRounding.roundDown bits (sqrtLower y) ^ 2 ≤
+        1 - y :=
+    ((sq_le_sq₀ hRoundLower0 hLower0).2
+      (LRUpperKDyadicOuterRounding.roundDown_le bits _)).trans
+        (sqrtLower_sq_le hy0 hy)
+  have hUpperSq :
+      1 - y ≤
+        LRUpperKDyadicOuterRounding.roundUp bits (sqrtUpper y) ^ 2 :=
+    (le_sqrtUpper_sq hy0).trans <|
+      (sq_le_sq₀ hUpper0 hRoundUpper0).2
+        (LRUpperKDyadicOuterRounding.le_roundUp bits _)
+  simp only [RationalEnclosure.SqrtCertificate.check, decide_eq_true_eq]
+  change 0 ≤ 1 - y ∧ 1 - y ≤ 1 - y ∧
+    0 ≤ LRUpperKDyadicOuterRounding.roundDown bits (sqrtLower y) ∧
+    LRUpperKDyadicOuterRounding.roundDown bits (sqrtLower y) ^ 2 ≤ 1 - y ∧
+    0 ≤ LRUpperKDyadicOuterRounding.roundUp bits (sqrtUpper y) ∧
+    1 - y ≤ LRUpperKDyadicOuterRounding.roundUp bits (sqrtUpper y) ^ 2
+  exact ⟨by linarith, le_rfl, hRoundLower0, hLowerSq,
+    hRoundUpper0, hUpperSq⟩
+
 def auto (logFuel : ℕ) (y : ℚ) : LRQPointCertificate :=
   let sqrtOneSub := sqrtCertificate y
+  let seed : LRQPointCertificate :=
+    { sqrtOneSub := sqrtOneSub
+      logLowerProbability :=
+        { lower := { exponent := 0, mantissa := 0 }
+          upper := { exponent := 0, mantissa := 0 } }
+      logUpperProbability :=
+        { lower := { exponent := 0, mantissa := 0 }
+          upper := { exponent := 0, mantissa := 0 } } }
+  { sqrtOneSub := sqrtOneSub
+    logLowerProbability :=
+      RationalEnclosure.autoLogIntervalCertificate logFuel
+        seed.lowerProbability
+    logUpperProbability :=
+      RationalEnclosure.autoLogIntervalCertificate logFuel
+        seed.upperProbability }
+
+def roundedAuto (sqrtBits logFuel : ℕ) (y : ℚ) : LRQPointCertificate :=
+  let sqrtOneSub := roundedSqrtCertificate sqrtBits y
   let seed : LRQPointCertificate :=
     { sqrtOneSub := sqrtOneSub
       logLowerProbability :=
@@ -119,6 +184,37 @@ def autoPrimeSucceeds (logFuel : ℕ) (y : ℚ) : Bool :=
       certificate.lowerProbability &&
     RationalEnclosure.autoLogIntervalCertificateSucceeds logFuel
       certificate.upperProbability
+
+def roundedAutoPrimeSucceeds (sqrtBits logFuel : ℕ) (y : ℚ) : Bool :=
+  let certificate := roundedAuto sqrtBits logFuel y
+  (RationalEnclosure.autoLogIntervalCertificateSucceeds logFuel
+      certificate.lowerProbability &&
+    RationalEnclosure.autoLogIntervalCertificateSucceeds logFuel
+      certificate.upperProbability) &&
+    decide ((0 : ℚ) < certificate.sqrtEnclosure.lower)
+
+theorem roundedAuto_primeCheck_of_succeeds (sqrtBits logFuel : ℕ) {y : ℚ}
+    (hy0 : 0 ≤ y) (hy : y ≤ 1 / 16)
+    (hsucceeds : roundedAutoPrimeSucceeds sqrtBits logFuel y = true) :
+    (roundedAuto sqrtBits logFuel y).primeCheck y = true := by
+  simp only [roundedAutoPrimeSucceeds, Bool.and_eq_true,
+    decide_eq_true_eq] at hsucceeds
+  have hsqrt := roundedSqrtCertificate_check sqrtBits hy0 hy
+  have hlower :=
+    RationalEnclosure.autoLogIntervalCertificate_check_of_succeeds
+      logFuel (roundedAuto sqrtBits logFuel y).lowerProbability
+        hsucceeds.1.1
+  have hupper :=
+    RationalEnclosure.autoLogIntervalCertificate_check_of_succeeds
+      logFuel (roundedAuto sqrtBits logFuel y).upperProbability
+        hsucceeds.1.2
+  have hsqrtLower :
+      0 < (roundedAuto sqrtBits logFuel y).sqrtEnclosure.lower := by
+    exact hsucceeds.2
+  simp only [LRQPointCertificate.primeCheck, LRQPointCertificate.check,
+    Bool.and_eq_true, decide_eq_true_eq]
+  exact ⟨⟨⟨by simpa [roundedAuto] using hsqrt, hlower⟩, hupper⟩,
+    hsqrtLower⟩
 
 theorem auto_primeCheck_of_succeeds (logFuel : ℕ) {y : ℚ}
     (hy0 : 0 ≤ y) (hy : y ≤ 1 / 16)

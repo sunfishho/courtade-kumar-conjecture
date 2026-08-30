@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRDeterminantAutoCertificateCorrectness
+import InformationTheory.CourtadeKumar.LRDeterminantAutoQCertificate
 
 /-!
 # Correctness of deterministic Q-function certificates
