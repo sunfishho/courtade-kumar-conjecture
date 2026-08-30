@@ -1,5 +1,7 @@
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKHistoricalACScalarSoundness
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKDyadicOuterRounding
+import InformationTheory.CourtadeKumar.LRDeterminantAutoQCertificateCorrectness
+import InformationTheory.CourtadeKumar.LRDeterminantFastQPointCertificate
 
 /-!
 # Shared point certificates for upper-`K` scalar values
@@ -43,6 +45,56 @@ theorem sound_of_certificate (terms : ℕ) {z : ℚ}
         hparts.1)
       qPrime := contains_of_covers hqPrime
         (certificate.prime_sound terms hz hcheck) }
+
+/-- Compute one shared `Q/Q'` point entry directly.  Generated leaves prove
+only the smaller `autoPrimeSucceeds` predicate, rather than unfolding the
+full point checker or rebuilding separate interval-AD certificates. -/
+def autoValues (bits terms sqrtFuel logFuel : ℕ) (z : ℚ) : Values :=
+  let certificate := LRQPointCertificate.auto sqrtFuel logFuel z
+  { q := LRUpperKDyadicOuterRounding.outerEnclosure bits
+      (certificate.enclosure terms)
+    qPrime := LRUpperKDyadicOuterRounding.outerEnclosure bits
+      (certificate.primeEnclosure terms) }
+
+theorem autoValues_sound (bits terms sqrtFuel logFuel : ℕ) {z : ℚ}
+    (hz : z ∈ Ioo (0 : ℚ) 1)
+    (hsucceeds : LRQPointCertificate.autoPrimeSucceeds
+      sqrtFuel logFuel z = true) :
+    Sound terms z (autoValues bits terms sqrtFuel logFuel z) := by
+  apply sound_of_certificate terms hz
+    (LRQPointCertificate.auto_primeCheck_of_succeeds
+      sqrtFuel logFuel z hsucceeds)
+  · simpa [autoValues] using
+      LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
+        ((LRQPointCertificate.auto sqrtFuel logFuel z).enclosure terms)
+  · simpa [autoValues] using
+      LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
+        ((LRQPointCertificate.auto sqrtFuel logFuel z).primeEnclosure terms)
+
+/-- Fast small-range values using the fixed polynomial square-root
+certificate. -/
+def fastAutoValues (bits terms logFuel : ℕ) (z : ℚ) : Values :=
+  let certificate := LRQFastPointCertificate.auto logFuel z
+  { q := LRUpperKDyadicOuterRounding.outerEnclosure bits
+      (certificate.enclosure terms)
+    qPrime := LRUpperKDyadicOuterRounding.outerEnclosure bits
+      (certificate.primeEnclosure terms) }
+
+theorem fastAutoValues_sound (bits terms logFuel : ℕ) {z : ℚ}
+    (hz : z ∈ Ioo (0 : ℚ) 1)
+    (hzUpper : z ≤ 1 / 16)
+    (hsucceeds : LRQFastPointCertificate.autoPrimeSucceeds
+      logFuel z = true) :
+    Sound terms z (fastAutoValues bits terms logFuel z) := by
+  apply sound_of_certificate terms hz
+    (LRQFastPointCertificate.auto_primeCheck_of_succeeds
+      logFuel hz.1.le hzUpper hsucceeds)
+  · simpa [fastAutoValues] using
+      LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
+        ((LRQFastPointCertificate.auto logFuel z).enclosure terms)
+  · simpa [fastAutoValues] using
+      LRUpperKDyadicOuterRounding.outerEnclosure_covers bits
+        ((LRQFastPointCertificate.auto logFuel z).primeEnclosure terms)
 
 def bPoint (s y : ℚ) : ℚ := s + (1 - s) * y
 
