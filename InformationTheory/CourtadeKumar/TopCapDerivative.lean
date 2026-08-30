@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.TopNormalizedReserve
+import InformationTheory.CourtadeKumar.TopPsiDerivativeCore
 
 /-! Exact differentiation of the normalized corrected reserve along the
 explicit TOP cap. -/
@@ -6,9 +7,6 @@ explicit TOP cap. -/
 open Set
 
 namespace CourtadeKumar
-
-noncomputable def topPsiDeriv (R : ℝ) : ℝ :=
-  Real.artanh (Real.sqrt R) / (2 * Real.sqrt R)
 
 noncomputable def topChannelWDeriv (R : ℝ) : ℝ :=
   ((Real.log 2 - topPsiDeriv R) * (1 - R) +

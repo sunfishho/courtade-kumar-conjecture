@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
-import Mathlib.Tactic
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Ring
 
 /-!
 # Exact rational interval arithmetic

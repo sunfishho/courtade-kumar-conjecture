@@ -1,31 +1,11 @@
 import InformationTheory.CourtadeKumar.EnvelopeFormula
+import InformationTheory.CourtadeKumar.TopEntropyScalarCore
 
 open scoped ENNReal NNReal BigOperators
 
 namespace CourtadeKumar
 
 /-! Algebraic core of the corrected balanced-root reserve. -/
-
-/-! Natural-unit scalar functions used by the corrected centered-endpoint theorem. -/
-
-noncomputable def topPhi (x : ℝ) : ℝ :=
-  Real.log 2 - Real.binEntropy ((1 - x) / 2)
-
-@[simp] lemma topPhi_one : topPhi 1 = Real.log 2 := by simp [topPhi]
-
-@[simp] lemma topPhi_neg_one : topPhi (-1) = Real.log 2 := by simp [topPhi]
-
-@[simp] lemma topPhi_zero : topPhi 0 = 0 := by
-  rw [topPhi, show ((1 - (0 : ℝ)) / 2) = (2 : ℝ)⁻¹ by norm_num,
-    Real.binEntropy_two_inv]
-  ring
-
-noncomputable def topJ (x : ℝ) : ℝ := Real.log 2 - topPhi x
-
-@[simp] lemma topJ_neg (x : ℝ) : topJ (-x) = topJ x := by
-  unfold topJ topPhi
-  rw [show (1 - -x) / 2 = 1 - (1 - x) / 2 by ring,
-    Real.binEntropy_one_sub]
 
 noncomputable def topR (rho : ℝ) : ℝ := rho ^ 2
 

@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.TopPhi
+import InformationTheory.CourtadeKumar.FixedWeightReduction
 import Mathlib.Analysis.SpecialFunctions.Artanh
 
 /-! Differential identities for the corrected TOP fixed-weight reduction. -/
@@ -7,11 +8,6 @@ open Set
 open scoped ENNReal NNReal BigOperators
 
 namespace CourtadeKumar
-
-lemma topJ_eq_binEntropy (x : ℝ) :
-    topJ x = Real.binEntropy ((1 - x) / 2) := by
-  unfold topJ topPhi
-  ring
 
 lemma hasDerivAt_biasToProbability (x : ℝ) :
     HasDerivAt (fun y : ℝ ↦ (1 - y) / 2) (-1 / 2) x := by

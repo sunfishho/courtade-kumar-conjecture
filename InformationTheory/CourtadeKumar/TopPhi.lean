@@ -1,4 +1,5 @@
-import InformationTheory.CourtadeKumar.ScalarUnitConversion
+import InformationTheory.CourtadeKumar.TopEntropyScalarCore
+import Mathlib.Tactic.Linarith
 
 /-! Convexity and endpoint bounds for the natural entropy deficiency `Phi`. -/
 

@@ -1,5 +1,4 @@
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
-import Mathlib.Tactic
 
 /-!
 # Lightweight outer-containment relation for rational enclosures

@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKLiteralCachedLogPointCore
 import InformationTheory.CourtadeKumar.LRDeterminantQPointCertificateAtomicCheck
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKCachedLogPointCertificate
 
@@ -15,28 +16,7 @@ namespace LRUpperKLiteralCachedLogPointCertificate
 
 open LRUpperKMidpointCoarsening
 
-abbrev LogValues := LRUpperKCachedLogPointCertificate.LogValues
-abbrev Values := LRUpperKPointCache.Values
 abbrev Sound := LRUpperKPointCache.Sound
-
-/-- Four independent outward-rounding equalities for the literal cached logs
-and point values.  Generated code uses one record declaration but still gives
-each field its own bounded reduction goal. -/
-structure OuterEqualities (pointBits logBits terms : ℕ)
-    (certificate : LRQPointCertificate) (logs : LogValues)
-    (values : Values) : Prop where
-  logLower : logs.lower =
-      LRUpperKDyadicOuterRounding.outerEnclosure logBits
-        (certificate.logLowerProbability.enclosure terms)
-  logUpper : logs.upper =
-      LRUpperKDyadicOuterRounding.outerEnclosure logBits
-        (certificate.logUpperProbability.enclosure terms)
-  q : values.q =
-      LRUpperKDyadicOuterRounding.outerEnclosure pointBits
-        (LRUpperKCachedLogPointCertificate.rawValues certificate logs).q
-  qPrime : values.qPrime =
-      LRUpperKDyadicOuterRounding.outerEnclosure pointBits
-        (LRUpperKCachedLogPointCertificate.rawValues certificate logs).qPrime
 
 /-- Componentwise outward-rounding equalities, together with the atomic
 certificate facts, imply semantic soundness of the literal point values. -/
@@ -65,6 +45,19 @@ theorem sound_of_atomic_outer_eq
       rw [outer.qPrime]
       exact LRUpperKDyadicOuterRounding.outerEnclosure_covers pointBits _)
       hraw.qPrime
+
+/-- Promote lightweight arithmetic facts to a semantic certified point.
+
+Generated arithmetic shards deliberately avoid importing this semantic layer.
+Replay leaves import it once and promote only the exact points they use. -/
+def certifiedPoint_of_atomic_outer_eq
+    (pointBits logBits terms : ℕ) {z : ℚ}
+    {certificate : LRQPointCertificate} {logs : LogValues} {values : Values}
+    (checks : LRQPointCertificate.AtomicChecks z certificate)
+    (outer : OuterEqualities pointBits logBits terms certificate logs values) :
+    LRUpperKPointCache.CertifiedPoint terms z :=
+  { values := values
+    sound := sound_of_atomic_outer_eq pointBits logBits terms checks outer }
 
 end LRUpperKLiteralCachedLogPointCertificate
 end CourtadeKumar

@@ -1,7 +1,6 @@
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKEnclosureCovers
 import Mathlib.Data.Rat.Floor
-import Mathlib.Tactic
 
 /-!
 # Lightweight verified dyadic outward rounding

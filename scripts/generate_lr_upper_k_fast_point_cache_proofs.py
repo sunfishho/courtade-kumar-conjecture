@@ -1,29 +1,36 @@
 #!/usr/bin/env python3
-"""Plan or emit kernel-authenticated upper-``K`` fast point modules.
+"""Plan or emit kernel-authenticated upper-``K`` fast point arithmetic.
 
 This stage authenticates the fast point query plan, the complete serial
 collection receipt, every collected output byte, and the exact Lean APIs used
-by the generated proof.  It then emits one ``CertifiedPoint`` definition per
+by the generated proof.  It emits one collection of arithmetic facts per
 materialized rational point.  Each entry contains a complete literal
 ``LRQPointCertificate``, the two shared rounded logarithm enclosures, and
-literal rounded ``Q`` and ``Q'`` enclosures.  The data, two records of
-independent arithmetic checks, semantic soundness theorem, and final
-``CertifiedPoint`` are separate Lean declarations.  Ordinary ``rfl'``
+literal rounded ``Q`` and ``Q'`` enclosures.  The data and two records of
+independent arithmetic checks are separate Lean declarations.  Ordinary ``rfl'``
 reductions check the square-root facts and identify the four outward-rounded
 enclosures.  Four stack-safe, kernel-checked ``norm_num`` proofs verify the
-logarithm range-reduction facts through shallow endpoint identities.  The proved
-``outerEnclosure_covers`` theorem transports the four isolated equalities to
-semantic containment.  Six atomic Boolean facts replace the one stack-hungry
-monolithic point-check reduction.  This deliberately avoids both a deeply
-nested proof term and negative-power rational normalization through raw
-definitional reduction.  No generated
+logarithm range-reduction facts through shallow endpoint identities.  Six
+atomic Boolean facts replace the one stack-hungry monolithic point-check
+reduction.  This deliberately avoids both a deeply nested proof term and
+negative-power rational normalization through raw definitional reduction.  No
+generated
 proof reruns automatic logarithm normalization or the polynomial square-root
 construction, and each logarithm series is evaluated only once.
 
+Semantic soundness is promoted lazily where a replay leaf actually uses a
+point.  A later module imports the semantic adapter once and applies
+``sound_of_atomic_outer_eq`` to the fully qualified arithmetic declarations
+recorded here.  Consequently the bulk arithmetic corpus never imports the
+historical analytic/TOP dependency closure, and this stage emits neither
+``Sound``/``CertifiedPoint`` declarations nor an all-import coverage root.
+
 The query output and this Python program have no proof authority.  The
 generated reductions and imported Lean theorems are checked by the ordinary
-Lean kernel.  Modules preserve authenticated first-use order, allowing later
-leaf generators to import only the nearby point modules they actually need.
+Lean kernel.  Disconnected arithmetic modules preserve authenticated first-use
+order, allowing later leaf generators to import only nearby point modules.
+The authenticated output table, entry table, and compilation receipt cover
+every module without forcing Lean to load the complete corpus at once.
 Emission is exclusive and confined to a dedicated existing repository-local
 ``.lake/scratch`` child directory.
 """
@@ -51,29 +58,39 @@ SCRIPT = Path(__file__).resolve()
 REPOSITORY = SCRIPT.parent.parent.resolve()
 SCRATCH = (REPOSITORY / ".lake" / "scratch").resolve()
 SCRIPT_BYTE_SHA256 = hashlib.sha256(SCRIPT.read_bytes()).hexdigest()
-FORMAT = "kernel-authenticated upper-K fast point-cache proof plan v4"
+FORMAT = "kernel-authenticated upper-K fast point-cache arithmetic plan v5"
 PROOF_AUTHORITY = (
     "two isolated ordinary Lean rfl' reductions and four isolated "
     "kernel-checked norm_num proofs for each literal point certificate; "
     "one isolated equality reduction for each of its two cached logarithm "
-    "enclosures and each of its two literal Q/Q' enclosures; followed only "
-    "by proved atomic-check assembly, outerEnclosure_covers, and cached-log "
-    "point soundness"
+    "enclosures and each of its two literal Q/Q' enclosures; no generated "
+    "semantic soundness or CertifiedPoint declaration: later replay leaves "
+    "promote the authenticated arithmetic facts through the proved "
+    "sound_of_atomic_outer_eq adapter"
 )
 MAX_RECEIPT_BYTES = 32 * 1024 * 1024
 MAX_GENERATED_MODULES = 20_000
 MAX_GENERATED_SOURCE_BYTES = 512 * 1024 * 1024
+MAX_GENERATED_MODULE_SOURCE_BYTES = 2 * 1024 * 1024
 MAX_MANIFEST_BYTES = 512 * 1024 * 1024
 GENERATED_NAMESPACE = "LRUpperKFastPointCacheProofGenerated"
 AUTHENTICATED_POINT_LOWER = Fraction(148137, 549755813888)
 AUTHENTICATED_POINT_UPPER = Fraction(287, 8192)
 POINT_PROOF_SOURCE_FILES = (
     "InformationTheory/CourtadeKumar/"
+    "TopEntropyScalarCore.lean",
+    "InformationTheory/CourtadeKumar/"
+    "TopPsiDerivativeCore.lean",
+    "InformationTheory/CourtadeKumar/"
     "ExactLogEnclosure.lean",
     "InformationTheory/CourtadeKumar/"
     "ExactSqrtEnclosure.lean",
     "InformationTheory/CourtadeKumar/"
-    "LRCertificateQEnclosure.lean",
+    "LRCertificateQEnclosureCore.lean",
+    "InformationTheory/CourtadeKumar/"
+    "LRCertificateQFunctionCore.lean",
+    "InformationTheory/CourtadeKumar/"
+    "LRCertificateQPointSound.lean",
     "InformationTheory/CourtadeKumar/"
     "LRDeterminantUpperKEnclosureCovers.lean",
     "InformationTheory/CourtadeKumar/"
@@ -86,6 +103,8 @@ POINT_PROOF_SOURCE_FILES = (
     "LRDeterminantUpperKCachedLogPointCertificate.lean",
     "InformationTheory/CourtadeKumar/"
     "LRDeterminantQPointCertificateAtomicCheck.lean",
+    "InformationTheory/CourtadeKumar/"
+    "LRDeterminantUpperKLiteralCachedLogPointCore.lean",
     "InformationTheory/CourtadeKumar/"
     "LRDeterminantUpperKLiteralCachedLogPointCertificate.lean",
 )
@@ -470,7 +489,8 @@ def render_config(
     proof_implementation: dict[str, object],
 ) -> tuple[str, str]:
     module = f"{prefix}Config"
-    source = f"""import InformationTheory.CourtadeKumar.LRDeterminantUpperKLiteralCachedLogPointCertificate
+    source = f"""import InformationTheory.CourtadeKumar.LRDeterminantQPointCertificateAtomicCheck
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKLiteralCachedLogPointCore
 
 /-! Authenticated constants for the generated upper-`K` fast point cache. -/
 
@@ -489,7 +509,7 @@ def collectionReceiptPayloadSha256 : String :=
   {json.dumps(receipt["receiptPayloadSha256"])}
 def queryFastPointSourceSetSha256 : String :=
   {json.dumps(query_implementation["fastPointCache"]["sourceSetSha256"])}
-def pointProofSourceSetSha256 : String :=
+def pointArithmeticAndPromotionSourceSetSha256 : String :=
   {json.dumps(proof_implementation["sourceSetSha256"])}
 
 end CourtadeKumar.{GENERATED_NAMESPACE}
@@ -497,7 +517,7 @@ end CourtadeKumar.{GENERATED_NAMESPACE}
     return module, source
 
 
-def render_proof_module(
+def render_arithmetic_module(
     prefix: str,
     config_module: str,
     index: int,
@@ -505,17 +525,15 @@ def render_proof_module(
     max_rec_depth: int,
     max_heartbeats: int,
 ) -> tuple[str, bytes, list[dict[str, object]]]:
-    module = f"{prefix}P{index:04d}"
-    namespace = f"P{index:04d}"
+    module = f"{prefix}A{index:04d}"
+    namespace = f"A{index:04d}"
     lines = [
         f"import {config_module}",
         "",
-        "/-! Kernel-authenticated rounded Q/Q' point entries. -/",
+        "/-! Kernel-authenticated rounded Q/Q' arithmetic facts. -/",
         "",
         f"namespace CourtadeKumar.{GENERATED_NAMESPACE}",
         f"namespace {namespace}",
-        "",
-        "open Set",
         "",
         f"set_option maxRecDepth {max_rec_depth}",
         f"set_option maxHeartbeats {max_heartbeats}",
@@ -524,13 +542,11 @@ def render_proof_module(
     records: list[dict[str, object]] = []
     for entry in entries:
         tag = entry.cache_id[:16]
-        point_name = f"point_{tag}"
         certificate_name = f"certificate_{tag}"
         logs_name = f"logs_{tag}"
         values_name = f"values_{tag}"
         checks_name = f"atomicChecks_{tag}"
         outer_equalities_name = f"outerEqualities_{tag}"
-        sound_name = f"sound_{tag}"
         z = typed_fraction_text(entry.z)
         sqrt_lower = typed_fraction_text(entry.value.sqrt_lower)
         sqrt_upper = typed_fraction_text(entry.value.sqrt_upper)
@@ -596,7 +612,7 @@ def render_proof_module(
                 f"              mantissa := {log_upper_upper_mantissa} }} }} }}",
                 "",
                 f"def {logs_name} :",
-                "    LRUpperKCachedLogPointCertificate.LogValues :=",
+                "    LRUpperKLiteralCachedLogPointCertificate.LogValues :=",
                 "  { lower :=",
                 f"        {{ lower := {log_lower_enclosure_lower}",
                 f"          upper := {log_lower_enclosure_upper} }}",
@@ -604,7 +620,8 @@ def render_proof_module(
                 f"        {{ lower := {log_upper_enclosure_lower}",
                 f"          upper := {log_upper_enclosure_upper} }} }}",
                 "",
-                f"def {values_name} : LRUpperKPointCache.Values :=",
+                f"def {values_name} :",
+                "    LRUpperKLiteralCachedLogPointCertificate.Values :=",
                 "  { q :=",
                 f"        {{ lower := {q_lower}",
                 f"          upper := {q_upper} }}",
@@ -643,34 +660,28 @@ def render_proof_module(
                 "    q := by rfl'",
                 "    qPrime := by rfl' }",
                 "",
-                f"theorem {sound_name} :",
-                f"    LRUpperKPointCache.Sound terms {z} {values_name} :=",
-                "  LRUpperKLiteralCachedLogPointCertificate.sound_of_atomic_outer_eq",
-                "    pointDyadicBits logDyadicBits",
-                f"      terms {checks_name} {outer_equalities_name}",
-                "",
-                f"def {point_name} :",
-                "    LRUpperKPointCache.CertifiedPoint terms",
-                f"      {z} :=",
-                f"  {{ values := {values_name}, sound := {sound_name} }}",
-                "",
             ]
+        )
+        qualified_prefix = (
+            f"CourtadeKumar.{GENERATED_NAMESPACE}.{namespace}."
         )
         records.append(
             {
                 "cacheId": entry.cache_id,
                 "module": module,
                 "namespace": namespace,
-                "pointName": point_name,
-                "qualifiedPointName": (
-                    f"CourtadeKumar.{GENERATED_NAMESPACE}.{namespace}.{point_name}"
-                ),
                 "certificateName": certificate_name,
+                "qualifiedCertificateName": qualified_prefix + certificate_name,
                 "logsName": logs_name,
+                "qualifiedLogsName": qualified_prefix + logs_name,
                 "valuesName": values_name,
+                "qualifiedValuesName": qualified_prefix + values_name,
                 "atomicChecksName": checks_name,
+                "qualifiedAtomicChecksName": qualified_prefix + checks_name,
                 "outerEqualitiesName": outer_equalities_name,
-                "soundName": sound_name,
+                "qualifiedOuterEqualitiesName": (
+                    qualified_prefix + outer_equalities_name
+                ),
                 "z": [entry.z.numerator, entry.z.denominator],
                 "leafMultiplicity": entry.leaf_multiplicity,
                 "firstUseOrdinal": entry.first_use_ordinal,
@@ -694,8 +705,20 @@ def render_proof_module(
         fail(f"{module} did not emit exactly six ordinary reductions per point")
     if source.count(b"norm_num [") != 4 * len(entries):
         fail(f"{module} did not emit exactly four norm_num proofs per point")
-    if source.count(b"def point_") != len(entries):
-        fail(f"{module} point declaration count drifted")
+    expected_declarations = (
+        (b"\ndef certificate_", len(entries)),
+        (b"\ndef logs_", len(entries)),
+        (b"\ndef values_", len(entries)),
+        (b"\ntheorem atomicChecks_", len(entries)),
+        (b"\ntheorem outerEqualities_", len(entries)),
+    )
+    for marker, expected in expected_declarations:
+        if source.count(marker) != expected:
+            fail(f"{module} arithmetic declaration count drifted for {marker!r}")
+    if b"\ndef point_" in source or b"\ntheorem sound_" in source:
+        fail(f"{module} unexpectedly emitted eager semantic declarations")
+    if len(source) > MAX_GENERATED_MODULE_SOURCE_BYTES:
+        fail(f"{module} exceeds the hard per-module source byte guard")
     return module, source, records
 
 
@@ -736,31 +759,74 @@ def validate_generated_byte_graph(sources: dict[str, bytes], prefix: str) -> Non
 
 
 def validate_sources(
-    sources: dict[str, bytes], prefix: str, expected_rfl: int,
-    expected_norm_num: int,
+    sources: dict[str, bytes],
+    prefix: str,
+    config_module: str,
+    arithmetic_modules: list[str],
+    expected_entries: int,
 ) -> None:
     if not sources or len(sources) > MAX_GENERATED_MODULES:
-        fail("generated fast point proof module count exceeds its hard guard")
+        fail("generated fast point arithmetic module count exceeds its hard guard")
+    if set(sources) != {config_module, *arithmetic_modules}:
+        fail("generated fast point arithmetic output set drifted")
+    if len(arithmetic_modules) != len(set(arithmetic_modules)):
+        fail("generated fast point arithmetic module list repeats a module")
     combined_bytes = 0
     reduction_count = 0
     norm_num_count = 0
+    declaration_markers = (
+        b"\ndef certificate_",
+        b"\ndef logs_",
+        b"\ndef values_",
+        b"\ntheorem atomicChecks_",
+        b"\ntheorem outerEqualities_",
+    )
+    declaration_counts = {marker: 0 for marker in declaration_markers}
+    import_pattern = re.compile(rb"^import\s+(\S+)\s*$", re.MULTILINE)
+    expected_config_imports = [
+        b"InformationTheory.CourtadeKumar."
+        b"LRDeterminantQPointCertificateAtomicCheck",
+        b"InformationTheory.CourtadeKumar."
+        b"LRDeterminantUpperKLiteralCachedLogPointCore",
+    ]
+    heavy_semantic_import = (
+        b"InformationTheory.CourtadeKumar."
+        b"LRDeterminantUpperKLiteralCachedLogPointCertificate"
+    )
     for module, source in sources.items():
         combined_bytes += len(source)
         reduction_count += source.count(b"rfl'")
         norm_num_count += source.count(b"norm_num [")
+        for marker in declaration_markers:
+            declaration_counts[marker] += source.count(marker)
+        if len(source) > MAX_GENERATED_MODULE_SOURCE_BYTES:
+            fail(f"generated module {module} exceeds its hard source byte guard")
         if b"#eval" in source:
             fail(f"generated proof module {module} unexpectedly contains #eval")
+        imports = import_pattern.findall(source)
+        if heavy_semantic_import in imports:
+            fail(f"generated arithmetic module {module} imports semantic soundness")
+        if module == config_module:
+            if imports != expected_config_imports:
+                fail("generated arithmetic config import set or order drifted")
+        elif imports != [config_module.encode("ascii")]:
+            fail(f"generated arithmetic shard {module} has unexpected imports")
+        if b"\ndef point_" in source or b"\ntheorem sound_" in source:
+            fail(f"generated module {module} contains eager semantic declarations")
         for forbidden in collection.query_plan.replay.FORBIDDEN_LEAN:
             if forbidden.encode("utf-8") in source:
                 fail(
                     f"generated fast point proof contains forbidden token {forbidden!r}"
                 )
     if combined_bytes > MAX_GENERATED_SOURCE_BYTES:
-        fail("generated fast point proof source bytes exceed their hard guard")
-    if reduction_count != expected_rfl:
-        fail("generated fast point proof reduction count drifted")
-    if norm_num_count != expected_norm_num:
-        fail("generated fast point proof norm_num count drifted")
+        fail("generated fast point arithmetic source bytes exceed their hard guard")
+    if reduction_count != 6 * expected_entries:
+        fail("generated fast point arithmetic reduction count drifted")
+    if norm_num_count != 4 * expected_entries:
+        fail("generated fast point arithmetic norm_num count drifted")
+    for marker, count in declaration_counts.items():
+        if count != expected_entries:
+            fail(f"generated arithmetic declaration count drifted for {marker!r}")
     validate_generated_byte_graph(sources, prefix)
 
 
@@ -792,11 +858,15 @@ def build(
         proof_implementation,
     )
     entry_count = len(entries)
+    if entry_count == 0:
+        fail("cannot emit an empty fast point arithmetic corpus")
     sources: dict[str, bytes] = {config_module: config_source.encode("utf-8")}
-    proof_modules: list[str] = []
+    arithmetic_modules: list[str] = []
     entry_records: list[dict[str, object]] = []
-    for index, group in enumerate(chunks(entries, args.proofs_per_module)):
-        module, source, records = render_proof_module(
+    for index, group in enumerate(
+        chunks(entries, args.arithmetic_points_per_module)
+    ):
+        module, source, records = render_arithmetic_module(
             prefix,
             config_module,
             index,
@@ -805,28 +875,28 @@ def build(
             args.max_heartbeats,
         )
         if module in sources:
-            fail(f"generated fast point-cache proof module collision: {module}")
+            fail(f"generated fast point-cache arithmetic module collision: {module}")
         sources[module] = source
-        proof_modules.append(module)
+        arithmetic_modules.append(module)
         entry_records.extend(records)
+    if len(entry_records) != entry_count:
+        fail("generated arithmetic entry record count drifted")
+    if len({record["cacheId"] for record in entry_records}) != entry_count:
+        fail("generated arithmetic entry records repeat a cache ID")
+    if {record["module"] for record in entry_records} != set(arithmetic_modules):
+        fail("generated arithmetic entry records do not cover every shard")
     # ``prepared`` gives this function sole ownership of ``entries``.  Its
     # ParsedValue/Fraction graph is no longer needed once every source literal
     # and compact manifest address has been rendered.  Releasing it before the
     # large manifest hash prevents those two representations from overlapping.
     entries.clear()
-    import_sources: dict[str, str] = {}
-    coverage, indexes = collection.query_plan.replay.add_import_fan_in(
-        import_sources,
+    validate_sources(
+        sources,
         prefix,
-        "Coverage",
-        proof_modules,
-        args.max_imports_per_index,
+        config_module,
+        arithmetic_modules,
+        entry_count,
     )
-    for module, source in import_sources.items():
-        if module in sources:
-            fail(f"generated fast point-cache import module collision: {module}")
-        sources[module] = source.encode("utf-8")
-    validate_sources(sources, prefix, 6 * entry_count, 4 * entry_count)
     output_hashes = {
         f"{module}.lean": sha256_bytes(source)
         for module, source in sorted(sources.items())
@@ -853,12 +923,22 @@ def build(
         },
         "implementation": {
             "query": query_implementation,
-            "pointProof": proof_implementation,
+            "pointArithmeticAndLazyPromotion": proof_implementation,
         },
         "proofApi": {
-            "entryType": (
-                "CourtadeKumar.LRUpperKPointCache.CertifiedPoint"
+            "generatedEntryKind": (
+                "literal arithmetic data plus AtomicChecks and "
+                "OuterEqualities; not a CertifiedPoint"
             ),
+            "generatedConstants": {
+                "pointDyadicBits": (
+                    f"CourtadeKumar.{GENERATED_NAMESPACE}.pointDyadicBits"
+                ),
+                "logDyadicBits": (
+                    f"CourtadeKumar.{GENERATED_NAMESPACE}.logDyadicBits"
+                ),
+                "terms": f"CourtadeKumar.{GENERATED_NAMESPACE}.terms",
+            },
             "certificateType": "CourtadeKumar.LRQPointCertificate",
             "certificateCheck": (
                 "CourtadeKumar.LRQPointCertificate.primeCheck"
@@ -872,15 +952,14 @@ def build(
             "atomicRangeAssembly": (
                 "CourtadeKumar.LRQPointCertificate.AtomicChecks.inRange"
             ),
-            "cachedLogType": (
-                "CourtadeKumar.LRUpperKCachedLogPointCertificate.LogValues"
+            "arithmeticLogValuesType": (
+                "CourtadeKumar.LRUpperKCachedLogPointCore.LogValues"
             ),
-            "cachedLogCovers": (
-                "CourtadeKumar.LRUpperKCachedLogPointCertificate."
-                "LogValues.Covers"
+            "arithmeticValuesType": (
+                "CourtadeKumar.LRUpperKCachedLogPointCore.Values"
             ),
-            "rawValues": (
-                "CourtadeKumar.LRUpperKCachedLogPointCertificate.rawValues"
+            "arithmeticRawValues": (
+                "CourtadeKumar.LRUpperKCachedLogPointCore.rawValues"
             ),
             "outerEnclosure": (
                 "CourtadeKumar.LRUpperKDyadicOuterRounding.outerEnclosure"
@@ -889,22 +968,30 @@ def build(
                 "CourtadeKumar.LRUpperKLiteralCachedLogPointCertificate."
                 "OuterEqualities"
             ),
-            "soundness": (
-                "CourtadeKumar.LRUpperKLiteralCachedLogPointCertificate."
-                "sound_of_atomic_outer_eq"
-            ),
-            "outerEnclosureCovers": (
-                "CourtadeKumar.LRUpperKDyadicOuterRounding."
-                "outerEnclosure_covers"
-            ),
-            "coversRelation": (
-                "CourtadeKumar.LRUpperKMidpointCoarsening.Covers"
-            ),
+            "lazyPromotion": {
+                "semanticAdapterModule": (
+                    "InformationTheory.CourtadeKumar."
+                    "LRDeterminantUpperKLiteralCachedLogPointCertificate"
+                ),
+                "soundType": "CourtadeKumar.LRUpperKPointCache.Sound",
+                "certifiedPointType": (
+                    "CourtadeKumar.LRUpperKPointCache.CertifiedPoint"
+                ),
+                "soundnessTheorem": (
+                    "CourtadeKumar.LRUpperKLiteralCachedLogPointCertificate."
+                    "sound_of_atomic_outer_eq"
+                ),
+                "certifiedPointConstructor": (
+                    "CourtadeKumar.LRUpperKLiteralCachedLogPointCertificate."
+                    "certifiedPoint_of_atomic_outer_eq"
+                ),
+                "generatedSoundDeclarationCount": 0,
+                "generatedCertifiedPointDeclarationCount": 0,
+            },
         },
         "parameters": {
             **parameters,
-            "proofsPerModule": args.proofs_per_module,
-            "maxImportsPerIndex": args.max_imports_per_index,
+            "arithmeticPointsPerModule": args.arithmetic_points_per_module,
             "maxRecDepth": args.max_rec_depth,
             "maxHeartbeats": args.max_heartbeats,
             "modulePrefix": prefix,
@@ -913,14 +1000,21 @@ def build(
             ),
             "proofStrategy": (
                 "stack-safe six-atomic-check componentwise cached-log "
-                "Q/Q-prime outer enclosure v4"
+                "Q/Q-prime arithmetic facts with lazy semantic promotion v5"
             ),
         },
         "outputDirectory": collection.query_plan.replay.relative_project_path(
             args.validated_output_dir
         ),
+        "configModule": config_module,
+        "generatedNamespace": (
+            f"CourtadeKumar.{GENERATED_NAMESPACE}"
+        ),
         "entryCount": entry_count,
-        "certifiedPointCount": entry_count,
+        "arithmeticFactEntryCount": entry_count,
+        "lazyPromotionReadyPointCount": entry_count,
+        "generatedSoundDeclarationCount": 0,
+        "generatedCertifiedPointDeclarationCount": 0,
         "kernelArithmeticCheckCount": 10 * entry_count,
         "ordinaryRflReductionCount": 6 * entry_count,
         "normNumCertificateProofCount": 4 * entry_count,
@@ -928,12 +1022,18 @@ def build(
         "cachedLogEqualityReductionCount": 2 * entry_count,
         "pointValueEqualityReductionCount": 2 * entry_count,
         "standalonePointRangeProofCount": 0,
-        "proofModuleCount": len(proof_modules),
-        "proofModules": proof_modules,
-        "importIndexModules": indexes,
-        "coverageModule": coverage,
+        "arithmeticModuleCount": len(arithmetic_modules),
+        "arithmeticModules": arithmetic_modules,
+        "allImportCoverageModuleCount": 0,
+        "coverageModules": arithmetic_modules,
         "coverageImportPolicy": (
-            "audit only; replay leaves import exact point proof modules instead"
+            "the authenticated output and entry tables plus the compilation "
+            "receipt cover every disconnected arithmetic shard; no all-import "
+            "Lean coverage module is emitted"
+        ),
+        "semanticPromotionPolicy": (
+            "later replay leaves import exact arithmetic shards and the shared "
+            "semantic adapter, then construct Sound/CertifiedPoint values lazily"
         ),
         "collectedLogRangeDataPolicy": (
             "all four range-reduction records and both rounded sqrt endpoints "
@@ -1004,17 +1104,24 @@ def summary(manifest: dict[str, object]) -> dict[str, object]:
         "standalonePointRangeProofCount": manifest[
             "standalonePointRangeProofCount"
         ],
-        "proofModuleCount": manifest["proofModuleCount"],
+        "arithmeticFactEntryCount": manifest["arithmeticFactEntryCount"],
+        "lazyPromotionReadyPointCount": manifest[
+            "lazyPromotionReadyPointCount"
+        ],
+        "generatedCertifiedPointDeclarationCount": manifest[
+            "generatedCertifiedPointDeclarationCount"
+        ],
+        "arithmeticModuleCount": manifest["arithmeticModuleCount"],
+        "allImportCoverageModuleCount": manifest[
+            "allImportCoverageModuleCount"
+        ],
         "leanModuleCount": manifest["leanModuleCount"],
-        "coverageModule": manifest["coverageModule"],
     }
 
 
 def validate_arguments(args: argparse.Namespace) -> None:
-    if not 1 <= args.proofs_per_module <= 32:
-        fail("--proofs-per-module must lie in [1,32]")
-    if not 2 <= args.max_imports_per_index <= 128:
-        fail("--max-imports-per-index must lie in [2,128]")
+    if not 1 <= args.arithmetic_points_per_module <= 512:
+        fail("--arithmetic-points-per-module must lie in [1,512]")
     if args.max_rec_depth <= 0 or args.max_heartbeats < 0:
         fail("Lean resource options are invalid")
     proof_module_prefix(args.module_prefix)
@@ -1118,8 +1225,17 @@ def add_arguments(command: argparse.ArgumentParser) -> None:
     command.add_argument("--collection-dir", required=True)
     command.add_argument("--collection-receipt", required=True)
     command.add_argument("--output-dir", required=True)
-    command.add_argument("--proofs-per-module", type=int, default=32)
-    command.add_argument("--max-imports-per-index", type=int, default=64)
+    command.add_argument(
+        "--arithmetic-points-per-module",
+        "--proofs-per-module",
+        dest="arithmetic_points_per_module",
+        type=int,
+        default=256,
+        help=(
+            "authenticated arithmetic points per shard (the old "
+            "--proofs-per-module spelling remains a truthful alias)"
+        ),
+    )
     command.add_argument("--max-rec-depth", type=int, default=1_000_000)
     command.add_argument("--max-heartbeats", type=int, default=0)
     command.add_argument(
@@ -1134,7 +1250,7 @@ def parser() -> argparse.ArgumentParser:
     add_arguments(plan)
     plan.set_defaults(handler=command_plan)
     generate = commands.add_parser(
-        "generate", help="emit kernel-authenticated fast point proof modules"
+        "generate", help="emit kernel-authenticated fast point arithmetic modules"
     )
     add_arguments(generate)
     generate.add_argument("--expected-plan-sha256", required=True)

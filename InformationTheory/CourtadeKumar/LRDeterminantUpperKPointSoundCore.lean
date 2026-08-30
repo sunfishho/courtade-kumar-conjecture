@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKCachedLogPointCore
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKEnclosureCovers
+import InformationTheory.CourtadeKumar.LRCertificateQPointSound
 
 /-!
 # Lightweight semantic core for upper-`K` point certificates

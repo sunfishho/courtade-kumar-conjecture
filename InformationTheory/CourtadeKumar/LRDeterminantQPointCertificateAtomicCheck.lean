@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.LRCertificateQEnclosure
+import InformationTheory.CourtadeKumar.LRCertificateQEnclosureCore
 
 /-!
 # Factored checks for literal `Q/Q'` point certificates

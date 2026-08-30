@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.LRCertificateQEnclosure
+import InformationTheory.CourtadeKumar.LRCertificateQEnclosureCore
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKDyadicOuterRoundingCore
 
 /-!

@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRCertificateQFunctionCore
 import InformationTheory.CourtadeKumar.TopCapPrimitive
 import InformationTheory.CourtadeKumar.ChannelCap
 
@@ -15,14 +16,6 @@ open Set
 
 namespace CourtadeKumar
 
-/-- The scalar `Q` used in the midpoint and determinant certificate ledgers. -/
-noncomputable def lrCertificateQ (y : ℝ) : ℝ :=
-  topJ (Real.sqrt (1 - y))
-
-/-- The manuscript expression for `Q'`. -/
-noncomputable def lrCertificateQPrime (y : ℝ) : ℝ :=
-  topPsiDeriv (1 - y)
-
 /-- The manuscript expression for `Q''`. -/
 noncomputable def lrCertificateQSecond (y : ℝ) : ℝ :=
   -topPsiDeriv2 (1 - y)
@@ -35,12 +28,6 @@ lemma lrCertificateQ_eq (y : ℝ) :
 @[simp] lemma lrCertificateQ_zero : lrCertificateQ 0 = 0 := by
   rw [lrCertificateQ_eq]
   norm_num [topPhi_one]
-
-lemma lrCertificateQPrime_eq (y : ℝ) :
-    lrCertificateQPrime y =
-      Real.artanh (Real.sqrt (1 - y)) /
-        (2 * Real.sqrt (1 - y)) := by
-  rfl
 
 lemma lrCertificateQSecond_eq {y : ℝ} (hy : y ∈ Ioo (0 : ℝ) 1) :
     lrCertificateQSecond y =
