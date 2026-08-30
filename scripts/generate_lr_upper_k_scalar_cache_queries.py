@@ -212,6 +212,33 @@ def scalar_uses(box: ExactBox) -> tuple[ScalarUse, ...]:
     )
 
 
+def point_uses(box: ExactBox) -> set[Fraction]:
+    """Distinct positive Q-points needed by one center or whole box.
+
+    The zero branch of ``C`` is exact and deliberately contributes no point.
+    """
+    result: set[Fraction] = set()
+    for use in scalar_uses(box):
+        s, y = use.key.s, use.key.y
+        b = s + (1 - s) * y
+        if use.key.kind == "a":
+            result.update((s, b))
+        elif y != 0:
+            result.update((s, y, b))
+    return result
+
+
+def raw_point_occurrences(box: ExactBox) -> int:
+    """Count point uses before sharing equal points inside a leaf."""
+    result = 0
+    for use in scalar_uses(box):
+        if use.key.kind == "a":
+            result += 2
+        elif use.key.y != 0:
+            result += 3
+    return result
+
+
 def authenticated_leaves(
     authenticated: replay.AuthenticatedInputs,
 ) -> Iterator[tuple[str, replay.PathSteps, ExactBox]]:
@@ -544,6 +571,59 @@ def command_plan(args: argparse.Namespace) -> None:
     print(json.dumps(summary(manifest), indent=2, sort_keys=True))
 
 
+def command_point_plan(args: argparse.Namespace) -> None:
+    """Authenticate the forest and report the fast point-cache workload."""
+    replay.validate_repository_location()
+    validate_arguments(args)
+    (
+        args.validated_output_dir,
+        args.validated_output_identity,
+    ) = replay.output_directory(args.output_dir)
+    authenticated = replay.authenticate_inputs(args)
+    counts: Counter[Fraction] = Counter()
+    raw_occurrences = 0
+    local_distinct = 0
+    leaf_count = 0
+    leaf_widths: Counter[int] = Counter()
+    for _root_key, _path, box in authenticated_leaves(authenticated):
+        leaf_count += 1
+        points = point_uses(box.center()) | point_uses(box)
+        raw_occurrences += (
+            raw_point_occurrences(box.center()) + raw_point_occurrences(box)
+        )
+        local_distinct += len(points)
+        leaf_widths[len(points)] += 1
+        counts.update(points)
+    if not counts or min(counts) <= 0 or max(counts) > Fraction(1, 16):
+        replay.fail("fast point-cache domain escaped (0,1/16]")
+    selected = {
+        point for point, multiplicity in counts.items()
+        if multiplicity >= args.cache_multiplicity_threshold
+    }
+    local_fallbacks = sum(
+        multiplicity for point, multiplicity in counts.items()
+        if point not in selected
+    )
+    print(json.dumps({
+        "status": "validated-read-only",
+        "totalLeaves": leaf_count,
+        "rawPointOccurrences": raw_occurrences,
+        "leafLocalDistinctPointOccurrences": local_distinct,
+        "leafDistinctWidths": {
+            str(width): multiplicity
+            for width, multiplicity in sorted(leaf_widths.items())
+        },
+        "uniquePointKeys": len(counts),
+        "minimumPoint": fraction_record(min(counts)),
+        "maximumPoint": fraction_record(max(counts)),
+        "selectedPointKeys": len(selected),
+        "selectedPointLeafOccurrences": sum(counts[p] for p in selected),
+        "localFallbackPointOccurrences": local_fallbacks,
+        "resultingPointMaterializations": len(selected) + local_fallbacks,
+        "cacheMultiplicityThreshold": args.cache_multiplicity_threshold,
+    }, indent=2, sort_keys=True))
+
+
 def command_generate_queries(args: argparse.Namespace) -> None:
     if not args.confirm_write:
         replay.fail("refusing query emission without --confirm-write")
@@ -587,6 +667,11 @@ def parser() -> argparse.ArgumentParser:
     plan = commands.add_parser("plan", help="authenticate and plan without writing")
     add_arguments(plan)
     plan.set_defaults(handler=command_plan)
+    point_plan = commands.add_parser(
+        "point-plan", help="authenticate and measure the fast point-cache plan"
+    )
+    add_arguments(point_plan)
+    point_plan.set_defaults(handler=command_point_plan)
     generate = commands.add_parser(
         "generate-queries", help="emit bounded untrusted Lean query modules"
     )
