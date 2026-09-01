@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.LRDeterminantBoundedDeepAssembly
+import InformationTheory.CourtadeKumar.LRDeterminantRegionInterfaces
 
 /-!
 # Checked-tree interfaces for the finite determinant ledger

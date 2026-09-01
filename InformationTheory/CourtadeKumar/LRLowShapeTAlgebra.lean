@@ -21,19 +21,6 @@ noncomputable def lrLowTDeterminant (R v t : ℝ) : ℝ :=
     (lrLowHalfSlopeBase v + 4 * lrNormalizedEnergy R 1) *
       (lrLowVReserve R v t / (1 - R) ^ 2)
 
-lemma lrFlowNumeratorP_midpoint_eq_lrLowVReserve
-    {R v t : ℝ} (hv : v ≠ -1) :
-    lrFlowNumeratorP R (lrFlowM v) v t =
-      lrLowVReserve R v t := by
-  unfold lrFlowNumeratorP lrLowVReserve lrLowYTangent lrFlowC
-    lrFlowD lrFlowA lrFlowM
-  have hden : 1 + v ≠ 0 := by
-    intro h
-    apply hv
-    linear_combination h
-  field_simp [hden]
-  ring
-
 lemma lrFlowHalfSlope_eq_normalized
     {R v : ℝ} (hR : R ≠ 1) :
     lrFlowHalfSlope R v =

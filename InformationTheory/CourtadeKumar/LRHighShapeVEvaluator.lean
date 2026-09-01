@@ -1,7 +1,7 @@
 import InformationTheory.CourtadeKumar.LRHighShapeTangentEvaluator
-import InformationTheory.CourtadeKumar.LRLowShapeTAlgebra
+import InformationTheory.CourtadeKumar.LRHighShapeVAutoComputation
+import InformationTheory.CourtadeKumar.LRLowShapeTAlgebraCore
 import InformationTheory.CourtadeKumar.LRPhysicalDiscardCertificate
-import InformationTheory.CourtadeKumar.LRFullFlowAssembly
 
 /-!
 # Direct evaluator for the high-shape cancellation reserve `V`
@@ -97,9 +97,6 @@ theorem lrCertificateVTarget_flow
     lrCertificateR_flow,
     lrCertificateV_flow hRNe hePos.ne' hv.1 ht.1,
     lrCertificateT_flow hRNe hePos.ne' ht.1]
-
-/-- No new untrusted data are needed beyond the half-midpoint payload. -/
-abbrev LRHighShapeVCertificate := LRHighShapeMidpointCertificate
 
 namespace LRHighShapeVCertificate
 
@@ -358,18 +355,5 @@ finite roots and analytic tails. -/
 def LRHighShapeVCoordinateTheorem : Prop :=
   ∀ point : CertificatePoint,
     LRHighShapeVRelevant point → 0 ≤ lrCertificateVTarget point
-
-/-- Once all cancellation-coordinate roots are covered, the exact change of
-variables turns their result into the sole high-shape assumption required by
-the reduced flow assembly. -/
-theorem lrHighShapeVTheorem_of_coordinateTheorem
-    (hcoordinate : LRHighShapeVCoordinateTheorem) :
-    LRHighShapeVTheorem := by
-  intro R v t hR hv ht htHigh hvHigh hJ
-  have htarget := hcoordinate (lrFlowCertificatePoint R v t)
-    (lrFlowCertificatePoint_highShapeVRelevant
-      hR hv ht htHigh hvHigh hJ)
-  rw [lrCertificateVTarget_flow hR hv ht] at htarget
-  exact htarget
 
 end CourtadeKumar

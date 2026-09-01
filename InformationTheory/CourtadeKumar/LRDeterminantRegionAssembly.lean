@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.LRDeterminantRegionCover
+import InformationTheory.CourtadeKumar.LRDeterminantRegionInterfaces
 import InformationTheory.CourtadeKumar.LRDeterminantWronskianConcrete
 import InformationTheory.CourtadeKumar.LRNearEndpointTangentAssembly
 
@@ -18,22 +18,6 @@ resummation in `LRDeterminantWronskianConcrete`.
 
 namespace CourtadeKumar
 
-/-- The cheaper (D5) scalar inequality at a certificate point. -/
-def LRDeterminantFirstBracketAt (point : CertificatePoint) : Prop :=
-  0 ≤ lrDeterminantFirstBracket
-    (lrCertificateBFlow point) (lrDeterminantD1 point)
-    (lrCertificateGShape point) (lrDeterminantPsi point)
-    (lrDeterminantDelta point) (lrCertificateW point)
-
-/-- The fully cleared singular determinant (D4) at a certificate point. -/
-def LRDeterminantClearedSingularAt (point : CertificatePoint) : Prop :=
-  0 ≤ lrDeterminantClearedSingular
-    (lrCertificateBFlow point) (lrDeterminantD1 point)
-    (lrCertificateGShape point) (lrDeterminantPsi point)
-    (lrDeterminantDelta point) (lrCertificateW point)
-    (lrDeterminantC0 point) (lrCertificateX point)
-    (lrDeterminantT point)
-
 /-- The reduced numerator (A1) used by the analytic bridges after discarding
 the complete favorable `4 * delta * B * W` atom. -/
 def LRDeterminantReducedClearedAt (point : CertificatePoint) : Prop :=
@@ -42,11 +26,6 @@ def LRDeterminantReducedClearedAt (point : CertificatePoint) : Prop :=
     (lrCertificateGShape point) (lrDeterminantPsi point)
     (lrDeterminantC0 point) (lrCertificateX point)
     (lrDeterminantT point)
-
-/-- The two scalar certificate formats accepted in the audited region table. -/
-def LRDeterminantAdmittedTarget (point : CertificatePoint) : Prop :=
-  LRDeterminantFirstBracketAt point ∨
-    LRDeterminantClearedSingularAt point
 
 /-- A reduced analytic target is an admitted determinant certificate. -/
 theorem lrDeterminantAdmittedTarget_of_reducedCleared
@@ -76,43 +55,6 @@ theorem lrCertificateTTarget_nonnegative_of_determinantAdmittedTarget
       hinterior hrelevant
       (lrCertificateDeterminantCoefficient_nonnegative hinterior)
       hcleared
-
-/-- A region theorem has precisely the hypotheses common to every row of the
-audited determinant table. -/
-def LRDeterminantRegionCertificateTheorem
-    (Region : CertificatePoint → Prop) : Prop :=
-  ∀ point : CertificatePoint,
-    LRHighShapeInterior point →
-    LRHighShapeVRelevant point →
-    Region point →
-    LRDeterminantAdmittedTarget point
-
-/-- The direct theorem used on the exceptional low-ratio strip
-`1/4 < k/s ≤ 1`. -/
-def LRDeterminantLowRatioTangentTheorem : Prop :=
-  ∀ point : CertificatePoint,
-    LRHighShapeInterior point →
-    LRHighShapeVRelevant point →
-    LRDeterminantLowRatioRegion point →
-    0 ≤ lrCertificateTTarget point
-
-/-- The eleven proof obligations in the audited near-endpoint determinant
-decomposition: one direct low-ratio strip and ten determinant rows. -/
-structure LRDeterminantRegionLedger where
-  lowRatio : LRDeterminantLowRatioTangentTheorem
-  deep : LRDeterminantRegionCertificateTheorem LRDeterminantDeepRegion
-  lowK : LRDeterminantRegionCertificateTheorem LRDeterminantLowKRegion
-  tail : LRDeterminantRegionCertificateTheorem LRDeterminantTailRegion
-  fixed1To32 :
-    LRDeterminantRegionCertificateTheorem LRDeterminantFixed1To32Region
-  kCorridor :
-    LRDeterminantRegionCertificateTheorem LRDeterminantKCorridorRegion
-  fixed1To128 :
-    LRDeterminantRegionCertificateTheorem LRDeterminantFixed1To128Region
-  upperK : LRDeterminantRegionCertificateTheorem LRDeterminantUpperKRegion
-  fixed64 : LRDeterminantRegionCertificateTheorem LRDeterminantFixed64Region
-  fixed32 : LRDeterminantRegionCertificateTheorem LRDeterminantFixed32Region
-  fixed16 : LRDeterminantRegionCertificateTheorem LRDeterminantFixed16Region
 
 /-- Every row in a determinant ledger supplies the tangent target on the
 union of the ten audited determinant regions. -/

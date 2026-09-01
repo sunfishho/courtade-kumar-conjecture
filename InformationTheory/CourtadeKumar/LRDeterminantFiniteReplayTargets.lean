@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRDeterminantFiniteRegions
+import InformationTheory.CourtadeKumar.LRDeterminantPositiveFactorsCore
 
 /-!
 # Exact replay targets for the finite determinant ledger
