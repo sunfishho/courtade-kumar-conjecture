@@ -8,8 +8,9 @@ root.  It then emits:
 
 * one proof-free configuration module whose boxes are reconstructed from the
   root by exact lower/upper paths;
-* configurable, independently recoverable arithmetic chunks in which every
-  terminal has its own ``#kernel_checked_bool`` receipt;
+* configurable, independently recoverable arithmetic chunks in which one
+  ``List.all`` receipt authenticates 32--128 terminal predicates and ordinary
+  structural list lemmas recover the individual equalities;
 * an arithmetic-free checked-tree assembly; and
 * a semantic endpoint for the fixed-16 restricted ledger row.
 
@@ -27,7 +28,7 @@ import json
 import os
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from pathlib import Path
 from typing import Any, TypeAlias
@@ -45,18 +46,24 @@ def fail(message: str) -> None:
 
 
 SCRIPT = Path(__file__).resolve()
-PLAN_FORMAT = "fixed16-restricted-d9-plan-v1"
-MANIFEST_FORMAT = "fixed16-restricted-d9-segmented-bundle-v1"
+PLAN_FORMATS = {
+    "fixed16-restricted-d9-plan-v1",
+    "fixed16-restricted-d9-plan-v2",
+}
+SLAB_PLAN_FORMAT = "fixed16-restricted-d9-slab-plan-v1"
+CHECKPOINT_PLAN_FORMAT = "fixed16-restricted-d9-checkpoint-plan-v1"
+MANIFEST_FORMAT = "fixed16-restricted-d9-segmented-bundle-v2"
 EXPECTED_ROOT = (
     Fraction(1, 16), Fraction(1, 10),
     Fraction(1, 16), Fraction(4),
     Fraction(0), Fraction(1),
 )
 PARAMETER_NAMES = ("terms", "sqrtFuel", "logFuel", "depth")
-TERMINAL_KINDS = ("accept", "irrelevant", "wedge")
-DEFAULT_CHUNK_SIZE = 4
-MAX_CHUNK_SIZE = 16
-MAX_DEPTH = 32
+TERMINAL_KINDS = ("fallback", "centered", "irrelevant", "wedge")
+ALLOWED_CHUNK_SIZES = (32, 64, 128)
+DEFAULT_CHUNK_SIZE = 64
+MAX_CHUNK_SIZE = max(ALLOWED_CHUNK_SIZES)
+MAX_DEPTH = 64
 # Direct-D9 pilots can still require several thousand terminals before the
 # centered-mean evaluator is available.  These are hard corruption/resource
 # guards, not target sizes; the production design should remain far smaller.
@@ -78,7 +85,6 @@ FORBIDDEN_LEAN_TOKENS = (
     "sorry",
     "admit",
 )
-
 
 def parse_nat(text: str, context: str) -> int:
     if not re.fullmatch(r"0|[1-9][0-9]*", text):
@@ -172,6 +178,7 @@ class Plan:
     terminals: tuple[Terminal, ...]
     source_sha256: str
     source_bytes: int
+    input_sha256s: tuple[str, ...] = ()
 
 
 def parse_box(fields: list[str], context: str) -> Box:
@@ -191,8 +198,7 @@ def validate_path(path: str, context: str) -> None:
         fail(f"{context}: invalid binary path {path!r}")
 
 
-def parse_plan(path: Path) -> Plan:
-    raw = path.read_bytes()
+def parse_plan_bytes(raw: bytes) -> Plan:
     if len(raw) > MAX_PLAN_BYTES:
         fail(f"plan exceeds {MAX_PLAN_BYTES}-byte guard")
     try:
@@ -203,8 +209,10 @@ def parse_plan(path: Path) -> Plan:
     if not lines:
         fail("empty plan")
     header = lines[0].split("\t")
-    if len(header) != 12 or header[:2] != ["H", PLAN_FORMAT]:
+    if (len(header) != 12 or header[0] != "H"
+            or header[1] not in PLAN_FORMATS):
         fail("invalid fixed16 restricted-D9 plan header")
+    plan_format = header[1]
     parameters = tuple(
         parse_nat(value, f"header {PARAMETER_NAMES[index]}")
         for index, value in enumerate(header[2:6])
@@ -242,16 +250,24 @@ def parse_plan(path: Path) -> Plan:
             node: Node = Split(
                 node_path, axis, parse_rat(fields[3], f"{context} cut")
             )
-        elif fields[0] in {"A", "X", "W"}:
+        elif fields[0] in {"A", "C", "X", "W"}:
             if len(fields) != 10:
                 fail(f"{context}: malformed terminal")
             index = parse_nat(fields[1], f"{context} terminal index")
             node_path, printed_kind = fields[2], fields[3]
             validate_path(node_path, context)
-            expected_kind = {"A": "accept", "X": "irrelevant",
-                             "W": "wedge"}[fields[0]]
+            expected_kind = {
+                "A": "accept" if plan_format.endswith("v1") else "fallback",
+                "C": "centered",
+                "X": "irrelevant",
+                "W": "wedge",
+            }[fields[0]]
+            if fields[0] == "C" and plan_format.endswith("v1"):
+                fail(f"{context}: centered terminal requires plan v2")
             if printed_kind != expected_kind:
                 fail(f"{context}: terminal tag/kind mismatch")
+            if expected_kind == "accept":
+                expected_kind = "fallback"
             node = Terminal(index, node_path, expected_kind,
                             parse_box(fields[4:], f"{context} box"))
             terminals.append(node)
@@ -271,6 +287,19 @@ def parse_plan(path: Path) -> Plan:
         fail(f"terminal count exceeds {MAX_TERMINALS}")
     if [terminal.index for terminal in terminals] != list(range(len(terminals))):
         fail("terminal indices are not contiguous lower-first indices")
+    if plan_format.endswith("v2"):
+        forced = {
+            "r": ("k", Fraction(1)),
+            "rL": ("k", Fraction(1, 4)),
+            "rLL": ("k", Fraction(1, 8)),
+            "rLR": ("k", Fraction(1, 2)),
+            "rR": ("k", Fraction(2)),
+        }
+        for forced_path, (axis, cut) in forced.items():
+            node = nodes.get(forced_path)
+            if not (isinstance(node, Split)
+                    and node.axis == axis and node.cut == cut):
+                fail(f"plan v2 is missing forced split {forced_path}")
 
     boxes: dict[str, Box] = {}
     preorder_terminals: list[int] = []
@@ -313,6 +342,342 @@ def parse_plan(path: Path) -> Plan:
                 hashlib.sha256(raw).hexdigest(), len(raw))
 
 
+def parse_plan(path: Path) -> Plan:
+    return parse_plan_bytes(path.read_bytes())
+
+
+SLAB_PREFIXES = ("rLLL", "rLLR", "rLRL", "rLRR", "rRL", "rRR")
+SLAB_K_BOUNDS = (
+    (Fraction(1, 16), Fraction(1, 8)),
+    (Fraction(1, 8), Fraction(1, 4)),
+    (Fraction(1, 4), Fraction(1, 2)),
+    (Fraction(1, 2), Fraction(1)),
+    (Fraction(1), Fraction(2)),
+    (Fraction(2), Fraction(4)),
+)
+
+
+def expected_slab_root(index: int) -> Box:
+    k_lo, k_hi = SLAB_K_BOUNDS[index]
+    return Box(Fraction(1, 16), Fraction(1, 10), k_lo, k_hi,
+               Fraction(0), Fraction(1))
+
+
+def merge_slab_plans(paths: list[Path]) -> Plan:
+    """Authenticate and merge six independent checkpoint plans."""
+    if len(paths) != 6:
+        fail("exactly six --slab-plan files are required")
+    transformed: list[list[str]] = []
+    input_hashes: list[str] = []
+    common_parameters: tuple[int, int, int] | None = None
+    total_terminals = 0
+    total_depth = 0
+    for expected_index, path in enumerate(paths):
+        raw = path.read_bytes()
+        if len(raw) > MAX_PLAN_BYTES:
+            fail(f"slab {expected_index}: plan exceeds byte guard")
+        try:
+            lines = raw.decode("ascii").splitlines()
+        except UnicodeDecodeError as error:
+            fail(f"slab {expected_index}: plan is not ASCII: {error}")
+        if not lines:
+            fail(f"slab {expected_index}: empty plan")
+        header = lines[0].split("\t")
+        if (len(header) != 13
+                or header[:2] != ["H", SLAB_PLAN_FORMAT]):
+            fail(f"slab {expected_index}: invalid checkpoint header")
+        slab_index = parse_nat(header[2], f"slab {expected_index} index")
+        if slab_index != expected_index:
+            fail(f"slab checkpoint order mismatch: expected {expected_index}")
+        parameters = tuple(parse_nat(value,
+                                     f"slab {expected_index} parameter")
+                           for value in header[3:7])
+        if parameters[-1] > MAX_DEPTH:
+            fail(f"slab {expected_index}: adaptive depth exceeds guard")
+        slab_root = parse_box(header[7:], f"slab {expected_index} root")
+        if slab_root != expected_slab_root(expected_index):
+            fail(f"slab {expected_index}: root does not match forced k slab")
+        if common_parameters is None:
+            common_parameters = parameters[:3]
+        elif parameters[:3] != common_parameters:
+            fail("slab evaluator parameters disagree")
+        prefix = SLAB_PREFIXES[expected_index]
+        local_records: list[str] = []
+        local_terminal_count = 0
+        footer_count: int | None = None
+        for line_number, line in enumerate(lines[1:], start=2):
+            fields = line.split("\t")
+            context = f"slab {expected_index} line {line_number}"
+            if footer_count is not None:
+                fail(f"{context}: data after footer")
+            if fields[0] == "E":
+                if len(fields) != 2:
+                    fail(f"{context}: malformed footer")
+                footer_count = parse_nat(fields[1], f"{context} count")
+                continue
+            if fields[0] == "N":
+                if len(fields) != 4:
+                    fail(f"{context}: malformed split")
+                validate_path(fields[1], context)
+                fields[1] = prefix + fields[1][1:]
+            elif fields[0] in {"A", "C", "X", "W"}:
+                if len(fields) != 10:
+                    fail(f"{context}: malformed terminal")
+                local_index = parse_nat(fields[1], f"{context} index")
+                if local_index != local_terminal_count:
+                    fail(f"{context}: noncontiguous local terminal index")
+                validate_path(fields[2], context)
+                fields[1] = str(total_terminals + local_terminal_count)
+                fields[2] = prefix + fields[2][1:]
+                local_terminal_count += 1
+            else:
+                fail(f"{context}: unknown record tag {fields[0]!r}")
+            local_records.append("\t".join(fields))
+        if footer_count is None or footer_count != local_terminal_count:
+            fail(f"slab {expected_index}: footer/terminal count mismatch")
+        transformed.append(local_records)
+        total_terminals += local_terminal_count
+        total_depth = max(total_depth, parameters[-1] + len(prefix) - 1)
+        input_hashes.append(hashlib.sha256(raw).hexdigest())
+    assert common_parameters is not None
+    root_fields = [str(value) for value in EXPECTED_ROOT]
+    header = "\t".join([
+        "H", "fixed16-restricted-d9-plan-v2",
+        *(str(value) for value in common_parameters), str(total_depth),
+        *root_fields,
+    ])
+    forced_and_slab_records = [
+        "N\tr\tk\t1",
+        "N\trL\tk\t1/4",
+        "N\trLL\tk\t1/8",
+        *transformed[0], *transformed[1],
+        "N\trLR\tk\t1/2",
+        *transformed[2], *transformed[3],
+        "N\trR\tk\t2",
+        *transformed[4], *transformed[5],
+    ]
+    merged = ("\n".join([
+        header, *forced_and_slab_records, f"E\t{total_terminals}", ""
+    ])).encode("ascii")
+    return replace(parse_plan_bytes(merged),
+                   input_sha256s=tuple(input_hashes))
+
+
+def checkpoint_skeleton(
+    level: int, root: Box, prefix: str = "r",
+) -> tuple[list[Split], list[tuple[str, Box]]]:
+    """Reconstruct the generator's fixed 16-way checkpoint partition.
+
+    One level bisects ``s`` and ``k`` and quarters ``chi``.  The quartering is
+    represented by the balanced binary cuts ``1/2`` followed by ``1/4`` and
+    ``3/4``; its lower-first leaves are exactly the order returned by the Lean
+    generator's ``fixedCellRoots``.  Recursing at each leaf therefore gives
+    the exact ``16^level`` checkpoint path/root pairs without trusting names
+    or printed boxes from the directory.
+    """
+    if level < 0 or level > 3:
+        fail("checkpoint level must lie in 0..3")
+    if level == 0:
+        return [], [(prefix, root)]
+
+    splits: list[Split] = []
+    cells: list[tuple[str, Box]] = []
+    s_cut = sum(root.bounds("s"), Fraction(0)) / 2
+    splits.append(Split(prefix, "s", s_cut))
+    for s_branch, s_box in (
+        ("L", root.lower("s", s_cut)),
+        ("R", root.upper("s", s_cut)),
+    ):
+        s_path = prefix + s_branch
+        k_cut = sum(s_box.bounds("k"), Fraction(0)) / 2
+        splits.append(Split(s_path, "k", k_cut))
+        for k_branch, k_box in (
+            ("L", s_box.lower("k", k_cut)),
+            ("R", s_box.upper("k", k_cut)),
+        ):
+            k_path = s_path + k_branch
+            chi_lo, chi_hi = k_box.bounds("chi")
+            chi_half = (chi_lo + chi_hi) / 2
+            chi_one = chi_lo + (chi_hi - chi_lo) / 4
+            chi_three = chi_lo + 3 * (chi_hi - chi_lo) / 4
+            splits.append(Split(k_path, "chi", chi_half))
+            splits.append(Split(k_path + "L", "chi", chi_one))
+            splits.append(Split(k_path + "R", "chi", chi_three))
+            cells.extend([
+                (k_path + "LL", k_box.lower("chi", chi_one)),
+                (k_path + "LR", k_box.upper("chi", chi_one).lower(
+                    "chi", chi_half)),
+                (k_path + "RL", k_box.upper("chi", chi_half).lower(
+                    "chi", chi_three)),
+                (k_path + "RR", k_box.upper("chi", chi_three)),
+            ])
+
+    leaves: list[tuple[str, Box]] = []
+    for cell_path, cell_root in cells:
+        child_splits, child_leaves = checkpoint_skeleton(
+            level - 1, cell_root, cell_path
+        )
+        splits.extend(child_splits)
+        leaves.extend(child_leaves)
+    return splits, leaves
+
+
+def checkpoint_header(path: Path) -> tuple[
+    bytes, list[str], int, int, int, tuple[int, int, int, int], Box
+]:
+    raw = path.read_bytes()
+    if len(raw) > MAX_PLAN_BYTES:
+        fail(f"checkpoint {path}: plan exceeds byte guard")
+    try:
+        lines = raw.decode("ascii").splitlines()
+    except UnicodeDecodeError as error:
+        fail(f"checkpoint {path}: plan is not ASCII: {error}")
+    if not lines:
+        fail(f"checkpoint {path}: empty plan")
+    header = lines[0].split("\t")
+    if (len(header) != 15
+            or header[:2] != ["H", CHECKPOINT_PLAN_FORMAT]):
+        fail(f"checkpoint {path}: invalid header")
+    slab_index = parse_nat(header[2], f"checkpoint {path} slab")
+    level = parse_nat(header[3], f"checkpoint {path} level")
+    checkpoint_index = parse_nat(header[4], f"checkpoint {path} index")
+    parameters = tuple(
+        parse_nat(value, f"checkpoint {path} parameter")
+        for value in header[5:9]
+    )
+    if parameters[-1] > MAX_DEPTH:
+        fail(f"checkpoint {path}: adaptive depth exceeds guard")
+    root = parse_box(header[9:], f"checkpoint {path} root")
+    return (raw, lines, slab_index, level, checkpoint_index,
+            parameters, root)
+
+
+def merge_checkpoint_directory(directory: Path) -> Plan:
+    """Authenticate and merge a complete fixed-level checkpoint directory."""
+    if not directory.is_dir():
+        fail(f"checkpoint directory does not exist: {directory}")
+    paths = sorted(directory.glob("*.tsv"))
+    if not paths:
+        fail("checkpoint directory contains no TSV plans")
+
+    entries: dict[tuple[int, int], tuple[Path, bytes, list[str], Box]] = {}
+    common_level: int | None = None
+    common_parameters: tuple[int, int, int, int] | None = None
+    for path in paths:
+        raw, lines, slab_index, level, checkpoint_index, parameters, root = \
+            checkpoint_header(path)
+        if slab_index >= len(SLAB_PREFIXES):
+            fail(f"checkpoint {path}: slab index must lie in 0..5")
+        if common_level is None:
+            common_level = level
+        elif level != common_level:
+            fail("checkpoint files use different fixed partition levels")
+        if common_parameters is None:
+            common_parameters = parameters
+        elif parameters != common_parameters:
+            fail("checkpoint evaluator parameters disagree")
+        key = (slab_index, checkpoint_index)
+        if key in entries:
+            fail(f"duplicate checkpoint slab={slab_index} index={checkpoint_index}")
+        entries[key] = (path, raw, lines, root)
+
+    assert common_level is not None and common_parameters is not None
+    expected_per_slab = 16 ** common_level
+    expected_keys = {
+        (slab_index, checkpoint_index)
+        for slab_index in range(6)
+        for checkpoint_index in range(expected_per_slab)
+    }
+    missing = sorted(expected_keys - set(entries))
+    extra = sorted(set(entries) - expected_keys)
+    if missing or extra:
+        fail("checkpoint directory is incomplete or has out-of-range indices: "
+             f"missing={missing[:8]} extra={extra[:8]}")
+
+    transformed: list[list[str]] = []
+    input_hashes: list[str] = []
+    total_terminals = 0
+    total_depth = 0
+    for slab_index in range(6):
+        slab_prefix = SLAB_PREFIXES[slab_index]
+        skeleton, leaves = checkpoint_skeleton(
+            common_level, expected_slab_root(slab_index)
+        )
+        slab_records = [
+            "\t".join(["N", slab_prefix + split.path[1:],
+                       split.axis, str(split.cut)])
+            for split in skeleton
+        ]
+        for checkpoint_index, (checkpoint_path, checkpoint_root) in enumerate(leaves):
+            path, raw, lines, printed_root = entries[
+                (slab_index, checkpoint_index)
+            ]
+            if printed_root != checkpoint_root:
+                fail(f"checkpoint {path}: root disagrees with fixed skeleton")
+            full_prefix = slab_prefix + checkpoint_path[1:]
+            local_terminal_count = 0
+            footer_count: int | None = None
+            for line_number, line in enumerate(lines[1:], start=2):
+                fields = line.split("\t")
+                context = f"checkpoint {path} line {line_number}"
+                if footer_count is not None:
+                    fail(f"{context}: data after footer")
+                if fields[0] == "E":
+                    if len(fields) != 2:
+                        fail(f"{context}: malformed footer")
+                    footer_count = parse_nat(fields[1], f"{context} count")
+                    continue
+                if fields[0] == "N":
+                    if len(fields) != 4:
+                        fail(f"{context}: malformed split")
+                    validate_path(fields[1], context)
+                    fields[1] = full_prefix + fields[1][1:]
+                elif fields[0] in {"A", "C", "X", "W"}:
+                    if len(fields) != 10:
+                        fail(f"{context}: malformed terminal")
+                    local_index = parse_nat(fields[1], f"{context} index")
+                    if local_index != local_terminal_count:
+                        fail(f"{context}: noncontiguous local terminal index")
+                    validate_path(fields[2], context)
+                    fields[1] = str(total_terminals + local_terminal_count)
+                    fields[2] = full_prefix + fields[2][1:]
+                    local_terminal_count += 1
+                else:
+                    fail(f"{context}: unknown record tag {fields[0]!r}")
+                slab_records.append("\t".join(fields))
+            if footer_count is None or footer_count != local_terminal_count:
+                fail(f"checkpoint {path}: footer/terminal count mismatch")
+            total_terminals += local_terminal_count
+            total_depth = max(
+                total_depth, common_parameters[-1] + len(full_prefix) - 1
+            )
+            input_hashes.append(hashlib.sha256(raw).hexdigest())
+        transformed.append(slab_records)
+
+    root_fields = [str(value) for value in EXPECTED_ROOT]
+    header = "\t".join([
+        "H", "fixed16-restricted-d9-plan-v2",
+        *(str(value) for value in common_parameters[:3]), str(total_depth),
+        *root_fields,
+    ])
+    forced_and_checkpoint_records = [
+        "N\tr\tk\t1",
+        "N\trL\tk\t1/4",
+        "N\trLL\tk\t1/8",
+        *transformed[0], *transformed[1],
+        "N\trLR\tk\t1/2",
+        *transformed[2], *transformed[3],
+        "N\trR\tk\t2",
+        *transformed[4], *transformed[5],
+    ]
+    merged = ("\n".join([
+        header, *forced_and_checkpoint_records,
+        f"E\t{total_terminals}", "",
+    ])).encode("ascii")
+    return replace(parse_plan_bytes(merged),
+                   input_sha256s=tuple(input_hashes))
+
+
 def lean_rat(value: Fraction) -> str:
     if value.denominator == 1:
         return f"({value.numerator} : ℚ)"
@@ -347,7 +712,7 @@ def config_source(plan: Plan, namespace: str, generator_sha256: str) -> str:
             f"  box_{path}.upper .{split.axis} cut_{path}",
         ))
     boxes = "\n\n".join(box_definitions)
-    return f"""import InformationTheory.CourtadeKumar.LRDeterminantRestrictedFiniteD9CheckedTree
+    return f"""import InformationTheory.CourtadeKumar.LRDeterminantRestrictedFiniteD9HybridCheckedTree
 
 /-!
 Untrusted fixed-16 restricted-D9 topology data.  Every box below is derived
@@ -369,7 +734,7 @@ def generatorSha256 : String := "{generator_sha256}"
 {parameters}
 
 abbrev CheckedTree (root : CertificateBox) : Type :=
-  LRFiniteDeterminantRestrictedD9PayloadFree.CheckedTree
+  LRFiniteDeterminantRestrictedD9HybridPayloadFree.CheckedTree
     terms sqrtFuel logFuel root
 
 {cut_definitions}
@@ -381,61 +746,62 @@ end CourtadeKumar
 """
 
 
-def terminal_declaration(terminal: Terminal) -> str:
+def terminal_predicate(terminal: Terminal) -> str:
+    """The exact external-box Boolean placed in a chunk's `List.all`."""
+    box_name = f"box_{terminal.path}"
+    if terminal.kind == "fallback":
+        return (
+            "LRFiniteDeterminantRestrictedD9HybridPayloadFree.acceptCheck "
+            f"terms sqrtFuel logFuel {box_name} .fallback"
+        )
+    if terminal.kind == "centered":
+        return (
+            "LRFiniteDeterminantRestrictedD9HybridPayloadFree.acceptCheck "
+            f"terms sqrtFuel logFuel {box_name} .centered"
+        )
+    if terminal.kind in {"irrelevant", "wedge"}:
+        return (
+            "LRFiniteDeterminantRestrictedD9HybridPayloadFree.discardCheck "
+            f"terms sqrtFuel logFuel {box_name} ()"
+        )
+    fail(f"terminal {terminal.index}: unknown kind {terminal.kind!r}")
+
+
+def terminal_from_receipt(terminal: Terminal, chunk_stem: str,
+                          local_index: int, chunk_length: int) -> str:
+    """Project one leaf equality structurally and package its checked tree."""
     stem = f"leaf{terminal.index:04d}"
     box_name = f"box_{terminal.path}"
-    if terminal.kind == "accept":
-        predicate = (
-            "LRFiniteDeterminantD9PayloadFree.accepts\n"
-            f"    terms sqrtFuel logFuel {box_name} ()"
-        )
+    predicate = terminal_predicate(terminal)
+    projection = (
+        f"(List.all_eq_true.mp {chunk_stem}Receipt) {local_index}\n"
+        "      (List.mem_range.mpr (by decide))"
+    )
+    if terminal.kind == "fallback":
         package = (
-            "LRFiniteDeterminantRestrictedD9PayloadFree.CheckedTree.ofAccept\n"
-            f"    terms sqrtFuel logFuel {stem}Check"
+            "LRFiniteDeterminantRestrictedD9HybridPayloadFree.CheckedTree."
+            "ofAccept\n"
+            f"    terms sqrtFuel logFuel .fallback\n    {projection}"
         )
         bridge = ""
-        check_name = f"{stem}Check"
-    elif terminal.kind == "irrelevant":
-        predicate = (
-            "LRFiniteDeterminantD9PayloadFree.discardCheck\n"
-            f"    terms sqrtFuel logFuel {box_name} ()"
-        )
-        bridge = f"""
-theorem {stem}RestrictedCheck :
-    LRFiniteDeterminantRestrictedD9PayloadFree.discardCheck
-      terms sqrtFuel logFuel {box_name} () = true := by
-  simp only [LRFiniteDeterminantRestrictedD9PayloadFree.discardCheck,
-    {stem}Check, Bool.or_true]
-"""
+    elif terminal.kind == "centered":
         package = (
-            "LRFiniteDeterminantRestrictedD9PayloadFree.CheckedTree.ofDiscard\n"
-            f"    terms sqrtFuel logFuel {stem}RestrictedCheck"
+            "LRFiniteDeterminantRestrictedD9HybridPayloadFree.CheckedTree."
+            "ofAccept\n"
+            f"    terms sqrtFuel logFuel .centered\n    {projection}"
         )
-        check_name = f"{stem}Check"
-    elif terminal.kind == "wedge":
-        predicate = (
-            "LRFiniteDeterminantRestrictedD9PayloadFree.geometricDiscardCheck\n"
-            f"    {box_name}"
-        )
-        bridge = f"""
-theorem {stem}RestrictedCheck :
-    LRFiniteDeterminantRestrictedD9PayloadFree.discardCheck
-      terms sqrtFuel logFuel {box_name} () = true := by
-  simp only [LRFiniteDeterminantRestrictedD9PayloadFree.discardCheck,
-    {stem}Check, Bool.true_or]
-"""
+        bridge = ""
+    elif terminal.kind in {"irrelevant", "wedge"}:
+        bridge = ""
         package = (
-            "LRFiniteDeterminantRestrictedD9PayloadFree.CheckedTree.ofDiscard\n"
-            f"    terms sqrtFuel logFuel {stem}RestrictedCheck"
+            "LRFiniteDeterminantRestrictedD9HybridPayloadFree.CheckedTree."
+            "ofDiscard\n"
+            f"    terms sqrtFuel logFuel\n    {projection}"
         )
-        check_name = f"{stem}Check"
     else:
         fail(f"terminal {terminal.index}: unknown kind {terminal.kind!r}")
-    return f"""/- Terminal {terminal.index}, path {terminal.path}, kind {terminal.kind}. -/
-def {stem}Result : Bool :=
-  {predicate}
-
-#kernel_checked_bool {check_name} {stem}Result
+    return f"""/- Terminal {terminal.index}, path {terminal.path}, kind {terminal.kind};
+projected at local index {local_index} of {chunk_length}. -/
 {bridge}
 def {stem}Checked : CheckedTree {box_name} :=
   {package}"""
@@ -446,7 +812,16 @@ def chunk_source(plan: Plan, terminals: tuple[Terminal, ...],
                  namespace: str) -> str:
     if not terminals:
         fail("refusing to render an empty terminal chunk")
-    declarations = "\n\n".join(terminal_declaration(item) for item in terminals)
+    chunk_stem = f"chunk{chunk_index:03d}"
+    predicate_cases = "\n".join(
+        f"  | {local_index} => {terminal_predicate(terminal)}"
+        for local_index, terminal in enumerate(terminals)
+    )
+    projections = "\n\n".join(
+        terminal_from_receipt(terminal, chunk_stem, local_index,
+                              len(terminals))
+        for local_index, terminal in enumerate(terminals)
+    )
     indices = [item.index for item in terminals]
     return f"""import {module_prefix}.Config
 import InformationTheory.CourtadeKumar.KernelCheckedBoolCommand
@@ -461,7 +836,16 @@ set_option autoImplicit false
 namespace CourtadeKumar
 namespace {namespace}
 
-{declarations}
+def {chunk_stem}Predicate : Nat → Bool
+{predicate_cases}
+  | _ => false
+
+def {chunk_stem}Result : Bool :=
+  (List.range {len(terminals)}).all {chunk_stem}Predicate
+
+#kernel_checked_bool {chunk_stem}Receipt {chunk_stem}Result
+
+{projections}
 
 end {namespace}
 end CourtadeKumar
@@ -470,8 +854,8 @@ end CourtadeKumar
 
 def chunk_groups(terminals: tuple[Terminal, ...],
                  chunk_size: int) -> list[tuple[Terminal, ...]]:
-    if not 1 <= chunk_size <= MAX_CHUNK_SIZE:
-        fail(f"chunk size must lie in [1, {MAX_CHUNK_SIZE}]")
+    if chunk_size not in ALLOWED_CHUNK_SIZES:
+        fail(f"chunk size must be one of {ALLOWED_CHUNK_SIZES}")
     groups = [terminals[start:start + chunk_size]
               for start in range(0, len(terminals), chunk_size)]
     if tuple(item for group in groups for item in group) != terminals:
@@ -501,7 +885,7 @@ def assembly_source(plan: Plan, chunk_count: int, module_prefix: str,
         lower = terminal_names.get(lower_path, f"node_{lower_path}")
         upper = terminal_names.get(upper_path, f"node_{upper_path}")
         definitions.append(f"""def node_{path} : CheckedTree box_{path} :=
-  LRFiniteDeterminantRestrictedD9PayloadFree.CheckedTree.join
+  LRFiniteDeterminantRestrictedD9HybridPayloadFree.CheckedTree.join
     .{split.axis} cut_{path} {lower} {upper}""")
     body = "\n\n".join(definitions)
     root_name = terminal_names.get("r", "node_r")
@@ -522,13 +906,14 @@ namespace {namespace}
 
 abbrev checkedRoot : CheckedTree rootBox := {root_name}
 
-abbrev certificate : LRFiniteDeterminantD9PayloadFree.Tree :=
+abbrev certificate : LRFiniteDeterminantRestrictedD9HybridPayloadFree.Tree :=
   checkedRoot.certificate
 
 theorem certificateCheck :
     certificate.check
-      (LRFiniteDeterminantD9PayloadFree.accepts terms sqrtFuel logFuel)
-      (LRFiniteDeterminantRestrictedD9PayloadFree.discardCheck
+      (LRFiniteDeterminantRestrictedD9HybridPayloadFree.acceptCheck
+        terms sqrtFuel logFuel)
+      (LRFiniteDeterminantRestrictedD9HybridPayloadFree.discardCheck
         terms sqrtFuel logFuel) rootBox = true :=
   checkedRoot.checked
 
@@ -553,9 +938,10 @@ set_option autoImplicit false
 namespace CourtadeKumar
 namespace {namespace}
 
-def restrictedRawTree : LRFiniteDeterminantRestrictedRawD9CheckedTree
+def restrictedSemanticTree :
+    LRFiniteDeterminantRestrictedSemanticD9CheckedTree
     lrDeterminantFixed16KLeFourRoot :=
-  checkedRoot.toRawCheckedTree
+  checkedRoot.toSemanticCheckedTree
 
 theorem restrictedCertificate :
     ∀ point : CertificatePoint,
@@ -565,8 +951,8 @@ theorem restrictedCertificate :
       point.s < point.k →
       point.k ≤ 4 →
       LRDeterminantAdmittedTarget point :=
-  lrDeterminantFixed16KLeFourRegion_certificate_of_restrictedD9Tree
-    restrictedRawTree
+  lrDeterminantFixed16KLeFourRegion_certificate_of_semanticD9Tree
+    restrictedSemanticTree
 
 end {namespace}
 end CourtadeKumar
@@ -585,14 +971,17 @@ def validate_sources(plan: Plan, sources: dict[str, bytes]) -> None:
     for token in FORBIDDEN_LEAN_TOKENS:
         if token.encode("ascii") in joined:
             fail(f"generated Lean contains forbidden token {token!r}")
-    if joined.count(b"#kernel_checked_bool") != len(plan.terminals):
-        fail("generated Lean does not contain one kernel receipt per terminal")
+    chunk_count = sum(name.startswith("Chunk") for name in sources)
+    if joined.count(b"#kernel_checked_bool") != chunk_count:
+        fail("generated Lean does not contain exactly one receipt per chunk")
+    if joined.count(b"List.all_eq_true.mp") != len(plan.terminals):
+        fail("generated Lean does not structurally project every terminal")
     if joined.count(b"CheckedTree.join") != sum(
             isinstance(node, Split) for node in plan.nodes.values()):
         fail("generated assembly join count does not match topology")
     for terminal in plan.terminals:
         box_name = f"box_{terminal.path}".encode("ascii")
-        stem = f"leaf{terminal.index:04d}Result".encode("ascii")
+        stem = f"leaf{terminal.index:04d}Checked".encode("ascii")
         if box_name not in joined or stem not in joined:
             fail(f"terminal {terminal.index}: missing external path binding")
     if sum(len(source) for source in sources.values()) > MAX_BUNDLE_BYTES:
@@ -641,6 +1030,7 @@ def bundle_manifest(plan: Plan, sources: dict[str, bytes],
         "untrustedGenerator": True,
         "generatorSha256": generator_sha256,
         "planSha256": plan.source_sha256,
+        "inputPlanSha256s": list(plan.input_sha256s),
         "planBytes": plan.source_bytes,
         "parameters": dict(zip(PARAMETER_NAMES, plan.parameters, strict=True)),
         "root": [str(value) for value in plan.root.fields()],
@@ -650,6 +1040,7 @@ def bundle_manifest(plan: Plan, sources: dict[str, bytes],
         "terminalKinds": terminal_kinds,
         "chunkSize": chunk_size,
         "chunkCount": len(groups),
+        "receiptStrategy": "list-all-one-kernel-receipt-per-chunk",
         "modulePrefix": module_prefix,
         "namespace": namespace,
         "chunks": [
@@ -701,7 +1092,18 @@ def generate(args: argparse.Namespace) -> dict[str, Any]:
         fail("--module-prefix must be a dotted Lean module name")
     if not NAMESPACE_RE.fullmatch(args.namespace):
         fail("--namespace must be one Lean namespace identifier")
-    plan = parse_plan(args.plan)
+    if args.checkpoint_dir is not None:
+        if args.plan is not None or args.slab_plan:
+            fail("pass a full plan, slab plans, or a checkpoint directory")
+        plan = merge_checkpoint_directory(args.checkpoint_dir)
+    elif args.slab_plan:
+        if args.plan is not None:
+            fail("pass either one full plan or six --slab-plan files, not both")
+        plan = merge_slab_plans(args.slab_plan)
+    else:
+        if args.plan is None:
+            fail("a full plan or six --slab-plan files are required")
+        plan = parse_plan(args.plan)
     generator_sha256 = hashlib.sha256(SCRIPT.read_bytes()).hexdigest()
     sources, groups = render_sources(
         plan, args.chunk_size, args.module_prefix, args.namespace,
@@ -731,13 +1133,23 @@ def generate(args: argparse.Namespace) -> dict[str, Any]:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("plan", type=Path,
+    result.add_argument("plan", type=Path, nargs="?",
                         help="canonical TSV plan emitted by the Lean search")
+    result.add_argument(
+        "--slab-plan", type=Path, action="append", default=[],
+        help=("one independent slab checkpoint; pass six times in slab-index "
+              "order to merge the forced topology"),
+    )
+    result.add_argument(
+        "--checkpoint-dir", type=Path,
+        help=("directory containing a complete fixed-level family of "
+              "checkpoint TSV plans for all six slabs"),
+    )
     result.add_argument("--output-dir", type=Path, required=True)
     result.add_argument("--module-prefix", required=True)
     result.add_argument("--namespace", required=True)
     result.add_argument("--chunk-size", type=int,
-                        choices=range(1, MAX_CHUNK_SIZE + 1),
+                        choices=ALLOWED_CHUNK_SIZES,
                         default=DEFAULT_CHUNK_SIZE)
     result.add_argument("--force", action="store_true")
     return result

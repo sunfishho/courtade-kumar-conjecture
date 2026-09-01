@@ -347,6 +347,14 @@ def cECornerI (terms : ℕ) (box : CertificateBox) : RationalEnclosure :=
   LRUpperKHistoricalACValues.cCornerI terms cornerSqrtFuel cornerLogFuel box
     (lrCertificateEAD box).value
 
+def aY0CornerI (terms : ℕ) (box : CertificateBox) : RationalEnclosure :=
+  LRUpperKHistoricalACValues.aCornerI terms cornerSqrtFuel cornerLogFuel box
+    (lrCertificateY0NonnegativeAD box).value
+
+def aECornerI (terms : ℕ) (box : CertificateBox) : RationalEnclosure :=
+  LRUpperKHistoricalACValues.aCornerI terms cornerSqrtFuel cornerLogFuel box
+    (lrCertificateEAD box).value
+
 def cCornersCheck (box : CertificateBox) : Bool :=
   let y0 := (lrCertificateY0NonnegativeAD box).value
   let e := (lrCertificateEAD box).value
@@ -357,6 +365,14 @@ def cCornersCheck (box : CertificateBox) : Bool :=
     LRUpperKHistoricalACValues.cCornerCheck cornerSqrtFuel cornerLogFuel
       box y0 &&
     LRUpperKHistoricalACValues.cCornerCheck cornerSqrtFuel cornerLogFuel
+      box e
+
+def aCornersCheck (box : CertificateBox) : Bool :=
+  let y0 := (lrCertificateY0NonnegativeAD box).value
+  let e := (lrCertificateEAD box).value
+  LRUpperKHistoricalACValues.aCornerCheck cornerSqrtFuel cornerLogFuel
+      box y0 &&
+    LRUpperKHistoricalACValues.aCornerCheck cornerSqrtFuel cornerLogFuel
       box e
 
 /-- A regular-shell payload used only to share the already proved D1 node.
@@ -441,12 +457,14 @@ def evaluateAll (terms : ℕ) (box : CertificateBox)
     (RationalEnclosure.mul (RationalEnclosure.point 4) logDelta)
   let ab := regular.ab.evaluate terms box coordinate
   let d1 := ((certificate.regularShell).d1AD terms box).value
-  let psi := RationalEnclosure.sub (RationalEnclosure.add g pw)
-    (RationalEnclosure.div
-      (RationalEnclosure.mul (RationalEnclosure.point 4) w) onePlusV)
   let oneMinusV := RationalEnclosure.sub (RationalEnclosure.point 1) v
   let kappa := RationalEnclosure.div
     (RationalEnclosure.mul oneMinusV oneMinusV) vOnePlus
+  let psi := RationalEnclosure.add
+    (RationalEnclosure.add
+      (RationalEnclosure.add g0 (aY0CornerI terms box))
+      (RationalEnclosure.div (aECornerI terms box) v))
+    (RationalEnclosure.mul kappa w)
   let delta := RationalEnclosure.div
     (RationalEnclosure.sub (RationalEnclosure.point 1)
       (RationalEnclosure.mul v x)) onePlusV
@@ -516,7 +534,8 @@ def payloadCheck (box : CertificateBox)
       (RationalEnclosure.add (RationalEnclosure.point 2) v.value).lower ∧
     (0 : ℚ) < (RationalEnclosure.mul v.value v.value).lower ∧
     (0 : ℚ) < vOnePlus.lower ∧
-    cCornersCheck box = true)
+    cCornersCheck box = true ∧
+    aCornersCheck box = true)
 
 set_option maxHeartbeats 800000 in
 theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
@@ -558,13 +577,14 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
       (0 : ℚ) < twoPlusV.lower ∧
       (0 : ℚ) < vSq.lower ∧
       (0 : ℚ) < vOnePlus.lower ∧
-      cCornersCheck box = true := by
+      cCornersCheck box = true ∧
+      aCornersCheck box = true := by
     simpa [payloadCheck, regular, coordinate, s, e, y0, by0, be,
       vAD, v, onePlusV, vOnePlus, twoPlusV, vSq] using hcheck
   rcases hparts with ⟨hzero, hqBY0Check, hqBECheck, hqSCheck,
     hlogTwoPlusVCheck, hlogD1Check, hsLower, hkLower, hRLower,
     hd1Den, honePlusVLower, htwoPlusVLower, hvSqLower,
-    hvOnePlusLower, hcCornersCheck⟩
+    hvOnePlusLower, hcCornersCheck, haCornersCheck⟩
 
   have hzeroChecked :
       decide ((0 : ℚ) ≤ box.chiLo ∧
@@ -633,6 +653,13 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
           box e.value = true := by
     simpa [cCornersCheck, y0, e] using hcCornersCheck
   rcases hcParts with ⟨⟨hcDomain, hcY0Check⟩, hcECheck⟩
+  have haParts :
+      LRUpperKHistoricalACValues.aCornerCheck
+          cornerSqrtFuel cornerLogFuel box y0.value = true ∧
+        LRUpperKHistoricalACValues.aCornerCheck
+          cornerSqrtFuel cornerLogFuel box e.value = true := by
+    simpa [aCornersCheck, y0, e] using haCornersCheck
+  rcases haParts with ⟨haY0Check, haECheck⟩
   rcases hcDomain with
     ⟨hsLoQ, hsOrderQ, hsHiQ, hy0LoQ, hy0HiQ, heLoQ, heHiQ⟩
   have hsLoReal : (0 : ℝ) < box.sLo := by exact_mod_cast hsLoQ
@@ -669,6 +696,12 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   have hcE := LRUpperKHistoricalACValues.cCornerI_sound
     terms cornerSqrtFuel cornerLogFuel hsLoMem hsMem hsHiMem
     heLoMem heMem heHiMem ⟨hpoint.1, hpoint.2.1⟩ heAD.1 hcECheck
+  have haY0 := LRUpperKHistoricalACValues.aCornerI_sound
+    terms cornerSqrtFuel cornerLogFuel hsLoMem hsMem hsHiMem
+    hy0LoMem hy0Mem hy0HiMem ⟨hpoint.1, hpoint.2.1⟩ hy0AD.1 haY0Check
+  have haE := LRUpperKHistoricalACValues.aCornerI_sound
+    terms cornerSqrtFuel cornerLogFuel hsLoMem hsMem hsHiMem
+    heLoMem heMem heHiMem ⟨hpoint.1, hpoint.2.1⟩ heAD.1 haECheck
   have hvValue : v.Contains (lrCertificateV point) := by
     simpa [v, vAD] using hvADSound.1
   have hvLowerReal : (0 : ℝ) < (v.lower : ℝ) := by
@@ -815,11 +848,6 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
 
   have hd1 := (certificate.regularShell).d1AD_value_sound terms hpoint
     hsLower hkLower hlogD1Check hd1Den
-  have hpsi := RationalEnclosure.contains_sub
-    (RationalEnclosure.contains_add hg hpw)
-    (RationalEnclosure.contains_div honePlusVLower
-      (RationalEnclosure.contains_mul
-        (RationalEnclosure.contains_point 4) hw) honePlusV)
   have honeMinusV := RationalEnclosure.contains_sub
     (RationalEnclosure.contains_point 1) hvValue
   have hkappaRaw := RationalEnclosure.contains_div hvOnePlusLower
@@ -832,6 +860,29 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
         vOnePlus).Contains
           (LRUpperKReplayCertificate.kappaV (lrCertificateV point)) := by
     simpa [LRUpperKReplayCertificate.kappaV, pow_two] using hkappaRaw
+  have haEOver := RationalEnclosure.contains_div hvLower haE hvValue
+  have hpsiRaw := RationalEnclosure.contains_add
+    (RationalEnclosure.contains_add
+      (RationalEnclosure.contains_add hg0 haY0) haEOver)
+    (RationalEnclosure.contains_mul hkappa hw)
+  have hpsi :
+      (RationalEnclosure.add
+        (RationalEnclosure.add
+          (RationalEnclosure.add
+            (regular.gShape.g0.evaluate terms vAD).value
+            (aY0CornerI terms box))
+          (RationalEnclosure.div (aECornerI terms box) v))
+        (RationalEnclosure.mul
+          (RationalEnclosure.div
+            (RationalEnclosure.mul
+              (RationalEnclosure.sub (RationalEnclosure.point 1) v)
+              (RationalEnclosure.sub (RationalEnclosure.point 1) v))
+            vOnePlus)
+          (regular.kernel.omegaZero.evaluate terms s).value)).Contains
+        (lrDeterminantPsi point) := by
+    rw [LRUpperKReplayCertificate.psi_eq_aPrimitives
+      hvPos.ne' hvPlus]
+    exact hpsiRaw
   have hdelta := RationalEnclosure.contains_div honePlusVLower
     (RationalEnclosure.contains_sub (RationalEnclosure.contains_point 1)
       (RationalEnclosure.contains_mul hvValue hxAD.1)) honePlusV
@@ -914,7 +965,8 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   dsimp only
   rw [htargetEq]
   simpa [regular, coordinate, s, e, x, y0, by0, be, vAD, v,
-    onePlusV, vOnePlus, twoPlusV, vSq, cY0CornerI, cECornerI,
+    onePlusV, vOnePlus, twoPlusV, vSq,
+    aY0CornerI, aECornerI, cY0CornerI, cECornerI,
     lrCertificateGShape,
     lrCertificateGShapeValue, lrCertificatePW, lrCertificatePWValue,
     lrDeterminantPsi, lrDeterminantDelta]
