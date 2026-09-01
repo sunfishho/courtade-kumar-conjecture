@@ -617,6 +617,20 @@ def runCheckpointWith
                 " logFuel=" ++ toString logFuel ++
                 " adaptiveDepth=" ++ toString depth) count tree output
 
+def runCheckpointRangeWith
+    (slabIndex level start stop terms sqrtFuel logFuel depth : Nat)
+    (directory : System.FilePath) : IO Unit := do
+  if stop <= start then
+    throw <| IO.userError "checkpoint range requires start < stop"
+  IO.FS.createDirAll directory
+  for offset in List.range (stop - start) do
+    let checkpointIndex := start + offset
+    let output := directory /
+      ("Slab" ++ toString slabIndex ++ "Level" ++ toString level ++
+        "Checkpoint" ++ toString checkpointIndex ++ ".tsv")
+    runCheckpointWith slabIndex level checkpointIndex terms sqrtFuel logFuel
+      depth output
+
 def runAllSlabs (depth : Nat) (directory : System.FilePath) : IO Unit := do
   IO.FS.createDirAll directory
   for slabIndex in [0, 1, 2, 3, 4, 5] do
@@ -633,6 +647,8 @@ def usage : String :=
     "<log-fuel> <adaptive-depth> <output.tsv>\n" ++
   "  fixed16_plan checkpoint-config <0..5> <level> <index> <terms> " ++
     "<sqrt-fuel> <log-fuel> <adaptive-depth> <output.tsv>\n" ++
+  "  fixed16_plan checkpoint-range-config <0..5> <level> <start> <stop-exclusive> " ++
+    "<terms> <sqrt-fuel> <log-fuel> <adaptive-depth> <output-directory>\n" ++
   "  fixed16_plan all-slabs <adaptive-depth> <output-directory>\n" ++
   "  fixed16_plan <adaptive-depth> <output.tsv>  (legacy full mode)"
 
@@ -661,6 +677,15 @@ def run (args : List String) : IO Unit := do
         (← parseNat "checkpoint" checkpoint) (← parseNat "terms" terms)
         (← parseNat "sqrt fuel" sqrtFuel) (← parseNat "log fuel" logFuel)
         (← parseNat "adaptive depth" depth) (System.FilePath.mk output)
+  | "checkpoint-range-config" :: slab :: level :: start :: stop :: terms ::
+      sqrtFuel :: logFuel :: depth :: directory :: [] =>
+      runCheckpointRangeWith (← parseNat "slab" slab)
+        (← parseNat "checkpoint level" level)
+        (← parseNat "checkpoint start" start)
+        (← parseNat "checkpoint stop" stop) (← parseNat "terms" terms)
+        (← parseNat "sqrt fuel" sqrtFuel) (← parseNat "log fuel" logFuel)
+        (← parseNat "adaptive depth" depth)
+        (System.FilePath.mk directory)
   | "all-slabs" :: depth :: directory :: [] =>
       runAllSlabs (← parseNat "adaptive depth" depth)
         (System.FilePath.mk directory)

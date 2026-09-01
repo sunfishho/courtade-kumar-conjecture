@@ -475,8 +475,8 @@ def checkpoint_skeleton(
     the exact ``16^level`` checkpoint path/root pairs without trusting names
     or printed boxes from the directory.
     """
-    if level < 0 or level > 3:
-        fail("checkpoint level must lie in 0..3")
+    if level < 0 or level > 4:
+        fail("checkpoint level must lie in 0..4")
     if level == 0:
         return [], [(prefix, root)]
 
@@ -553,67 +553,73 @@ def checkpoint_header(path: Path) -> tuple[
 
 
 def merge_checkpoint_directory(directory: Path) -> Plan:
-    """Authenticate and merge a complete fixed-level checkpoint directory."""
+    """Authenticate and merge a complete prefix-free checkpoint directory.
+
+    Easy regions may remain at a coarse checkpoint level while a difficult
+    checkpoint is replaced by all sixteen children at the next level.  The
+    directory is accepted only when those variable-depth roots form an exact
+    partition of every slab: an ancestor and descendant may not both occur,
+    and no branch of the reconstructed fixed skeleton may be missing.
+    """
     if not directory.is_dir():
         fail(f"checkpoint directory does not exist: {directory}")
     paths = sorted(directory.glob("*.tsv"))
     if not paths:
         fail("checkpoint directory contains no TSV plans")
 
-    entries: dict[tuple[int, int], tuple[Path, bytes, list[str], Box]] = {}
-    common_level: int | None = None
+    entries: dict[
+        tuple[int, str],
+        tuple[Path, bytes, list[str], Box, int, int],
+    ] = {}
     common_parameters: tuple[int, int, int, int] | None = None
+    canonical_cache: dict[tuple[int, int], list[tuple[str, Box]]] = {}
     for path in paths:
         raw, lines, slab_index, level, checkpoint_index, parameters, root = \
             checkpoint_header(path)
         if slab_index >= len(SLAB_PREFIXES):
             fail(f"checkpoint {path}: slab index must lie in 0..5")
-        if common_level is None:
-            common_level = level
-        elif level != common_level:
-            fail("checkpoint files use different fixed partition levels")
+        if level > 4:
+            fail(f"checkpoint {path}: level exceeds recovery guard 4")
         if common_parameters is None:
             common_parameters = parameters
         elif parameters != common_parameters:
             fail("checkpoint evaluator parameters disagree")
-        key = (slab_index, checkpoint_index)
+        cache_key = (slab_index, level)
+        if cache_key not in canonical_cache:
+            canonical_cache[cache_key] = checkpoint_skeleton(
+                level, expected_slab_root(slab_index)
+            )[1]
+        canonical = canonical_cache[cache_key]
+        if checkpoint_index >= len(canonical):
+            fail(f"checkpoint {path}: index is out of range for its level")
+        canonical_path, canonical_root = canonical[checkpoint_index]
+        if root != canonical_root:
+            fail(f"checkpoint {path}: root disagrees with fixed skeleton")
+        key = (slab_index, canonical_path)
         if key in entries:
-            fail(f"duplicate checkpoint slab={slab_index} index={checkpoint_index}")
-        entries[key] = (path, raw, lines, root)
+            fail(f"duplicate checkpoint root slab={slab_index} "
+                 f"path={canonical_path}")
+        entries[key] = (
+            path, raw, lines, root, level, checkpoint_index,
+        )
 
-    assert common_level is not None and common_parameters is not None
-    expected_per_slab = 16 ** common_level
-    expected_keys = {
-        (slab_index, checkpoint_index)
-        for slab_index in range(6)
-        for checkpoint_index in range(expected_per_slab)
-    }
-    missing = sorted(expected_keys - set(entries))
-    extra = sorted(set(entries) - expected_keys)
-    if missing or extra:
-        fail("checkpoint directory is incomplete or has out-of-range indices: "
-             f"missing={missing[:8]} extra={extra[:8]}")
+    assert common_parameters is not None
 
     transformed: list[list[str]] = []
     input_hashes: list[str] = []
+    used_entries: set[tuple[int, str]] = set()
     total_terminals = 0
     total_depth = 0
+
     for slab_index in range(6):
         slab_prefix = SLAB_PREFIXES[slab_index]
-        skeleton, leaves = checkpoint_skeleton(
-            common_level, expected_slab_root(slab_index)
-        )
-        slab_records = [
-            "\t".join(["N", slab_prefix + split.path[1:],
-                       split.axis, str(split.cut)])
-            for split in skeleton
-        ]
-        for checkpoint_index, (checkpoint_path, checkpoint_root) in enumerate(leaves):
-            path, raw, lines, printed_root = entries[
-                (slab_index, checkpoint_index)
-            ]
-            if printed_root != checkpoint_root:
-                fail(f"checkpoint {path}: root disagrees with fixed skeleton")
+        slab_records: list[str] = []
+
+        def append_checkpoint(checkpoint_path: str) -> None:
+            nonlocal total_terminals, total_depth
+            key = (slab_index, checkpoint_path)
+            path, raw, lines, _root, _level, _index = entries[key]
+            used_entries.add(key)
             full_prefix = slab_prefix + checkpoint_path[1:]
             local_terminal_count = 0
             footer_count: int | None = None
@@ -652,7 +658,37 @@ def merge_checkpoint_directory(directory: Path) -> Plan:
                 total_depth, common_parameters[-1] + len(full_prefix) - 1
             )
             input_hashes.append(hashlib.sha256(raw).hexdigest())
+
+        def append_region(region_path: str, region_root: Box) -> None:
+            key = (slab_index, region_path)
+            descendants = [
+                entry_path for entry_slab, entry_path in entries
+                if entry_slab == slab_index and entry_path.startswith(region_path)
+            ]
+            if key in entries:
+                if any(path != region_path for path in descendants):
+                    fail(f"checkpoint slab={slab_index} path={region_path} "
+                         "overlaps a deeper checkpoint")
+                append_checkpoint(region_path)
+                return
+            if not descendants:
+                fail(f"checkpoint partition is missing slab={slab_index} "
+                     f"path={region_path}")
+            skeleton, children = checkpoint_skeleton(1, region_root, region_path)
+            slab_records.extend(
+                "\t".join(["N", slab_prefix + split.path[1:],
+                           split.axis, str(split.cut)])
+                for split in skeleton
+            )
+            for child_path, child_root in children:
+                append_region(child_path, child_root)
+
+        append_region("r", expected_slab_root(slab_index))
         transformed.append(slab_records)
+
+    unused = sorted(set(entries) - used_entries)
+    if unused:
+        fail(f"checkpoint directory has unreachable entries: {unused[:8]}")
 
     root_fields = [str(value) for value in EXPECTED_ROOT]
     header = "\t".join([
