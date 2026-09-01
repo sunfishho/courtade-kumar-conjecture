@@ -1,4 +1,5 @@
-import InformationTheory.CourtadeKumar.LRDirectVAssembly
+import InformationTheory.CourtadeKumar.LRLowShapeTAlgebraCore
+import InformationTheory.CourtadeKumar.LRLowShapeSeriesBounds
 import InformationTheory.CourtadeKumar.LRLowShapeTailData
 import InformationTheory.CourtadeKumar.LRNegativeChartBounds
 

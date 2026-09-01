@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRCompactVBEnclosure
-import InformationTheory.CourtadeKumar.LRLowShapeUTail
+import InformationTheory.CourtadeKumar.LRLowShapeUTailCore
+import InformationTheory.CourtadeKumar.LRLowShapeUTailSeriesCore
 
 /-!
 # Positive Abel-series enclosure for `W_R(1)`

@@ -70,6 +70,36 @@ def lrCompactVSignedProductLower
     (b q : RationalEnclosure) : ℚ :=
   if 0 ≤ q.lower then b.lower * q.lower else b.upper * q.lower
 
+/-- Endpoint-oriented lower bound for `B * Q` when the checker has proved a
+scalar lower bound for `Q`, rather than an enclosure of one fixed surrogate.
+
+This form is useful for hybrid certificates: two different analytic
+expressions may both be lower bounds for the same exact `Q`, so their maximum
+is stronger even though it is not the lower endpoint of an enclosure of
+either expression. -/
+def lrCompactVSignedProductScalarLower
+    (b : RationalEnclosure) (qLower : ℚ) : ℚ :=
+  if 0 ≤ qLower then b.lower * qLower else b.upper * qLower
+
+theorem cast_lrCompactVSignedProductScalarLower_le
+    {b : RationalEnclosure} {qLower : ℚ} {B Q : ℝ}
+    (hB : b.Contains B) (hQLower : (qLower : ℝ) ≤ Q) (hB0 : 0 ≤ B) :
+    (lrCompactVSignedProductScalarLower b qLower : ℝ) ≤ B * Q := by
+  by_cases hq0 : (0 : ℚ) ≤ qLower
+  · rw [lrCompactVSignedProductScalarLower, if_pos hq0]
+    norm_num only [Rat.cast_mul]
+    have hq0Real : (0 : ℝ) ≤ qLower := by exact_mod_cast hq0
+    exact (mul_le_mul hB.1 le_rfl hq0Real hB0).trans
+      (mul_le_mul_of_nonneg_left hQLower hB0)
+  · rw [lrCompactVSignedProductScalarLower, if_neg hq0]
+    norm_num only [Rat.cast_mul]
+    have hqNeg : (qLower : ℝ) ≤ 0 := by
+      exact_mod_cast (le_of_not_ge hq0)
+    have hfirst :
+        (b.upper : ℝ) * (qLower : ℝ) ≤ B * (qLower : ℝ) := by
+      nlinarith [mul_nonneg (sub_nonneg.mpr hB.2) (neg_nonneg.mpr hqNeg)]
+    exact hfirst.trans (mul_le_mul_of_nonneg_left hQLower hB0)
+
 theorem cast_lrCompactVSignedProductLower_le
     {b q : RationalEnclosure} {B Q : ℝ}
     (hB : b.Contains B) (hQ : q.Contains Q) (hB0 : 0 ≤ B) :
@@ -89,6 +119,101 @@ theorem cast_lrCompactVSignedProductLower_le
           B * (q.lower : ℝ) := by
       nlinarith [mul_nonneg (sub_nonneg.mpr hB.2) (neg_nonneg.mpr hqNeg)]
     exact hfirst.trans (mul_le_mul_of_nonneg_left hQ.1 hB0)
+
+/-- The correction `4 W_R(1) M_x` appearing in the grouped reserve. -/
+def lrCompactVCorrectionEnclosure
+    (box : CertificateBox) (wOne : RationalEnclosure) :
+    RationalEnclosure :=
+  RationalEnclosure.scale 4 <|
+    RationalEnclosure.mul wOne (lrCompactVMxEnclosure box)
+
+theorem lrCompactVCorrectionEnclosure_sound
+    {box : CertificateBox} {point : CertificatePoint}
+    (hbox : LRCompactVBoxValid box) (hpoint : box.Contains point)
+    {wOne : RationalEnclosure}
+    (hwOne : wOne.Contains (lrWKernel point.s 1)) :
+    (lrCompactVCorrectionEnclosure box wOne).Contains
+      (4 * lrWKernel point.s 1 * lrCompactVMx point.k point.chi) := by
+  have hmx := lrCompactVMxEnclosure_sound hbox hpoint
+  simpa [lrCompactVCorrectionEnclosure, mul_assoc] using
+    (RationalEnclosure.contains_scale (4 : ℚ) <|
+      RationalEnclosure.contains_mul hwOne hmx)
+
+/-- Direct-positive-head lower bound for the exact grouped `Q`. -/
+def lrCompactVHeadQLower
+    (N : ℕ) (box : CertificateBox) (wOne : RationalEnclosure) : ℚ :=
+  (lrCompactVPWHeadEnclosure N box).lower -
+    (lrCompactVCorrectionEnclosure box wOne).upper
+
+theorem cast_lrCompactVHeadQLower_le
+    {N : ℕ} {box : CertificateBox} {point : CertificatePoint}
+    (hbox : LRCompactVBoxValid box) (hpoint : box.Contains point)
+    (hinterior : LRCompactVInterior point)
+    {wOne : RationalEnclosure}
+    (hwOne : wOne.Contains (lrWKernel point.s 1)) :
+    (lrCompactVHeadQLower N box wOne : ℝ) ≤
+      lrFlowPW point.s point.k (Real.sqrt point.chi) -
+        4 * lrWKernel point.s 1 * lrCompactVMx point.k point.chi := by
+  have ht : Real.sqrt point.chi ∈ Set.Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact Real.sqrt_pos.2 hinterior.2.2.1
+    · simpa using
+        (Real.sqrt_lt_sqrt_iff hinterior.2.2.1.le).2 hinterior.2.2.2
+  have hhead := lrCompactVPWHeadEnclosure_sound
+    (N := N) hbox hpoint
+  have hheadFlow := lrCompactVPWHead_le_lrFlowPW
+    hinterior.1 hinterior.2.1 ht N
+  have hsquare : (Real.sqrt point.chi) ^ 2 = point.chi :=
+    Real.sq_sqrt hinterior.2.2.1.le
+  rw [hsquare] at hheadFlow
+  have hcorrection := lrCompactVCorrectionEnclosure_sound
+    hbox hpoint hwOne
+  change (((lrCompactVPWHeadEnclosure N box).lower -
+    (lrCompactVCorrectionEnclosure box wOne).upper : ℚ) : ℝ) ≤ _
+  norm_num only [Rat.cast_sub]
+  exact sub_le_sub (hhead.1.trans hheadFlow) hcorrection.2
+
+/-- Maximum of the tail-enhanced and direct-positive-head lower bounds for
+the exact grouped `Q`.  This is the executable strengthening that reduced
+the audited `[3/4,13/16]` terminal count by more than sixty percent. -/
+def lrCompactVHybridQLower
+    (N : ℕ) (box : CertificateBox)
+    (pZero wOne : RationalEnclosure) : ℚ :=
+  max (lrCompactVQEnclosure N box pZero wOne).lower
+    (lrCompactVHeadQLower N box wOne)
+
+theorem cast_lrCompactVHybridQLower_le
+    {N : ℕ} {box : CertificateBox} {point : CertificatePoint}
+    (hbox : LRCompactVBoxValid box) (hpoint : box.Contains point)
+    (hinterior : LRCompactVInterior point)
+    {pZero wOne : RationalEnclosure}
+    (hpZero : pZero.Contains (lrCompactVPZeroX point.k point.chi))
+    (hwOne : wOne.Contains (lrWKernel point.s 1)) :
+    (lrCompactVHybridQLower N box pZero wOne : ℝ) ≤
+      lrFlowPW point.s point.k (Real.sqrt point.chi) -
+        4 * lrWKernel point.s 1 * lrCompactVMx point.k point.chi := by
+  have ht : Real.sqrt point.chi ∈ Set.Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact Real.sqrt_pos.2 hinterior.2.2.1
+    · simpa using
+        (Real.sqrt_lt_sqrt_iff hinterior.2.2.1.le).2 hinterior.2.2.2
+  have htailContains := lrCompactVQEnclosure_sound
+    (N := N) hbox hpoint hpZero hwOne
+  have htailFlow := lrCompactVPWLower_le_lrFlowPW
+    hinterior.1 hinterior.2.1 ht N
+  have htail :
+      ((lrCompactVQEnclosure N box pZero wOne).lower : ℝ) ≤
+        lrFlowPW point.s point.k (Real.sqrt point.chi) -
+          4 * lrWKernel point.s 1 * lrCompactVMx point.k point.chi := by
+    refine htailContains.1.trans ?_
+    unfold lrCompactVQX
+    exact sub_le_sub_right htailFlow _
+  have hhead := cast_lrCompactVHeadQLower_le
+    (N := N) hbox hpoint hinterior hwOne
+  change ((max (lrCompactVQEnclosure N box pZero wOne).lower
+    (lrCompactVHeadQLower N box wOne) : ℚ) : ℝ) ≤ _
+  rw [Rat.cast_max]
+  exact max_le htail hhead
 
 /-- Fully rational grouped leaf lower bound. -/
 def lrCompactVGroupedLower

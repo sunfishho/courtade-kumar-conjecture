@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRLowShapeUReserve
+import InformationTheory.CourtadeKumar.LRLowShapeTAlgebraCore
 
 /-!
 # Algebraic reduction of the low-shape tangent reserve
@@ -10,14 +11,6 @@ and verifies the normalized determinant identity used by certificate `(T)`.
 open Set
 
 namespace CourtadeKumar
-
-noncomputable def lrLowYTangent (R v t : ℝ) : ℝ :=
-  lrFlowPW R v t -
-    4 * lrWKernel R 1 * lrFlowM v * t ^ 2
-
-noncomputable def lrLowVReserve (R v t : ℝ) : ℝ :=
-  lrFlowD R v t * lrFlowC R v t +
-    lrFlowB R v t * lrLowYTangent R v t
 
 noncomputable def lrLowHalfSlopeBase (v : ℝ) : ℝ :=
   -Real.log (1 - lrFlowM v / 2) / (lrFlowM v / 2) ^ 2
