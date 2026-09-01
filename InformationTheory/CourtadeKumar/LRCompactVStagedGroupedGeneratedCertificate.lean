@@ -1,14 +1,15 @@
 import InformationTheory.CourtadeKumar.LRCompactVHybridDirectDGeneratedCertificate
 import InformationTheory.CourtadeKumar.LRCompactVLambdaGroupedLeafChecker
+import InformationTheory.CourtadeKumar.LRCompactVSameYGroupedLeafChecker
 
 /-!
 # Generated staged direct/adaptive-grouped compact-`V` certificates
 
-The generator preserves the cheap hybrid direct-`D` closure topology, but it
-preferentially tags a terminal with a grouped proof when that proof is also
-available and cheaper to replay.  Grouped checking tries 128 terms first and
-escalates to 192 terms only on harder boxes.  The accepted-leaf tag is part of
-the replay data, so the kernel replays exactly one arithmetic proof.
+The generator first tries the tight same-`y` grouped ratio, then retains the
+independent-ratio checker as a closure-preserving fallback.  Each grouped
+checker tries 128 terms before escalating to 192.  A direct proof is tagged
+only when neither grouped proof closes the box.  The accepted-leaf tag is
+part of the replay data, so the kernel replays exactly one arithmetic proof.
 
 Subdivision keeps the empirically superior primary one-step lookahead.  The
 grouped criterion closes the current box but does not perturb split scoring;
@@ -34,9 +35,20 @@ def auto (headChoice : LRCompactVLambdaGroupedHeadChoice)
 
 end LRCompactVLambdaGroupedLeafCertificate
 
+namespace LRCompactVSameYGroupedLeafCertificate
+
+def ofB (headChoice : LRCompactVLambdaGroupedHeadChoice)
+    (b : LRCompactVBCertificate) :
+    LRCompactVSameYGroupedLeafCertificate :=
+  { logOnePlusVHi := b.logOnePlusV.upper
+    headChoice := headChoice }
+
+end LRCompactVSameYGroupedLeafCertificate
+
 /-- A replay tag selects exactly one accepted-leaf checker. -/
 inductive LRCompactVStagedGroupedLeafCertificate where
   | direct (certificate : LRCompactVHybridDirectDLeafCertificate)
+  | sameY (certificate : LRCompactVSameYGroupedLeafCertificate)
   | grouped (certificate : LRCompactVLambdaGroupedLeafCertificate)
 
 namespace LRCompactVStagedGroupedLeafCertificate
@@ -48,29 +60,40 @@ def check
   match certificate with
   | .direct data => data.check
       logTerms pZeroTerms wTerms dTerms directN box
+  | .sameY data => data.check logTerms wTerms dTerms box
   | .grouped data => data.check logTerms wTerms dTerms box
 
-/-- Choose the cheapest grouped replay that closes the box, falling back to
-the direct replay only when it was successful and neither grouped head was.
-Returning `none` means that all three closure tests failed. -/
+/-- Try the tighter, smaller-payload same-`y` leaves first, then the
+independent-ratio fallback, and finally a successful direct replay.
+Returning `none` means that every closure test failed. -/
 def selectAdaptiveReplay
     (logTerms wTerms dTerms : ℕ) (directOK : Bool)
     (box : CertificateBox)
     (direct : LRCompactVHybridDirectDLeafCertificate) :
     Option LRCompactVStagedGroupedLeafCertificate :=
-  let reduced := LRCompactVLambdaGroupedLeafCertificate.ofB
+  let tightReduced := LRCompactVSameYGroupedLeafCertificate.ofB
     .n128 direct.b
-  if reduced.check logTerms wTerms dTerms box then
-    some (.grouped reduced)
+  if tightReduced.check logTerms wTerms dTerms box then
+    some (.sameY tightReduced)
   else
-    let full := LRCompactVLambdaGroupedLeafCertificate.ofB
+    let tightFull := LRCompactVSameYGroupedLeafCertificate.ofB
       .n192 direct.b
-    if full.check logTerms wTerms dTerms box then
-      some (.grouped full)
-    else if directOK then
-      some (.direct direct)
+    if tightFull.check logTerms wTerms dTerms box then
+      some (.sameY tightFull)
     else
-      none
+      let reduced := LRCompactVLambdaGroupedLeafCertificate.ofB
+        .n128 direct.b
+      if reduced.check logTerms wTerms dTerms box then
+        some (.grouped reduced)
+      else
+        let full := LRCompactVLambdaGroupedLeafCertificate.ofB
+          .n192 direct.b
+        if full.check logTerms wTerms dTerms box then
+          some (.grouped full)
+        else if directOK then
+          some (.direct direct)
+        else
+          none
 
 theorem sound
     (logTerms pZeroTerms wTerms dTerms directN : ℕ)
@@ -84,6 +107,8 @@ theorem sound
   | direct data =>
       exact data.sound
         logTerms pZeroTerms wTerms dTerms directN hcheck
+  | sameY data =>
+      exact data.sound logTerms wTerms dTerms hcheck
   | grouped data =>
       exact data.sound logTerms wTerms dTerms hcheck
 

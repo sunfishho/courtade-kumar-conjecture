@@ -26,6 +26,9 @@ def bEndpoint
   lrCompactVSameYBEndpointEnclosure logTerms dTerms box
     certificate.logOnePlusVHi
 
+/- `dTerms` is deliberately shared by the two positive half-log series: the
+same-`y` endpoint `B` term and the direct `D` term. -/
+
 def lambda
     (logTerms dTerms : ℕ) (box : CertificateBox)
     (certificate : LRCompactVSameYGroupedLeafCertificate) : ℚ :=
@@ -44,14 +47,17 @@ def check
     (logTerms wTerms dTerms : ℕ) (box : CertificateBox)
     (certificate : LRCompactVSameYGroupedLeafCertificate) : Bool :=
   let bEndpoint := certificate.bEndpoint logTerms dTerms box
-  let lambda := certificate.lambda logTerms dTerms box
+  let d := lrCompactVDirectDEnclosure dTerms box
+  let lambda := lrCompactVSameYLambda bEndpoint d
+  let wOne := lrCompactVWOneEnclosure logTerms wTerms box
   decide (
     certificate.logOnePlusVHi.check (1 + box.kHi) = true ∧
     LRCompactVDirectDValid.check box = true ∧
     0 < bEndpoint.upper ∧
     lambda * box.sHi * (1 - lrCompactVDirectDYLoQ box) ≤
       1 - box.sHi ∧
-    0 ≤ certificate.groupedLower logTerms wTerms dTerms box)
+    0 ≤ lrCompactVLambdaGroupedFiniteLower
+      certificate.headChoice.headN lambda box wOne)
 
 theorem sound
     (logTerms wTerms dTerms : ℕ)
@@ -67,7 +73,7 @@ theorem sound
       certificate.lambda logTerms dTerms box * box.sHi *
           (1 - lrCompactVDirectDYLoQ box) ≤ 1 - box.sHi ∧
       0 ≤ certificate.groupedLower logTerms wTerms dTerms box := by
-    simpa [check] using hcheck
+    simpa [check, groupedLower, lambda, bEndpoint] using hcheck
   have hvalid := LRCompactVDirectDValid.of_check hparts.2.1
   have hbox := hvalid.1
   intro point hpoint hphysical
