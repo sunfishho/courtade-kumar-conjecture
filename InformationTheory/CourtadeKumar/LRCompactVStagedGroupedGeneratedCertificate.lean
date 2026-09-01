@@ -1,0 +1,146 @@
+import InformationTheory.CourtadeKumar.LRCompactVHybridDirectDGeneratedCertificate
+import InformationTheory.CourtadeKumar.LRCompactVLambdaGroupedLeafChecker
+
+/-!
+# Generated staged direct/grouped compact-`V` certificates
+
+The cheap hybrid direct-`D` checker is tried first.  Only a failed direct
+leaf evaluates the 192-term grouped fallback.  The accepted-leaf tag is part
+of the replay data, so kernel checking a direct leaf never recomputes the
+expensive fallback.
+
+Subdivision keeps the empirically superior primary one-step lookahead.  The
+grouped criterion closes the current box but does not perturb split scoring;
+benchmarks showed that lambda-driven topology was slower and left more
+unresolved volume.
+-/
+
+set_option autoImplicit false
+
+namespace CourtadeKumar
+
+namespace LRCompactVLambdaGroupedLeafCertificate
+
+def auto (logFuel : ℕ) (box : CertificateBox) :
+    LRCompactVLambdaGroupedLeafCertificate :=
+  { b := LRCompactVBCertificate.hybridDirectDAuto logFuel box }
+
+end LRCompactVLambdaGroupedLeafCertificate
+
+/-- A replay tag selects exactly one accepted-leaf checker. -/
+inductive LRCompactVStagedGroupedLeafCertificate where
+  | direct (certificate : LRCompactVHybridDirectDLeafCertificate)
+  | grouped (certificate : LRCompactVLambdaGroupedLeafCertificate)
+
+namespace LRCompactVStagedGroupedLeafCertificate
+
+def check
+    (logTerms pZeroTerms wTerms dTerms directN : ℕ)
+    (box : CertificateBox)
+    (certificate : LRCompactVStagedGroupedLeafCertificate) : Bool :=
+  match certificate with
+  | .direct data => data.check
+      logTerms pZeroTerms wTerms dTerms directN box
+  | .grouped data => data.check logTerms wTerms dTerms box
+
+theorem sound
+    (logTerms pZeroTerms wTerms dTerms directN : ℕ)
+    {box : CertificateBox}
+    {certificate : LRCompactVStagedGroupedLeafCertificate}
+    (hcheck : certificate.check
+      logTerms pZeroTerms wTerms dTerms directN box = true) :
+    ∀ point, box.Contains point → LRCompactVPhysical point →
+      0 ≤ lrCompactVReserveTarget point := by
+  cases certificate with
+  | direct data =>
+      exact data.sound
+        logTerms pZeroTerms wTerms dTerms directN hcheck
+  | grouped data =>
+      exact data.sound logTerms wTerms dTerms hcheck
+
+end LRCompactVStagedGroupedLeafCertificate
+
+/-- Direct-first, grouped-second generation with primary lookahead splits. -/
+def generateLRCompactVStagedGroupedCertificate
+    (logTerms pZeroTerms wTerms dTerms directN logFuel : ℕ) :
+    ℕ → CertificateBox →
+      SubdivisionCertificate
+        LRCompactVStagedGroupedLeafCertificate LRCompactVDiscardCertificate
+  | 0, box =>
+      let direct :=
+        LRCompactVHybridDirectDLeafCertificate.auto logFuel box
+      if direct.check
+          logTerms pZeroTerms wTerms dTerms directN box then
+        .accept (.direct direct)
+      else
+        .accept (.grouped <|
+          LRCompactVLambdaGroupedLeafCertificate.auto logFuel box)
+  | fuel + 1, box =>
+      let discard :=
+        LRCompactVDiscardCertificate.hybridDirectDAuto logFuel box
+      if discard.check logTerms box then
+        .discard discard
+      else
+        let direct :=
+          LRCompactVHybridDirectDLeafCertificate.auto logFuel box
+        if direct.check
+            logTerms pZeroTerms wTerms dTerms directN box then
+          .accept (.direct direct)
+        else
+          let grouped :=
+            LRCompactVLambdaGroupedLeafCertificate.auto logFuel box
+          if grouped.check logTerms wTerms dTerms box then
+            .accept (.grouped grouped)
+          else
+            let axis := lrCompactVHybridDirectDLookaheadSplitAxis
+              logTerms pZeroTerms wTerms dTerms directN logFuel box
+            let cut := lrCompactVHybridDirectDSplitCut box axis
+            .split axis cut
+              (generateLRCompactVStagedGroupedCertificate
+                logTerms pZeroTerms wTerms dTerms directN logFuel fuel
+                (box.lower axis cut))
+              (generateLRCompactVStagedGroupedCertificate
+                logTerms pZeroTerms wTerms dTerms directN logFuel fuel
+                (box.upper axis cut))
+
+theorem lrCompactVStagedGroupedSubdivisionCertificate_sound
+    (logTerms pZeroTerms wTerms dTerms directN : ℕ)
+    {box : CertificateBox}
+    {certificate : SubdivisionCertificate
+      LRCompactVStagedGroupedLeafCertificate LRCompactVDiscardCertificate}
+    (hcheck : certificate.check
+      (LRCompactVStagedGroupedLeafCertificate.check
+        logTerms pZeroTerms wTerms dTerms directN)
+      (LRCompactVDiscardCertificate.check logTerms) box = true) :
+    ∀ point, box.Contains point → LRCompactVPhysical point →
+      0 ≤ lrCompactVReserveTarget point := by
+  have hstruct := subdivisionCertificate_sound
+    (Relevant := LRCompactVPhysical)
+    (Property := fun point ↦ LRCompactVPhysical point →
+      0 ≤ lrCompactVReserveTarget point)
+    (acceptBox := LRCompactVStagedGroupedLeafCertificate.check
+      logTerms pZeroTerms wTerms dTerms directN)
+    (discardBox := LRCompactVDiscardCertificate.check logTerms)
+    (box := box) (certificate := certificate)
+    (fun leaf data hleaf point hpoint hphysical ↦
+      data.sound logTerms pZeroTerms wTerms dTerms directN hleaf
+        point hpoint hphysical)
+    (fun leaf data hleaf ↦ data.excludes_physical logTerms hleaf)
+    hcheck
+  intro point hpoint hphysical
+  exact hstruct point hpoint hphysical hphysical
+
+theorem generatedLRCompactVStagedGroupedCertificate_sound
+    (logTerms pZeroTerms wTerms dTerms directN logFuel fuel : ℕ)
+    {box : CertificateBox}
+    (hcheck : (generateLRCompactVStagedGroupedCertificate
+      logTerms pZeroTerms wTerms dTerms directN logFuel fuel box).check
+        (LRCompactVStagedGroupedLeafCertificate.check
+          logTerms pZeroTerms wTerms dTerms directN)
+        (LRCompactVDiscardCertificate.check logTerms) box = true) :
+    ∀ point, box.Contains point → LRCompactVPhysical point →
+      0 ≤ lrCompactVReserveTarget point :=
+  lrCompactVStagedGroupedSubdivisionCertificate_sound
+    logTerms pZeroTerms wTerms dTerms directN hcheck
+
+end CourtadeKumar

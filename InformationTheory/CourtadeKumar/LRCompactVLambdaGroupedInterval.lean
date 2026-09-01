@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRCompactVLambdaGroupedCore
 import InformationTheory.CourtadeKumar.LRCompactVGroupedBilinear
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKDyadicOuterRoundingCore
 
 /-!
 # Exact interval lower bound for the grouped compact-`V` fallback
@@ -25,6 +26,11 @@ namespace CourtadeKumar
 /-- Fixed grouped head length chosen at the measured size/runtime knee. -/
 def lrCompactVLambdaGroupedHeadN : ℕ := 192
 
+/-- Fixed dyadic precision for per-term lower rounding.  Rounding before the
+sum prevents exact-rational denominator growth while leaving far more
+precision than the subdivision margins require. -/
+def lrCompactVLambdaGroupedBits : ℕ := 96
+
 /-- Lower endpoint of `g=4/(1+v)` on a compact box. -/
 def lrCompactVLambdaGLoQ (box : CertificateBox) : ℚ :=
   4 / (1 + box.kHi)
@@ -38,7 +44,9 @@ endpoints already evaluated.  Passing `gLo` and `hHi` explicitly prevents
 their rational divisions from being normalized once per series term. -/
 def lrCompactVLambdaGroupedTermLowerWith
     (lambda gLo hHi : ℚ) (box : CertificateBox) (n : ℕ) : ℚ :=
-  lrLowAQ n *
+  LRUpperKDyadicOuterRounding.roundDown
+    lrCompactVLambdaGroupedBits <|
+    lrLowAQ n *
     lrCompactVGroupedBilinearCornerLower lambda
       (lrCompactVScoreEnclosure box n).lower
       (lrCompactVScoreEnclosure box n).upper
@@ -55,7 +63,9 @@ def lrCompactVLambdaGroupedTermLower
 /-- Lower bound for the matching endpoint-kernel head summand. -/
 def lrCompactVWeightedScoreTermLower
     (box : CertificateBox) (n : ℕ) : ℚ :=
-  lrLowAQ n * (lrCompactVScoreEnclosure box n).lower
+  LRUpperKDyadicOuterRounding.roundDown
+    lrCompactVLambdaGroupedBits <|
+    lrLowAQ n * (lrCompactVScoreEnclosure box n).lower
 
 /-- Paired rational accumulator used by the executable checker. -/
 structure LRCompactVLambdaGroupedAccumulator where
@@ -196,14 +206,60 @@ theorem lrCompactVLambdaGroupedTermLower_le
               (mul_le_mul_of_nonneg_left
                 (sub_le_sub_left hh _ ) hw0) _
   have hgroup := hcorner.trans hshape
+  have hraw :
+      ((lrLowAQ n *
+          lrCompactVGroupedBilinearCornerLower lambda
+            (lrCompactVScoreEnclosure box n).lower
+            (lrCompactVScoreEnclosure box n).upper
+            (lrCompactVTEnclosure box n).lower
+            (lrCompactVTEnclosure box n).upper
+            (lrCompactVLambdaGLoQ box)
+            (lrCompactVLambdaHHiQ box) : ℚ) : ℝ) ≤
+        lrLowA n *
+          lrCompactVLambdaGroup (lambda : ℝ)
+            (lrCompactVScore point.s n)
+            (lrCompactVT point.k point.chi n)
+            (4 / (1 + point.k))
+            (4 * lrCompactVMx point.k point.chi) := by
+    norm_num only [Rat.cast_mul]
+    rw [cast_lrLowAQ]
+    exact mul_le_mul_of_nonneg_left
+      (by simpa [lrCompactVLambdaGroup,
+          lrCompactVGroupedBilinearReal] using hgroup)
+      (lrLowA_pos hn).le
+  have hroundQ := LRUpperKDyadicOuterRounding.roundDown_le
+    lrCompactVLambdaGroupedBits
+    (lrLowAQ n *
+      lrCompactVGroupedBilinearCornerLower lambda
+        (lrCompactVScoreEnclosure box n).lower
+        (lrCompactVScoreEnclosure box n).upper
+        (lrCompactVTEnclosure box n).lower
+        (lrCompactVTEnclosure box n).upper
+        (lrCompactVLambdaGLoQ box)
+        (lrCompactVLambdaHHiQ box))
+  have hround :
+      (LRUpperKDyadicOuterRounding.roundDown
+          lrCompactVLambdaGroupedBits
+          (lrLowAQ n *
+            lrCompactVGroupedBilinearCornerLower lambda
+              (lrCompactVScoreEnclosure box n).lower
+              (lrCompactVScoreEnclosure box n).upper
+              (lrCompactVTEnclosure box n).lower
+              (lrCompactVTEnclosure box n).upper
+              (lrCompactVLambdaGLoQ box)
+              (lrCompactVLambdaHHiQ box)) : ℝ) ≤
+        ((lrLowAQ n *
+          lrCompactVGroupedBilinearCornerLower lambda
+            (lrCompactVScoreEnclosure box n).lower
+            (lrCompactVScoreEnclosure box n).upper
+            (lrCompactVTEnclosure box n).lower
+            (lrCompactVTEnclosure box n).upper
+            (lrCompactVLambdaGLoQ box)
+            (lrCompactVLambdaHHiQ box) : ℚ) : ℝ) := by
+    exact_mod_cast hroundQ
   unfold lrCompactVLambdaGroupedTermLower
     lrCompactVLambdaGroupedTermLowerWith
-  norm_num only [Rat.cast_mul]
-  rw [cast_lrLowAQ]
-  exact mul_le_mul_of_nonneg_left
-    (by simpa [lrCompactVLambdaGroup,
-        lrCompactVGroupedBilinearReal] using hgroup)
-    (lrLowA_pos hn).le
+  exact hround.trans hraw
 
 theorem lrCompactVWeightedScoreTermLower_le
     {box : CertificateBox} {point : CertificatePoint}
@@ -213,10 +269,27 @@ theorem lrCompactVWeightedScoreTermLower_le
       lrCompactVWTerm point.s 1 n := by
   have hscore := lrCompactVScoreEnclosure_sound hn
     hbox.1 hbox.2.2.1 hpoint
-  unfold lrCompactVWeightedScoreTermLower lrCompactVWTerm
-  norm_num only [Rat.cast_mul, one_pow, mul_one]
-  rw [cast_lrLowAQ]
-  exact mul_le_mul_of_nonneg_left hscore.1 (lrLowA_pos hn).le
+  have hraw :
+      ((lrLowAQ n *
+          (lrCompactVScoreEnclosure box n).lower : ℚ) : ℝ) ≤
+        lrCompactVWTerm point.s 1 n := by
+    unfold lrCompactVWTerm
+    norm_num only [Rat.cast_mul, one_pow, mul_one]
+    rw [cast_lrLowAQ]
+    exact mul_le_mul_of_nonneg_left hscore.1 (lrLowA_pos hn).le
+  have hroundQ := LRUpperKDyadicOuterRounding.roundDown_le
+    lrCompactVLambdaGroupedBits
+    (lrLowAQ n * (lrCompactVScoreEnclosure box n).lower)
+  have hround :
+      (LRUpperKDyadicOuterRounding.roundDown
+          lrCompactVLambdaGroupedBits
+          (lrLowAQ n *
+            (lrCompactVScoreEnclosure box n).lower) : ℝ) ≤
+        ((lrLowAQ n *
+          (lrCompactVScoreEnclosure box n).lower : ℚ) : ℝ) := by
+    exact_mod_cast hroundQ
+  unfold lrCompactVWeightedScoreTermLower
+  exact hround.trans hraw
 
 theorem lrCompactVLambdaGroupedAccumulate_le
     {lambda : ℚ} (hlambda : (0 : ℚ) ≤ lambda)
