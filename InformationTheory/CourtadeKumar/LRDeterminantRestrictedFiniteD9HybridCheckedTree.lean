@@ -22,6 +22,7 @@ namespace LRFiniteDeterminantRestrictedD9HybridPayloadFree
 
 inductive AcceptKind where
   | fallback
+  | zeroFace
   | centered
   deriving DecidableEq, Repr
 
@@ -32,6 +33,11 @@ def acceptCheck (terms sqrtFuel logFuel : Nat)
   | .fallback =>
       LRFiniteDeterminantD9PayloadFree.accepts
         terms sqrtFuel logFuel box ()
+  | .zeroFace =>
+      let certificate := LRFiniteDeterminantD9ZeroFaceCertificate.auto
+        sqrtFuel logFuel box
+      LRFiniteDeterminantD9ZeroFaceCertificate.payloadCheck box certificate &&
+        certificate.componentCheck terms box
   | .centered =>
       LRFiniteDeterminantD9CenteredCertificate.autoAccepts
         terms sqrtFuel logFuel box ()
@@ -52,6 +58,16 @@ theorem acceptCheck_sound (terms sqrtFuel logFuel : Nat) :
       exact RationalEnclosure.nonnegative_of_provesNonnegative hparts.2
         ((LRFiniteDeterminantD9PayloadFree.evaluatorSound
           terms sqrtFuel logFuel).value box () hparts.1 point hpoint)
+  | zeroFace =>
+      let certificate := LRFiniteDeterminantD9ZeroFaceCertificate.auto
+        sqrtFuel logFuel box
+      have hparts :
+          LRFiniteDeterminantD9ZeroFaceCertificate.payloadCheck
+              box certificate = true ∧
+            certificate.componentCheck terms box = true := by
+        simpa [acceptCheck, certificate] using hcheck
+      exact certificate.nonnegative_of_payload_and_componentCheck
+        terms hpoint hparts.1 hparts.2
   | centered =>
       let certificate := LRFiniteDeterminantD9CenteredCertificate.auto
         sqrtFuel logFuel box

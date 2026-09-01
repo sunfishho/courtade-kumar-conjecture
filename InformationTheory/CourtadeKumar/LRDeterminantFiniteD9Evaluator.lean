@@ -537,14 +537,65 @@ def payloadCheck (box : CertificateBox)
     cCornersCheck box = true ∧
     aCornersCheck box = true)
 
+/-- Form the final signed factor from an already evaluated `D1` enclosure. -/
+def factorFromD1 (terms : ℕ) (box : CertificateBox)
+    (certificate : LRFiniteDeterminantD9ZeroFaceCertificate)
+    (d1 : RationalEnclosure) :
+    RationalEnclosure :=
+  let regular := certificate.zero.base
+  let coordinate := regular.kernel.coordinate
+  let ab := regular.ab.evaluate terms box coordinate
+  let x := (lrCertificateXAD box).value
+  RationalEnclosure.sub (RationalEnclosure.mul ab.b.value x) d1
+
+/-- The final signed factor in the zero-face D9 decomposition, exposed
+separately so a checker can verify its sign without constructing the much
+larger final target enclosure. -/
+def factor (terms : ℕ) (box : CertificateBox)
+    (certificate : LRFiniteDeterminantD9ZeroFaceCertificate) :
+    RationalEnclosure :=
+  certificate.factorFromD1 terms box
+    (certificate.evaluateAll terms box).d1
+
+/-- Semantic facts for exactly the five enclosures needed by the sign-only
+zero-face acceptance rule. -/
+structure ComponentSound (terms : ℕ) (box : CertificateBox)
+    (point : CertificatePoint)
+    (certificate : LRFiniteDeterminantD9ZeroFaceCertificate) : Prop where
+  halfSlope : (certificate.evaluateAll terms box).halfSlope.Contains
+    (lrCertificateHalfSlope point)
+  firstBracket : (certificate.evaluateAll terms box).firstBracket.Contains
+    (lrDeterminantFirstBracket
+      (lrCertificateBFlow point) (lrDeterminantD1 point)
+      (lrCertificateGShape point) (lrDeterminantPsi point)
+      (lrDeterminantDelta point) (lrCertificateW point))
+  w : (certificate.evaluateAll terms box).w.Contains
+    (lrCertificateW point)
+  gap : (certificate.evaluateAll terms box).gap.Contains
+    (lrCertificateGap point)
+  factor : (certificate.factor terms box).Contains
+    (lrCertificateBFlow point * lrCertificateX point -
+      lrDeterminantD1 point)
+  decomposition :
+    lrFiniteDeterminantD9ReplayTarget point =
+      3 * lrCertificateHalfSlope point *
+          lrDeterminantFirstBracket
+            (lrCertificateBFlow point) (lrDeterminantD1 point)
+            (lrCertificateGShape point) (lrDeterminantPsi point)
+            (lrDeterminantDelta point) (lrCertificateW point) +
+        4 * lrCertificateW point * lrCertificateGap point *
+          (lrCertificateBFlow point * lrCertificateX point -
+            lrDeterminantD1 point)
+
 set_option maxHeartbeats 800000 in
-theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
+theorem evaluate_and_components_sound (terms : ℕ) {box : CertificateBox}
     {point : CertificatePoint}
     {certificate : LRFiniteDeterminantD9ZeroFaceCertificate}
     (hpoint : box.Contains point)
     (hcheck : certificate.payloadCheck box = true) :
     (certificate.enclose terms box).Contains
-      (lrFiniteDeterminantD9ReplayTarget point) := by
+        (lrFiniteDeterminantD9ReplayTarget point) ∧
+      ComponentSound terms box point certificate := by
   let regular := certificate.zero.base
   let coordinate := regular.kernel.coordinate
   let s := lrCertificateSAD box
@@ -961,16 +1012,119 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
     unfold lrDeterminantFirstBracket
     rw [hbaseEq]
 
-  unfold enclose evaluateAll
-  dsimp only
-  rw [htargetEq]
-  simpa [regular, coordinate, s, e, x, y0, by0, be, vAD, v,
-    onePlusV, vOnePlus, twoPlusV, vSq,
-    aY0CornerI, aECornerI, cY0CornerI, cECornerI,
-    lrCertificateGShape,
-    lrCertificateGShapeValue, lrCertificatePW, lrCertificatePWValue,
-    lrDeterminantPsi, lrDeterminantDelta]
-    using htarget
+  have htargetNamed :
+      (certificate.enclose terms box).Contains
+        (lrFiniteDeterminantD9ReplayTarget point) := by
+    unfold enclose evaluateAll
+    dsimp only
+    rw [htargetEq]
+    simpa [regular, coordinate, s, e, x, y0, by0, be, vAD, v,
+      onePlusV, vOnePlus, twoPlusV, vSq,
+      aY0CornerI, aECornerI, cY0CornerI, cECornerI,
+      lrCertificateGShape,
+      lrCertificateGShapeValue, lrCertificatePW, lrCertificatePWValue,
+      lrDeterminantPsi, lrDeterminantDelta]
+      using htarget
+  exact ⟨htargetNamed,
+    { halfSlope := by
+        simpa [evaluateAll, regular, coordinate, s, e, x, y0, by0, be,
+          vAD, v, onePlusV, vOnePlus, twoPlusV, vSq,
+          aY0CornerI, aECornerI, cY0CornerI, cECornerI]
+          using hhalfSlopeNamed
+      firstBracket := by
+        unfold evaluateAll
+        dsimp only
+        unfold lrDeterminantFirstBracket
+        rw [← hbaseEq]
+        simpa [regular, coordinate, s, e, x, y0, by0, be, vAD, v,
+          onePlusV, vOnePlus, twoPlusV, vSq,
+          aY0CornerI, aECornerI, cY0CornerI, cECornerI,
+          lrCertificateGShape, lrCertificateGShapeValue,
+          lrCertificatePW, lrCertificatePWValue,
+          lrDeterminantPsi, lrDeterminantDelta]
+          using hfirst
+      w := by
+        simpa [evaluateAll, regular, coordinate, s, e, x, y0, by0, be,
+          vAD, v, onePlusV, vOnePlus, twoPlusV, vSq]
+          using hw
+      gap := by
+        simpa [evaluateAll, regular, coordinate, s, e, x, y0, by0, be,
+          vAD, v, onePlusV, vOnePlus, twoPlusV, vSq]
+          using hgap
+      factor := by
+        simpa [factor, factorFromD1, evaluateAll,
+          regular, coordinate, s, e, x, y0,
+          by0, be, vAD, v, onePlusV, vOnePlus, twoPlusV, vSq]
+          using hfactorD1
+      decomposition := htargetOriginal }⟩
+
+theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
+    {point : CertificatePoint}
+    {certificate : LRFiniteDeterminantD9ZeroFaceCertificate}
+    (hpoint : box.Contains point)
+    (hcheck : certificate.payloadCheck box = true) :
+    (certificate.enclose terms box).Contains
+      (lrFiniteDeterminantD9ReplayTarget point) :=
+  (certificate.evaluate_and_components_sound terms hpoint hcheck).1
+
+/-- The two factors in the leading summand of the zero-face D9 target. -/
+def leadingComponentCheck (terms : ℕ) (box : CertificateBox)
+    (certificate : LRFiniteDeterminantD9ZeroFaceCertificate) : Bool :=
+  let evaluation := certificate.evaluateAll terms box
+  evaluation.halfSlope.provesNonnegative &&
+    evaluation.firstBracket.provesNonnegative
+
+/-- The three factors in the correction summand of the zero-face D9 target. -/
+def correctionComponentCheck (terms : ℕ) (box : CertificateBox)
+    (certificate : LRFiniteDeterminantD9ZeroFaceCertificate) : Bool :=
+  let evaluation := certificate.evaluateAll terms box
+  evaluation.w.provesNonnegative &&
+    evaluation.gap.provesNonnegative &&
+    (certificate.factorFromD1 terms box evaluation.d1).provesNonnegative
+
+/-- Sign-only arithmetic for the zero-face evaluator.  This deliberately
+checks the five final factors separately and never constructs the enormous
+common-denominator enclosure produced by their final sum.  The two halves
+are named so generated certificates can kernel-check them independently. -/
+def componentCheck (terms : ℕ) (box : CertificateBox)
+    (certificate : LRFiniteDeterminantD9ZeroFaceCertificate) : Bool :=
+  certificate.leadingComponentCheck terms box &&
+    certificate.correctionComponentCheck terms box
+
+theorem nonnegative_of_payload_and_componentCheck
+    (terms : ℕ) {box : CertificateBox} {point : CertificatePoint}
+    {certificate : LRFiniteDeterminantD9ZeroFaceCertificate}
+    (hpoint : box.Contains point)
+    (hpayload : certificate.payloadCheck box = true)
+    (hcomponents : certificate.componentCheck terms box = true) :
+    0 ≤ lrFiniteDeterminantD9ReplayTarget point := by
+  have hsound := certificate.evaluate_and_components_sound
+    terms hpoint hpayload
+  have hcomponentHalves :
+      certificate.leadingComponentCheck terms box = true ∧
+      certificate.correctionComponentCheck terms box = true := by
+    simpa [componentCheck] using hcomponents
+  have hleading :
+      (certificate.evaluateAll terms box).halfSlope.provesNonnegative = true ∧
+      (certificate.evaluateAll terms box).firstBracket.provesNonnegative = true := by
+    simpa [leadingComponentCheck] using hcomponentHalves.1
+  have hcorrection :
+      ((certificate.evaluateAll terms box).w.provesNonnegative = true ∧
+        (certificate.evaluateAll terms box).gap.provesNonnegative = true) ∧
+      (certificate.factor terms box).provesNonnegative = true := by
+    simpa [correctionComponentCheck, factor] using hcomponentHalves.2
+  have hhalfSlope := RationalEnclosure.nonnegative_of_provesNonnegative
+    hleading.1 hsound.2.halfSlope
+  have hfirstBracket := RationalEnclosure.nonnegative_of_provesNonnegative
+    hleading.2 hsound.2.firstBracket
+  have hw := RationalEnclosure.nonnegative_of_provesNonnegative
+    hcorrection.1.1 hsound.2.w
+  have hgap := RationalEnclosure.nonnegative_of_provesNonnegative
+    hcorrection.1.2 hsound.2.gap
+  have hfactor := RationalEnclosure.nonnegative_of_provesNonnegative
+    hcorrection.2 hsound.2.factor
+  rw [hsound.2.decomposition]
+  positivity
 
 noncomputable def checkedEvaluatorSound (terms : ℕ) :
     CheckedEnclosureLeafEvaluatorSound lrFiniteDeterminantD9ReplayTarget
