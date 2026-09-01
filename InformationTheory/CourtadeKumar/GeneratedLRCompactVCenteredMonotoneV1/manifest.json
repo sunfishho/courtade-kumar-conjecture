@@ -1,0 +1,84 @@
+{
+  "assemblyModule": "InformationTheory.CourtadeKumar.GeneratedLRCompactVCenteredMonotoneV1.Assembly",
+  "bundleSha256": "8b417a17f9d17424e1d512eed8a73892157ce8433602ec768e5d7169f21a63a1",
+  "certificateModule": "InformationTheory.CourtadeKumar.GeneratedLRCompactVCenteredMonotoneV1.Certificate",
+  "chunkSize": 2,
+  "designSha256": "5b48a177063dc0dde6e42d266b0649b9c338353987a60fb27135c1dc791f1325",
+  "files": [
+    {
+      "bytes": 2006,
+      "path": "Assembly.lean",
+      "sha256": "fa8d42aad4dcb0b93e19f4241d2f33fb270fe58ca6874a8cdaa3207c213e5844"
+    },
+    {
+      "bytes": 928,
+      "path": "Certificate.lean",
+      "sha256": "4d9dd6049dbb8e2ed25d832a367e0e0473a4eb02875272d06278695500db4c3e"
+    },
+    {
+      "bytes": 1126,
+      "path": "Chunk000.lean",
+      "sha256": "c4f0f20a2b79804feaff8d15e777ad07a1b0cceaa0d2fa20d3e841ecec17017b"
+    },
+    {
+      "bytes": 1126,
+      "path": "Chunk001.lean",
+      "sha256": "e5c1d4179caa80c6b9eae90599fde5e400c8e2ec6b230bb4741b2e0a7073da7d"
+    },
+    {
+      "bytes": 1126,
+      "path": "Chunk002.lean",
+      "sha256": "2025e8db84b280bfb5dfc85d466f285a2c89d9acd08de7f12d59406ca1612030"
+    },
+    {
+      "bytes": 1126,
+      "path": "Chunk003.lean",
+      "sha256": "4249792ef03b3911c28d8bd7071750763f8d8f06f2182464614dcc543853fa56"
+    },
+    {
+      "bytes": 4283,
+      "path": "Config.lean",
+      "sha256": "c5163eda42cafe8149eabac4df61a12ff9894ff725f8bc55e55badd6ea294540"
+    }
+  ],
+  "format": "lr-compact-v-centered-monotone-lean-bundle-v1",
+  "generatorSha256": "a703879482659554171c4155f97a7dabc5b841cf9b3c17e4fc53421536f9e8e8",
+  "leafChunks": [
+    {
+      "leaves": [
+        0,
+        1
+      ],
+      "module": "InformationTheory.CourtadeKumar.GeneratedLRCompactVCenteredMonotoneV1.Chunk000",
+      "path": "Chunk000.lean"
+    },
+    {
+      "leaves": [
+        2,
+        3
+      ],
+      "module": "InformationTheory.CourtadeKumar.GeneratedLRCompactVCenteredMonotoneV1.Chunk001",
+      "path": "Chunk001.lean"
+    },
+    {
+      "leaves": [
+        4,
+        5
+      ],
+      "module": "InformationTheory.CourtadeKumar.GeneratedLRCompactVCenteredMonotoneV1.Chunk002",
+      "path": "Chunk002.lean"
+    },
+    {
+      "leaves": [
+        6,
+        7
+      ],
+      "module": "InformationTheory.CourtadeKumar.GeneratedLRCompactVCenteredMonotoneV1.Chunk003",
+      "path": "Chunk003.lean"
+    }
+  ],
+  "observationSha256": "43eaa0d8dd4f406b5b4b1922d9832bfbe70139185d99dbae1079e672982c3421",
+  "rowCount": 8,
+  "untrustedGenerator": true,
+  "weightedHeadCount": 1152
+}

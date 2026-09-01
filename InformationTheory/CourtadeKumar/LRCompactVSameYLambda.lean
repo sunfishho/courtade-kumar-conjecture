@@ -137,6 +137,33 @@ theorem cast_lrCompactVSameYLambda_mul_le
     exact max_le hD0 hdLower
   exact hfirst.trans (hcancel.le.trans hclamp)
 
+/-- A checked nonnegative rational multiplier need not be the exact endpoint
+quotient.  It is enough that its product with the certified upper endpoint
+of `B` fit below the certified nonnegative lower endpoint of `D`.  This form
+is useful for fixed-dyadic evaluators, because it avoids constructing a large
+exact rational quotient in every generated leaf. -/
+theorem cast_lrCompactVCheckedLambda_mul_le
+    {lambda : ℚ} {bEndpoint d : RationalEnclosure} {B D : ℝ}
+    (hlambda : (0 : ℚ) ≤ lambda)
+    (hBUpper : B ≤ (bEndpoint.upper : ℝ))
+    (hbudget : lambda * bEndpoint.upper ≤ d.nonnegativeLower)
+    (hdLower : (d.lower : ℝ) ≤ D) (hD0 : 0 ≤ D) :
+    (lambda : ℝ) * B ≤ D := by
+  have hlambdaReal : (0 : ℝ) ≤ lambda := by exact_mod_cast hlambda
+  have hfirst :
+      (lambda : ℝ) * B ≤
+        (lambda : ℝ) * (bEndpoint.upper : ℝ) :=
+    mul_le_mul_of_nonneg_left hBUpper hlambdaReal
+  have hbudgetReal :
+      (lambda : ℝ) * (bEndpoint.upper : ℝ) ≤
+        (d.nonnegativeLower : ℝ) := by
+    exact_mod_cast hbudget
+  have hclamp : (d.nonnegativeLower : ℝ) ≤ D := by
+    change ((max 0 d.lower : ℚ) : ℝ) ≤ D
+    rw [Rat.cast_max, Rat.cast_zero]
+    exact max_le hD0 hdLower
+  exact hfirst.trans (hbudgetReal.trans hclamp)
+
 theorem lrCompactVSameYBEndpointEnclosure_sound
     (logTerms halfLogTerms : ℕ) {box : CertificateBox}
     {logOnePlusVHi : RationalEnclosure.LogRangeCertificate}
@@ -429,6 +456,91 @@ theorem lrCompactVSameYLambda_mul_flowB_le_flowD
     hlambda hvalid hpoint hinterior hslopeReal
   have hcorner0 :
       0 ≤ lrCompactVSameYSlack lambda (box.sHi : ℝ) (box.kHi : ℝ)
+        (lrCompactVDirectDYLoQ box : ℝ) := by
+    exact sub_nonneg.mpr hlambdaEndpoint
+  have hpoint0 := hcorner0.trans hcorner
+  have hR0 : 0 ≤ point.s :=
+    (by exact_mod_cast hvalid.1.1 : (0 : ℝ) ≤ box.sLo) |>.trans
+      hpoint.1
+  have hx0 : 0 ≤ point.chi :=
+    (by exact_mod_cast hvalid.1.2.2.2.2.2.2.1 :
+      (0 : ℝ) ≤ box.chiLo) |>.trans hpoint.2.2.2.2.1
+  unfold lrCompactVSameYSlack at hpoint0
+  rw [lrCompactVDFullX_eq_flowD hR0 hx0,
+    lrCompactVBFullX_eq_flowB hR0 hx0] at hpoint0
+  exact sub_nonneg.mp hpoint0
+
+/-- Checker-facing same-`y` theorem for an arbitrary certified dyadic
+multiplier.  The two exact rational side conditions separately certify the
+endpoint budget and the monotonicity in the shared `y` coordinate. -/
+theorem lrCompactVSameYCheckedLambda_mul_flowB_le_flowD
+    (logTerms halfLogTerms dTerms : ℕ) (lambda : ℚ)
+    {box : CertificateBox} {point : CertificatePoint}
+    {logOnePlusVHi : RationalEnclosure.LogRangeCertificate}
+    (hvalid : LRCompactVDirectDValid box)
+    (hpoint : box.Contains point) (hinterior : LRCompactVInterior point)
+    (hlambda : (0 : ℚ) ≤ lambda)
+    (hlogcheck : logOnePlusVHi.check (1 + box.kHi) = true)
+    (hbudget :
+      lambda *
+          (lrCompactVSameYBEndpointEnclosure
+            logTerms halfLogTerms box logOnePlusVHi).upper ≤
+        (lrCompactVDirectDEnclosure dTerms box).nonnegativeLower)
+    (hslope :
+      lambda * box.sHi * (1 - lrCompactVDirectDYLoQ box) ≤
+        1 - box.sHi) :
+    (lambda : ℝ) *
+        lrFlowB point.s point.k (Real.sqrt point.chi) ≤
+      lrFlowD point.s point.k (Real.sqrt point.chi) := by
+  let bEndpoint := lrCompactVSameYBEndpointEnclosure
+    logTerms halfLogTerms box logOnePlusVHi
+  let d := lrCompactVDirectDEnclosure dTerms box
+  have hbEndpoint := lrCompactVSameYBEndpointEnclosure_sound
+    logTerms halfLogTerms hvalid hlogcheck
+  have hdEndpoint :=
+    lrCompactVDirectDEnclosure_contains_corner dTerms hvalid
+  have hyLo0 : (0 : ℝ) ≤ lrCompactVDirectDYLoQ box := by
+    rw [cast_lrCompactVDirectDYLoQ]
+    exact mul_nonneg (sq_nonneg _)
+      (by exact_mod_cast hvalid.1.2.2.2.2.2.2.1)
+  have hyLo1 : (lrCompactVDirectDYLoQ box : ℝ) < 1 := by
+    exact_mod_cast hvalid.2.2
+  have hargOrder :
+      1 - (lrCompactVDirectDYLoQ box : ℝ) ≤
+        1 - (box.sHi : ℝ) *
+          (lrCompactVDirectDYLoQ box : ℝ) := by
+    have hprod := mul_le_mul_of_nonneg_right
+      (show (box.sHi : ℝ) ≤ 1 by exact_mod_cast hvalid.1.2.2.1)
+      hyLo0
+    linarith
+  have hlogOrder := Real.log_le_log (by linarith) hargOrder
+  have hD0 : 0 ≤ lrCompactVDFullX (box.sHi : ℝ)
+      (lrCompactVDirectDYLoQ box : ℝ) := by
+    unfold lrCompactVDFullX
+    linarith
+  have hlambdaEndpoint :
+      (lambda : ℝ) *
+          lrCompactVBFullX (box.sHi : ℝ) (box.kHi : ℝ)
+            (lrCompactVDirectDYLoQ box : ℝ) ≤
+        lrCompactVDFullX (box.sHi : ℝ)
+          (lrCompactVDirectDYLoQ box : ℝ) := by
+    apply cast_lrCompactVCheckedLambda_mul_le
+      (bEndpoint := bEndpoint) (d := d) hlambda
+    · exact hbEndpoint.2
+    · simpa [bEndpoint, d] using hbudget
+    · exact hdEndpoint.1
+    · exact hD0
+  have hlambdaReal : (0 : ℝ) ≤ lambda := by exact_mod_cast hlambda
+  have hslopeReal :
+      (lambda : ℝ) * (box.sHi : ℝ) *
+          (1 - (lrCompactVDirectDYLoQ box : ℝ)) ≤
+        1 - (box.sHi : ℝ) := by
+    exact_mod_cast hslope
+  have hcorner := lrCompactVSameYSlack_corner_le
+    hlambdaReal hvalid hpoint hinterior hslopeReal
+  have hcorner0 :
+      0 ≤ lrCompactVSameYSlack (lambda : ℝ)
+        (box.sHi : ℝ) (box.kHi : ℝ)
         (lrCompactVDirectDYLoQ box : ℝ) := by
     exact sub_nonneg.mpr hlambdaEndpoint
   have hpoint0 := hcorner0.trans hcorner
