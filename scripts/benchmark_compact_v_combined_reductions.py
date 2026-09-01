@@ -66,6 +66,11 @@ primary-bound lookahead topology and uses lambda only to close the current
 box.  ``hybrid-lambda-lookahead`` additionally converts lambda child bounds
 to reserve units with a sign-safe box-wide B endpoint and includes them in
 the split score.  These exploratory modes are not used in the default matrix.
+The default lambda uses the sharper same-y endpoint ratio; the optional
+``--independent-lambda-ratio`` uses the easier-to-formalize D_lower/B_upper
+quotient as a controlled comparison.
+``--omit-lambda-f0`` additionally removes the nonnegative constant term, so
+the benchmark can isolate the minimal payload-free grouped criterion.
 
 The formal DirectD checker does not use the J-dependent physical shape cap,
 so this benchmark defaults to no cap.  ``--physical-cap`` is available only
@@ -409,6 +414,8 @@ def lambda_grouped_lower(
     xh: int,
     head_n: int,
     use_physical_cap: bool,
+    tight_ratio: bool,
+    include_f0: bool,
 ) -> tuple[int, int, int, int]:
     """Return (S_lower, lambda_lower, D_endpoint_lower, B_endpoint_upper).
 
@@ -419,7 +426,10 @@ def lambda_grouped_lower(
     ylo = q.product_lower(vl, vl, xl)
     dlo = max(0, m.D_full_lower(rh, ylo))
     rylo_up = q.mul(q.point(rh), q.point(ylo)).hi
-    bhi = q.add(q.beta_scalar(vh), q.ell_scalar(rylo_up)).hi
+    if tight_ratio:
+        bhi = q.add(q.beta_scalar(vh), q.ell_scalar(rylo_up)).hi
+    else:
+        bhi = q.B_upper(rh, vh, xh)
     lam = q.div(q.point(dlo), q.point(bhi)).lo
 
     glo = q.scale_int(q.div(q.UNIT, q.point(q.ONE + vh)), 4).lo
@@ -435,7 +445,7 @@ def lambda_grouped_lower(
         q.g_scalar(vh).lo
         - q.scale_int(q.div(q.LOG2, q.point(q.ONE + vh)), 4).hi,
     )
-    total = q.mul(q.point(lam), q.point(f0lo)).lo
+    total = q.mul(q.point(lam), q.point(f0lo)).lo if include_f0 else 0
 
     shape_uppers = m.physical_shape_uppers(
         rh, vl, vh, xh, head_n, use_physical_cap
@@ -484,6 +494,8 @@ def evaluate_lambda_grouped(
     box: m.Box,
     grouped_head_n: int,
     use_physical_cap: bool,
+    tight_ratio: bool,
+    include_f0: bool,
     counters: dict[str, int],
     runtime: RuntimeCounters,
 ) -> tuple[int, int]:
@@ -497,6 +509,8 @@ def evaluate_lambda_grouped(
         box.xh,
         grouped_head_n,
         use_physical_cap,
+        tight_ratio,
+        include_f0,
     )
     counters["groupedBoundEvaluations"] += 1
     runtime.note_interval_evaluation()
@@ -688,6 +702,8 @@ def choose_lookahead_axis(
     grouped_head_n: int,
     difference_modes: tuple[int, ...],
     use_physical_cap: bool,
+    lambda_tight_ratio: bool,
+    lambda_include_f0: bool,
     counters: dict[str, int],
     runtime: RuntimeCounters,
     limit_reason,
@@ -731,6 +747,8 @@ def choose_lookahead_axis(
                             child,
                             grouped_head_n,
                             use_physical_cap,
+                            lambda_tight_ratio,
+                            lambda_include_f0,
                             counters,
                             runtime,
                         )
@@ -764,6 +782,8 @@ def run_policy(
     grouped_head_n: int,
     difference_modes: tuple[int, ...],
     use_physical_cap: bool,
+    lambda_tight_ratio: bool,
+    lambda_include_f0: bool,
     report_period: int,
     runtime: RuntimeCounters,
 ) -> dict[str, object]:
@@ -864,6 +884,8 @@ def run_policy(
                 box,
                 grouped_head_n,
                 use_physical_cap,
+                lambda_tight_ratio,
+                lambda_include_f0,
                 counters,
                 runtime,
             )
@@ -893,6 +915,8 @@ def run_policy(
                     grouped_head_n,
                     difference_modes,
                     use_physical_cap,
+                    lambda_tight_ratio,
+                    lambda_include_f0,
                     counters,
                     runtime,
                     limit_reason,
@@ -1033,6 +1057,19 @@ def main() -> None:
             "fidelity to the formal DirectD leaf checker)"
         ),
     )
+    parser.add_argument(
+        "--independent-lambda-ratio",
+        action="store_true",
+        help=(
+            "use D_lower/B_box_upper instead of the sharper same-y lambda "
+            "ratio"
+        ),
+    )
+    parser.add_argument(
+        "--omit-lambda-f0",
+        action="store_true",
+        help="omit the known-nonnegative f0 term from the grouped fallback",
+    )
     args = parser.parse_args()
 
     regions = unique(comma_list(args.regions))
@@ -1118,6 +1155,12 @@ def main() -> None:
         "tailN": args.tail,
         "directDTerms": args.d_terms,
         "groupHeadN": args.group_head,
+        "lambdaRatio": (
+            "independent-D-lower-over-B-upper"
+            if args.independent_lambda_ratio
+            else "tight-same-y-endpoint"
+        ),
+        "lambdaIncludesF0": not args.omit_lambda_f0,
         "physicalCap": physical_cap,
         "checkerFidelity": (
             "non-fidelity physical-cap experiment"
@@ -1215,6 +1258,8 @@ def main() -> None:
             args.group_head,
             difference_modes,
             physical_cap,
+            not args.independent_lambda_ratio,
+            not args.omit_lambda_f0,
             args.report_period,
             runtime,
         )
