@@ -24,7 +24,7 @@ def lrCompactVLambdaGroupedCanaryBox : CertificateBox where
 def lrCompactVLambdaGroupedCanaryCertificate :
     LRCompactVLambdaGroupedLeafCertificate :=
   LRCompactVLambdaGroupedLeafCertificate.auto
-    16 lrCompactVLambdaGroupedCanaryBox
+    .n192 16 lrCompactVLambdaGroupedCanaryBox
 
 #kernel_checked_bool lrCompactVLambdaGroupedCanary_check
   (lrCompactVLambdaGroupedCanaryCertificate.check

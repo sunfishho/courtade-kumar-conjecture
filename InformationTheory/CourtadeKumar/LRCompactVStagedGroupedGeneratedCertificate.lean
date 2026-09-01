@@ -2,12 +2,13 @@ import InformationTheory.CourtadeKumar.LRCompactVHybridDirectDGeneratedCertifica
 import InformationTheory.CourtadeKumar.LRCompactVLambdaGroupedLeafChecker
 
 /-!
-# Generated staged direct/grouped compact-`V` certificates
+# Generated staged direct/adaptive-grouped compact-`V` certificates
 
-The cheap hybrid direct-`D` checker is tried first.  Only a failed direct
-leaf evaluates the 192-term grouped fallback.  The accepted-leaf tag is part
-of the replay data, so kernel checking a direct leaf never recomputes the
-expensive fallback.
+The generator preserves the cheap hybrid direct-`D` closure topology, but it
+preferentially tags a terminal with a grouped proof when that proof is also
+available and cheaper to replay.  Grouped checking tries 128 terms first and
+escalates to 192 terms only on harder boxes.  The accepted-leaf tag is part of
+the replay data, so the kernel replays exactly one arithmetic proof.
 
 Subdivision keeps the empirically superior primary one-step lookahead.  The
 grouped criterion closes the current box but does not perturb split scoring;
@@ -21,9 +22,15 @@ namespace CourtadeKumar
 
 namespace LRCompactVLambdaGroupedLeafCertificate
 
-def auto (logFuel : ℕ) (box : CertificateBox) :
+def ofB (headChoice : LRCompactVLambdaGroupedHeadChoice)
+    (b : LRCompactVBCertificate) :
     LRCompactVLambdaGroupedLeafCertificate :=
-  { b := LRCompactVBCertificate.hybridDirectDAuto logFuel box }
+  { b := b, headChoice := headChoice }
+
+def auto (headChoice : LRCompactVLambdaGroupedHeadChoice)
+    (logFuel : ℕ) (box : CertificateBox) :
+    LRCompactVLambdaGroupedLeafCertificate :=
+  ofB headChoice (LRCompactVBCertificate.hybridDirectDAuto logFuel box)
 
 end LRCompactVLambdaGroupedLeafCertificate
 
@@ -43,6 +50,28 @@ def check
       logTerms pZeroTerms wTerms dTerms directN box
   | .grouped data => data.check logTerms wTerms dTerms box
 
+/-- Choose the cheapest grouped replay that closes the box, falling back to
+the direct replay only when it was successful and neither grouped head was.
+Returning `none` means that all three closure tests failed. -/
+def selectAdaptiveReplay
+    (logTerms wTerms dTerms : ℕ) (directOK : Bool)
+    (box : CertificateBox)
+    (direct : LRCompactVHybridDirectDLeafCertificate) :
+    Option LRCompactVStagedGroupedLeafCertificate :=
+  let reduced := LRCompactVLambdaGroupedLeafCertificate.ofB
+    .n128 direct.b
+  if reduced.check logTerms wTerms dTerms box then
+    some (.grouped reduced)
+  else
+    let full := LRCompactVLambdaGroupedLeafCertificate.ofB
+      .n192 direct.b
+    if full.check logTerms wTerms dTerms box then
+      some (.grouped full)
+    else if directOK then
+      some (.direct direct)
+    else
+      none
+
 theorem sound
     (logTerms pZeroTerms wTerms dTerms directN : ℕ)
     {box : CertificateBox}
@@ -60,7 +89,8 @@ theorem sound
 
 end LRCompactVStagedGroupedLeafCertificate
 
-/-- Direct-first, grouped-second generation with primary lookahead splits. -/
+/-- Direct-topology generation with adaptive grouped replay tags and primary
+lookahead splits. -/
 def generateLRCompactVStagedGroupedCertificate
     (logTerms pZeroTerms wTerms dTerms directN logFuel : ℕ) :
     ℕ → CertificateBox →
@@ -69,29 +99,26 @@ def generateLRCompactVStagedGroupedCertificate
   | 0, box =>
       let direct :=
         LRCompactVHybridDirectDLeafCertificate.auto logFuel box
-      if direct.check
-          logTerms pZeroTerms wTerms dTerms directN box then
-        .accept (.direct direct)
-      else
-        .accept (.grouped <|
-          LRCompactVLambdaGroupedLeafCertificate.auto logFuel box)
+      let directOK := direct.check
+        logTerms pZeroTerms wTerms dTerms directN box
+      match LRCompactVStagedGroupedLeafCertificate.selectAdaptiveReplay
+          logTerms wTerms dTerms directOK box direct with
+      | some leaf => .accept leaf
+      | none => .accept (.direct direct)
   | fuel + 1, box =>
       let discard :=
         LRCompactVDiscardCertificate.hybridDirectDAuto logFuel box
       if discard.check logTerms box then
         .discard discard
       else
-        let direct :=
-          LRCompactVHybridDirectDLeafCertificate.auto logFuel box
-        if direct.check
-            logTerms pZeroTerms wTerms dTerms directN box then
-          .accept (.direct direct)
-        else
-          let grouped :=
-            LRCompactVLambdaGroupedLeafCertificate.auto logFuel box
-          if grouped.check logTerms wTerms dTerms box then
-            .accept (.grouped grouped)
-          else
+        let direct : LRCompactVHybridDirectDLeafCertificate :=
+          { b := discard.b }
+        let directOK := direct.check
+          logTerms pZeroTerms wTerms dTerms directN box
+        match LRCompactVStagedGroupedLeafCertificate.selectAdaptiveReplay
+            logTerms wTerms dTerms directOK box direct with
+        | some leaf => .accept leaf
+        | none =>
             let axis := lrCompactVHybridDirectDLookaheadSplitAxis
               logTerms pZeroTerms wTerms dTerms directN logFuel box
             let cut := lrCompactVHybridDirectDSplitCut box axis

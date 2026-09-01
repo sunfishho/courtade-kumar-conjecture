@@ -13,8 +13,9 @@ After the cheaper hybrid direct-`D` leaf fails, this checker sets
 The grouped interval module certifies `Q + lambda C`, while the elementary
 ratio inequality `lambda B ≤ D` lifts that result to `BQ + DC`.  The leaf
 payload is still only the two logarithm certificates already needed for
-`B`; `D`, `W_R(1)`, and the 192-term grouped head are deterministic rational
-computations replayed by the kernel.
+`B`, together with a choice between the cheaper 128-term head and the
+stronger 192-term head.  `D`, `W_R(1)`, and the selected grouped head are
+deterministic rational computations replayed by the kernel.
 -/
 
 set_option autoImplicit false
@@ -60,8 +61,23 @@ theorem cast_lrCompactVIndependentLambda_mul_le
     exact max_le hD0 hdLower
   exact hfirst.trans (hcancel.le.trans hclamp)
 
+/-- The adaptive grouped checker first tries the cheaper head and escalates
+to the measured hard-region head only when needed. -/
+inductive LRCompactVLambdaGroupedHeadChoice where
+  | n128
+  | n192
+
+namespace LRCompactVLambdaGroupedHeadChoice
+
+def headN : LRCompactVLambdaGroupedHeadChoice → ℕ
+  | .n128 => 128
+  | .n192 => lrCompactVLambdaGroupedHeadN
+
+end LRCompactVLambdaGroupedHeadChoice
+
 structure LRCompactVLambdaGroupedLeafCertificate where
   b : LRCompactVBCertificate
+  headChoice : LRCompactVLambdaGroupedHeadChoice
 
 namespace LRCompactVLambdaGroupedLeafCertificate
 
@@ -74,7 +90,7 @@ def groupedLower
   let wOne := lrCompactVWOneEnclosure logTerms wTerms box
   let lambda := lrCompactVIndependentLambda b d
   lrCompactVLambdaGroupedFiniteLower
-    lrCompactVLambdaGroupedHeadN lambda box wOne
+    certificate.headChoice.headN lambda box wOne
 
 def check
     (logTerms wTerms dTerms : ℕ)
@@ -89,7 +105,7 @@ def check
     LRCompactVDirectDValid.check box = true ∧
     0 < b.upper ∧
     0 ≤ lrCompactVLambdaGroupedFiniteLower
-      lrCompactVLambdaGroupedHeadN lambda box wOne)
+      certificate.headChoice.headN lambda box wOne)
 
 theorem sound
     (logTerms wTerms dTerms : ℕ)
@@ -152,14 +168,14 @@ theorem sound
     exact lrCompactVIndependentLambda_nonnegative hparts.2.2.1
   have hlambda : (0 : ℝ) ≤ lambda := by exact_mod_cast hlambdaQ
   have hfinite := lrCompactVLambdaGroupedFiniteLower_le
-    (N := lrCompactVLambdaGroupedHeadN)
+    (N := certificate.headChoice.headN)
     hlambdaQ hbox hpoint hinterior hwOne
   have hanalytic := lrCompactVLambdaGroupedFinite_le
     hinterior.1 hinterior.2.1 ht hlambda
-    lrCompactVLambdaGroupedHeadN
+    certificate.headChoice.headN
   have hbound :
       (lrCompactVLambdaGroupedFiniteLower
-          lrCompactVLambdaGroupedHeadN lambda box wOne : ℝ) ≤
+          certificate.headChoice.headN lambda box wOne : ℝ) ≤
         (lrFlowPW point.s point.k t -
           4 * lrWKernel point.s 1 *
             (point.k * t ^ 2 / (1 + point.k))) +
