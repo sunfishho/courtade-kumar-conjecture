@@ -1,6 +1,7 @@
 import InformationTheory.CourtadeKumar.LRDeterminantFiniteReplayTargets
 import InformationTheory.CourtadeKumar.LRDeterminantFiniteD9Computation
 import InformationTheory.CourtadeKumar.LRHighShapeVZeroFaceEvaluator
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKHistoricalACCornerSoundness
 
 set_option autoImplicit false
 
@@ -333,6 +334,31 @@ structure LRFiniteDeterminantD9ZeroFaceCertificate where
 
 namespace LRFiniteDeterminantD9ZeroFaceCertificate
 
+open Set
+
+def cornerSqrtFuel : ℕ := 20
+def cornerLogFuel : ℕ := 16
+
+def cY0CornerI (terms : ℕ) (box : CertificateBox) : RationalEnclosure :=
+  LRUpperKHistoricalACValues.cCornerI terms cornerSqrtFuel cornerLogFuel box
+    (lrCertificateY0NonnegativeAD box).value
+
+def cECornerI (terms : ℕ) (box : CertificateBox) : RationalEnclosure :=
+  LRUpperKHistoricalACValues.cCornerI terms cornerSqrtFuel cornerLogFuel box
+    (lrCertificateEAD box).value
+
+def cCornersCheck (box : CertificateBox) : Bool :=
+  let y0 := (lrCertificateY0NonnegativeAD box).value
+  let e := (lrCertificateEAD box).value
+  decide (
+    (0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧
+    (0 : ℚ) ≤ y0.lower ∧ y0.upper < 1 ∧
+    (0 : ℚ) ≤ e.lower ∧ e.upper < 1) &&
+    LRUpperKHistoricalACValues.cCornerCheck cornerSqrtFuel cornerLogFuel
+      box y0 &&
+    LRUpperKHistoricalACValues.cCornerCheck cornerSqrtFuel cornerLogFuel
+      box e
+
 /-- A regular-shell payload used only to share the already proved D1 node.
 No theorem in this file assumes that this shell passes the regular tangent
 checker. -/
@@ -369,6 +395,7 @@ def evaluateAll (terms : ℕ) (box : CertificateBox)
   let be := lrCertificateBAD s e
   let v := (coordinate.vAD box).value
   let onePlusV := RationalEnclosure.add (RationalEnclosure.point 1) v
+  let vOnePlus := RationalEnclosure.mul v onePlusV
   let vSq := RationalEnclosure.mul v v
   let g0 := (regular.gShape.g0.evaluate terms (coordinate.vAD box)).value
   let qY0 := certificate.zero.qY0.enclosure terms y0.value
@@ -417,14 +444,20 @@ def evaluateAll (terms : ℕ) (box : CertificateBox)
   let psi := RationalEnclosure.sub (RationalEnclosure.add g pw)
     (RationalEnclosure.div
       (RationalEnclosure.mul (RationalEnclosure.point 4) w) onePlusV)
+  let oneMinusV := RationalEnclosure.sub (RationalEnclosure.point 1) v
+  let kappa := RationalEnclosure.div
+    (RationalEnclosure.mul oneMinusV oneMinusV) vOnePlus
   let delta := RationalEnclosure.div
     (RationalEnclosure.sub (RationalEnclosure.point 1)
       (RationalEnclosure.mul v x)) onePlusV
+  let cBase := RationalEnclosure.add
+    (RationalEnclosure.add (cY0CornerI terms box)
+      (RationalEnclosure.div (cECornerI terms box) v))
+    (RationalEnclosure.mul
+      (RationalEnclosure.add kappa
+        (RationalEnclosure.mul (RationalEnclosure.point 4) delta)) w)
   let firstBracket := RationalEnclosure.add
-    (RationalEnclosure.mul ab.b.value
-      (RationalEnclosure.add (RationalEnclosure.sub psi g)
-        (RationalEnclosure.mul
-          (RationalEnclosure.mul (RationalEnclosure.point 4) delta) w)))
+    (RationalEnclosure.mul ab.b.value cBase)
     (RationalEnclosure.mul d1 psi)
   let factor := RationalEnclosure.sub
     (RationalEnclosure.mul ab.b.value x) d1
@@ -461,6 +494,8 @@ def payloadCheck (box : CertificateBox)
   let e := lrCertificateEAD box
   let y0 := lrCertificateY0NonnegativeAD box
   let v := coordinate.vAD box
+  let vOnePlus := RationalEnclosure.mul v.value
+    (RationalEnclosure.add (RationalEnclosure.point 1) v.value)
   decide (
     certificate.zero.check box = true ∧
     certificate.qBY0.check (lrCertificateBAD s y0).value = true ∧
@@ -479,7 +514,9 @@ def payloadCheck (box : CertificateBox)
       (RationalEnclosure.add (RationalEnclosure.point 1) v.value).lower ∧
     (0 : ℚ) <
       (RationalEnclosure.add (RationalEnclosure.point 2) v.value).lower ∧
-    (0 : ℚ) < (RationalEnclosure.mul v.value v.value).lower)
+    (0 : ℚ) < (RationalEnclosure.mul v.value v.value).lower ∧
+    (0 : ℚ) < vOnePlus.lower ∧
+    cCornersCheck box = true)
 
 set_option maxHeartbeats 800000 in
 theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
@@ -500,6 +537,7 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   let vAD := coordinate.vAD box
   let v := vAD.value
   let onePlusV := RationalEnclosure.add (RationalEnclosure.point 1) v
+  let vOnePlus := RationalEnclosure.mul v onePlusV
   let twoPlusV := RationalEnclosure.add (RationalEnclosure.point 2) v
   let vSq := RationalEnclosure.mul v v
   have hparts :
@@ -518,12 +556,15 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
         (LRFiniteDeterminantD9Certificate.d1DenominatorAD box).value.lower ∧
       (0 : ℚ) < onePlusV.lower ∧
       (0 : ℚ) < twoPlusV.lower ∧
-      (0 : ℚ) < vSq.lower := by
+      (0 : ℚ) < vSq.lower ∧
+      (0 : ℚ) < vOnePlus.lower ∧
+      cCornersCheck box = true := by
     simpa [payloadCheck, regular, coordinate, s, e, y0, by0, be,
-      vAD, v, onePlusV, twoPlusV, vSq] using hcheck
+      vAD, v, onePlusV, vOnePlus, twoPlusV, vSq] using hcheck
   rcases hparts with ⟨hzero, hqBY0Check, hqBECheck, hqSCheck,
     hlogTwoPlusVCheck, hlogD1Check, hsLower, hkLower, hRLower,
-    hd1Den, honePlusVLower, htwoPlusVLower, hvSqLower⟩
+    hd1Den, honePlusVLower, htwoPlusVLower, hvSqLower,
+    hvOnePlusLower, hcCornersCheck⟩
 
   have hzeroChecked :
       decide ((0 : ℚ) ≤ box.chiLo ∧
@@ -581,6 +622,53 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   have hy0AD := lrCertificateY0NonnegativeAD_sound hpoint
     hdomain.1 hdomain.2
   have hvADSound := coordinate.vAD_sound hpoint hcoordinate
+
+  have hcParts :
+      (((0 : ℚ) < box.sLo ∧ box.sLo ≤ box.sHi ∧ box.sHi < 1 ∧
+          (0 : ℚ) ≤ y0.value.lower ∧ y0.value.upper < 1 ∧
+          (0 : ℚ) ≤ e.value.lower ∧ e.value.upper < 1) ∧
+        LRUpperKHistoricalACValues.cCornerCheck cornerSqrtFuel cornerLogFuel
+            box y0.value = true) ∧
+      LRUpperKHistoricalACValues.cCornerCheck cornerSqrtFuel cornerLogFuel
+          box e.value = true := by
+    simpa [cCornersCheck, y0, e] using hcCornersCheck
+  rcases hcParts with ⟨⟨hcDomain, hcY0Check⟩, hcECheck⟩
+  rcases hcDomain with
+    ⟨hsLoQ, hsOrderQ, hsHiQ, hy0LoQ, hy0HiQ, heLoQ, heHiQ⟩
+  have hsLoReal : (0 : ℝ) < box.sLo := by exact_mod_cast hsLoQ
+  have hsOrderReal : (box.sLo : ℝ) ≤ box.sHi := by
+    exact_mod_cast hsOrderQ
+  have hsHiReal : (box.sHi : ℝ) < 1 := by exact_mod_cast hsHiQ
+  have hsLoMem : (box.sLo : ℝ) ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hsLoReal, hsOrderReal.trans_lt hsHiReal⟩
+  have hsHiMem : (box.sHi : ℝ) ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hsLoReal.trans_le hsOrderReal, hsHiReal⟩
+  have hsMem : point.s ∈ Ioo (0 : ℝ) 1 :=
+    ⟨hsLoReal.trans_le hpoint.1, hpoint.2.1.trans_lt hsHiReal⟩
+  have hy0LoReal : (0 : ℝ) ≤ y0.value.lower := by
+    exact_mod_cast hy0LoQ
+  have hy0HiReal : (y0.value.upper : ℝ) < 1 := by
+    exact_mod_cast hy0HiQ
+  have hy0Mem : lrCertificateY0 point ∈ Ico (0 : ℝ) 1 :=
+    ⟨hy0LoReal.trans hy0AD.1.1, hy0AD.1.2.trans_lt hy0HiReal⟩
+  have hy0LoMem : (y0.value.lower : ℝ) ∈ Ico (0 : ℝ) 1 :=
+    ⟨hy0LoReal, hy0AD.1.1.trans_lt hy0Mem.2⟩
+  have hy0HiMem : (y0.value.upper : ℝ) ∈ Ico (0 : ℝ) 1 :=
+    ⟨hy0Mem.1.trans hy0AD.1.2, hy0HiReal⟩
+  have heLoReal : (0 : ℝ) ≤ e.value.lower := by exact_mod_cast heLoQ
+  have heHiReal : (e.value.upper : ℝ) < 1 := by exact_mod_cast heHiQ
+  have heMem : lrCertificateE point ∈ Ico (0 : ℝ) 1 :=
+    ⟨heLoReal.trans heAD.1.1, heAD.1.2.trans_lt heHiReal⟩
+  have heLoMem : (e.value.lower : ℝ) ∈ Ico (0 : ℝ) 1 :=
+    ⟨heLoReal, heAD.1.1.trans_lt heMem.2⟩
+  have heHiMem : (e.value.upper : ℝ) ∈ Ico (0 : ℝ) 1 :=
+    ⟨heMem.1.trans heAD.1.2, heHiReal⟩
+  have hcY0 := LRUpperKHistoricalACValues.cCornerI_sound
+    terms cornerSqrtFuel cornerLogFuel hsLoMem hsMem hsHiMem
+    hy0LoMem hy0Mem hy0HiMem ⟨hpoint.1, hpoint.2.1⟩ hy0AD.1 hcY0Check
+  have hcE := LRUpperKHistoricalACValues.cCornerI_sound
+    terms cornerSqrtFuel cornerLogFuel hsLoMem hsMem hsHiMem
+    heLoMem heMem heHiMem ⟨hpoint.1, hpoint.2.1⟩ heAD.1 hcECheck
   have hvValue : v.Contains (lrCertificateV point) := by
     simpa [v, vAD] using hvADSound.1
   have hvLowerReal : (0 : ℝ) < (v.lower : ℝ) := by
@@ -632,6 +720,7 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   have hlogTwoPlusV := hlogTwoPlusVAD.1
   have honePlusV := RationalEnclosure.contains_add
     (RationalEnclosure.contains_point 1) hvValue
+  have hvOnePlus := RationalEnclosure.contains_mul hvValue honePlusV
   have htwoPlusV := RationalEnclosure.contains_add
     (RationalEnclosure.contains_point 2) hvValue
   have hvSq := RationalEnclosure.contains_mul hvValue hvValue
@@ -731,16 +820,30 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
     (RationalEnclosure.contains_div honePlusVLower
       (RationalEnclosure.contains_mul
         (RationalEnclosure.contains_point 4) hw) honePlusV)
+  have honeMinusV := RationalEnclosure.contains_sub
+    (RationalEnclosure.contains_point 1) hvValue
+  have hkappaRaw := RationalEnclosure.contains_div hvOnePlusLower
+    (RationalEnclosure.contains_mul honeMinusV honeMinusV) hvOnePlus
+  have hkappa :
+      (RationalEnclosure.div
+        (RationalEnclosure.mul
+          (RationalEnclosure.sub (RationalEnclosure.point 1) v)
+          (RationalEnclosure.sub (RationalEnclosure.point 1) v))
+        vOnePlus).Contains
+          (LRUpperKReplayCertificate.kappaV (lrCertificateV point)) := by
+    simpa [LRUpperKReplayCertificate.kappaV, pow_two] using hkappaRaw
   have hdelta := RationalEnclosure.contains_div honePlusVLower
     (RationalEnclosure.contains_sub (RationalEnclosure.contains_point 1)
       (RationalEnclosure.contains_mul hvValue hxAD.1)) honePlusV
-  have hfourDeltaW := RationalEnclosure.contains_mul
+  have hcEOver := RationalEnclosure.contains_div hvLower hcE hvValue
+  have hcoefficient := RationalEnclosure.contains_add hkappa
     (RationalEnclosure.contains_mul
-      (RationalEnclosure.contains_point 4) hdelta) hw
+      (RationalEnclosure.contains_point 4) hdelta)
+  have hcBase := RationalEnclosure.contains_add
+    (RationalEnclosure.contains_add hcY0 hcEOver)
+    (RationalEnclosure.contains_mul hcoefficient hw)
   have hfirst := RationalEnclosure.contains_add
-    (RationalEnclosure.contains_mul hab.2.1.1
-      (RationalEnclosure.contains_add
-        (RationalEnclosure.contains_sub hpsi hg) hfourDeltaW))
+    (RationalEnclosure.contains_mul hab.2.1.1 hcBase)
     (RationalEnclosure.contains_mul hd1 hpsi)
   have hfactorD1 := RationalEnclosure.contains_sub
     (RationalEnclosure.contains_mul hab.2.1.1 hxAD.1) hd1
@@ -763,7 +866,19 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
   have hsPos : 0 < point.s := hsLowerReal.trans_le hsAD.1.1
   have hRPos : 0 < lrCertificateR point :=
     hRLowerReal.trans_le hR.1.1
-  have htargetEq :
+  have hbaseEq :
+      LRUpperKReplayCertificate.cPrimitive point.s
+            (lrCertificateY0 point) +
+          LRUpperKReplayCertificate.cPrimitive point.s
+              (lrCertificateE point) / lrCertificateV point +
+          (LRUpperKReplayCertificate.kappaV (lrCertificateV point) +
+              4 * lrDeterminantDelta point) * lrCertificateW point =
+        lrDeterminantPsi point - lrCertificateGShape point +
+          4 * lrDeterminantDelta point * lrCertificateW point := by
+    rw [LRUpperKReplayCertificate.psi_sub_gShape_eq_cPrimitives
+      hvPos.ne' hvPlus]
+    ring
+  have htargetOriginal :
       lrFiniteDeterminantD9ReplayTarget point =
         3 * lrCertificateHalfSlope point *
             lrDeterminantFirstBracket
@@ -775,14 +890,34 @@ theorem evaluate_sound (terms : ℕ) {box : CertificateBox}
               lrDeterminantD1 point) := by
     unfold lrFiniteDeterminantD9ReplayTarget lrDeterminantHd lrDeterminantT
     field_simp [hsPos.ne', hRPos.ne']
+  have htargetEq :
+      lrFiniteDeterminantD9ReplayTarget point =
+        3 * lrCertificateHalfSlope point *
+            (lrCertificateBFlow point *
+                (LRUpperKReplayCertificate.cPrimitive point.s
+                    (lrCertificateY0 point) +
+                  LRUpperKReplayCertificate.cPrimitive point.s
+                      (lrCertificateE point) / lrCertificateV point +
+                  (LRUpperKReplayCertificate.kappaV
+                        (lrCertificateV point) +
+                      4 * lrDeterminantDelta point) *
+                    lrCertificateW point) +
+              lrDeterminantD1 point * lrDeterminantPsi point) +
+          4 * lrCertificateW point * lrCertificateGap point *
+            (lrCertificateBFlow point * lrCertificateX point -
+              lrDeterminantD1 point) := by
+    rw [htargetOriginal]
+    unfold lrDeterminantFirstBracket
+    rw [hbaseEq]
 
   unfold enclose evaluateAll
   dsimp only
   rw [htargetEq]
   simpa [regular, coordinate, s, e, x, y0, by0, be, vAD, v,
-    onePlusV, twoPlusV, vSq, lrCertificateGShape,
+    onePlusV, vOnePlus, twoPlusV, vSq, cY0CornerI, cECornerI,
+    lrCertificateGShape,
     lrCertificateGShapeValue, lrCertificatePW, lrCertificatePWValue,
-    lrDeterminantPsi, lrDeterminantDelta, lrDeterminantFirstBracket]
+    lrDeterminantPsi, lrDeterminantDelta]
     using htarget
 
 noncomputable def checkedEvaluatorSound (terms : ℕ) :

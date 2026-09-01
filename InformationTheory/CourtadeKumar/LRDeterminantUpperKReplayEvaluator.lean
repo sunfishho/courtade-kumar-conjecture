@@ -1,5 +1,4 @@
 import InformationTheory.CourtadeKumar.LRDeterminantFiniteReplayTargets
-import InformationTheory.CourtadeKumar.LRDeterminantPositiveFactors
 import InformationTheory.CourtadeKumar.LRHighShapeVZeroFaceEvaluator
 import InformationTheory.CourtadeKumar.IntervalMidpointSKCertificate
 

@@ -1,6 +1,5 @@
 import InformationTheory.CourtadeKumar.LRCertificateQSecondMonotonicity
 import InformationTheory.CourtadeKumar.LRDeterminantUpperKReplayEvaluator
-import InformationTheory.CourtadeKumar.LRUniformTailCurvature
 
 noncomputable section
 
@@ -146,14 +145,41 @@ private lemma hasDerivAt_acC_y
   convert (hasDerivAt_acA_y hs hy).sub (hasDerivAt_lrCertificateQ hy) using 1 <;>
     ring
 
+private lemma topPsiSlopeGap_pos
+    {x : ℝ} (hx : x ∈ Ioo (0 : ℝ) 1) :
+    0 < topPsiSlopeGap x := by
+  have hmono : StrictMonoOn topPsiSlopeGap (Icc (0 : ℝ) x) := by
+    apply strictMonoOn_of_deriv_pos (convex_Icc (0 : ℝ) x)
+    · intro y hy
+      have hyOpen : y ∈ Ioo (-1 : ℝ) 1 :=
+        ⟨by linarith [hy.1], hy.2.trans_lt hx.2⟩
+      exact
+        (hasDerivAt_topPsiSlopeGap hyOpen).continuousAt.continuousWithinAt
+    · intro y hy
+      rw [interior_Icc] at hy
+      have hyOpen : y ∈ Ioo (-1 : ℝ) 1 :=
+        ⟨by linarith [hy.1], hy.2.trans hx.2⟩
+      rw [(hasDerivAt_topPsiSlopeGap hyOpen).deriv]
+      exact div_pos (mul_pos (by norm_num) (sq_pos_of_pos hy.1))
+        (sq_pos_of_pos (by nlinarith [hyOpen.1, hyOpen.2]))
+  have h := hmono
+    (show (0 : ℝ) ∈ Icc 0 x from ⟨le_rfl, hx.1.le⟩)
+    (show x ∈ Icc (0 : ℝ) x from ⟨hx.1.le, le_rfl⟩) hx.1
+  simpa [topPsiSlopeGap] using h
+
 private lemma qSecond_neg
     {x : ℝ} (hx : x ∈ Ioo (0 : ℝ) 1) :
     lrCertificateQSecond x < 0 := by
-  have h := lrCertificateQSecond_upper_six hx
-  have hxpos : 0 < 6 * x := mul_pos (by norm_num) hx.1
-  have : -1 / (6 * x) < (0 : ℝ) := by
-    exact div_neg_of_neg_of_pos (by norm_num) hxpos
-  exact lt_of_le_of_lt h this
+  have hR : 1 - x ∈ Ioo (0 : ℝ) 1 := by
+    constructor <;> linarith [hx.1, hx.2]
+  have hz : Real.sqrt (1 - x) ∈ Ioo (0 : ℝ) 1 := by
+    constructor
+    · exact Real.sqrt_pos.2 hR.1
+    · simpa using (Real.sqrt_lt_sqrt_iff hR.1.le).2 hR.2
+  have hden : 0 < 4 * Real.sqrt (1 - x) ^ 3 :=
+    mul_pos (by norm_num) (pow_pos hz.1 3)
+  unfold lrCertificateQSecond topPsiDeriv2
+  exact neg_neg_of_pos (div_pos (topPsiSlopeGap_pos hz) hden)
 
 private lemma qPrime_right_tangent
     (hQ2 : MonotoneOn lrCertificateQSecond (Ioo (0 : ℝ) 1))
