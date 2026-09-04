@@ -54,3 +54,39 @@ draft wrapper includes the missing short comparison lemma locally.
 
 Full fixed16 and CK remain unproved unconditionally. Continue with the
 small numerical receipt path and then connect it to the semantic assembly.
+
+## Continuation: smaller B and D1 proof path
+
+Three additional modules have now compiled, serially with the memory guard:
+
+- AgentRootRatioBaseFaceD1Standalone: 4.2 seconds, minimum observed
+  memory availability 47%. Proves the exact rounded D1 interval cover
+  and real containment throughout the specified s/k interval.
+- AgentRootRatioBaseFaceBStandalone: 9.1 seconds, minimum 47%.
+  Proves the exact rounded B interval cover, including literal square-root
+  and logarithm certificate checks, and real containment throughout the
+  specified s/k/chi box.
+- AgentRootRatioBaseFaceTwoBoundsAssembly: 2.0 seconds, minimum 48%.
+  Uses those two proved bounds to establish the scalar first-bracket
+  inequality conditional ONLY on Cbase and Psi interval containments.
+
+All printed exported proof audits use exactly propext, Classical.choice,
+and Quot.sound. These modules avoid full D9 evaluator imports and automatic
+payload generation. Finite checks use ordinary norm_num; the assembly uses
+ordinary nlinarith. No native or VM proof shortcut was introduced.
+
+These three are exceptions to the earlier uncompiled-draft inventory.
+The original heavy payload/cover receipt modules remain uncompiled.
+The standalone theorems concern explicit real formulas matching the D1
+and B formulas; they do not yet prove the old automatic-evaluator cover
+predicates definitionally equal to these new checks.
+
+AgentRootRatioBaseFaceD1Production and AgentRootRatioBaseFaceBProduction
+are UNCOMPILED bridge drafts. Both import attempts were stopped at 41%
+memory availability, below the unchanged 42% cutoff. Do not claim their
+production-named conclusions, a complete base-face box, or CK from this
+checkpoint. The Cbase/Psi bounds and production identification remain open.
+
+Replay the small files after the original DominanceArithmetic module,
+in the three-module order above. Stop rather than retry large production
+imports while memory is constrained.
