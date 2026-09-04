@@ -1,0 +1,12 @@
+import AgentRootRatioPrimitiveNumericalPilot
+import AgentRootRatioQNumericalPilot
+
+#print axioms CourtadeKumar.RootRatioPrimitiveNumericalPilot.log_s_contains
+#print axioms CourtadeKumar.RootRatioPrimitiveNumericalPilot.log_k_contains
+#print axioms CourtadeKumar.RootRatioPrimitiveNumericalPilot.log_chi_contains
+#print axioms CourtadeKumar.RootRatioPrimitiveNumericalPilot.log_two_contains
+#print axioms CourtadeKumar.RootRatioQNumericalPilot.sqrt_v_contains
+#print axioms CourtadeKumar.RootRatioQNumericalPilot.sqrt_qhat_e_contains
+#print axioms CourtadeKumar.RootRatioQNumericalPilot.sqrt_qhat_y_contains
+#print axioms CourtadeKumar.RootRatioQNumericalPilot.q_s_contains
+#print axioms CourtadeKumar.RootRatioQNumericalPilot.q_prime_s_contains

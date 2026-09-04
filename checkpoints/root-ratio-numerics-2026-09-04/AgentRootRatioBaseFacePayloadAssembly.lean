@@ -1,0 +1,17 @@
+import AgentRootRatioBaseFacePayloadDenominators
+import AgentRootRatioBaseFacePayloadLogs
+import AgentRootRatioBaseFacePayloadQ
+import AgentRootRatioBaseFacePayloadBase
+import AgentRootRatioBaseFacePayloadCorners
+
+namespace CourtadeKumar.RootRatioBaseFacePayloadReceipts
+open CourtadeKumar.RootRatioBaseFaceGroupedPilot
+
+theorem payloadChecked : pilotPayloadCheck 8 = true :=
+  LRFiniteDeterminantD9ZeroFaceCertificate.payloadCheck_of_parts
+    (pilotBox 8) (pilotPayload 8)
+    baseChecked qChecked logsChecked denominatorsChecked cornersChecked
+
+#print axioms CourtadeKumar.RootRatioBaseFacePayloadReceipts.payloadChecked
+
+end CourtadeKumar.RootRatioBaseFacePayloadReceipts

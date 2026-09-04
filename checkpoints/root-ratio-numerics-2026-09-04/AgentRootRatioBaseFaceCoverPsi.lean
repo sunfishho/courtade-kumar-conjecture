@@ -1,0 +1,11 @@
+import AgentRootRatioBaseFaceRoundedData
+import InformationTheory.CourtadeKumar.KernelCheckedBoolCommand
+
+namespace CourtadeKumar.RootRatioBaseFaceCoverReceipts
+open CourtadeKumar.RootRatioBaseFaceRoundedPilot
+
+#kernel_checked_bool psiCovered (pilot8Bounds.psiCoverCheck 8)
+
+#print axioms CourtadeKumar.RootRatioBaseFaceCoverReceipts.psiCovered
+
+end CourtadeKumar.RootRatioBaseFaceCoverReceipts
