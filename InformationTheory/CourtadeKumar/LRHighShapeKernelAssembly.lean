@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRHighShapeCoordinateAD
 import InformationTheory.CourtadeKumar.LRCertificateOmega
 
@@ -13,14 +14,8 @@ open Set
 
 namespace CourtadeKumar
 
-def lrCertificateY0 (point : CertificatePoint) : ℝ :=
-  point.chi * lrCertificateE point
 
-noncomputable def lrCertificateW (point : CertificatePoint) : ℝ :=
-  lrCertificateOmega point.s 0
 
-noncomputable def lrCertificatePWValue (s y0 e v : ℝ) : ℝ :=
-  lrCertificateOmega s y0 + lrCertificateOmega s e / v
 
 noncomputable def lrCertificatePWValueDeriv
     (s y0 e v s' y0' e' v' : ℝ) : ℝ :=
@@ -28,9 +23,6 @@ noncomputable def lrCertificatePWValueDeriv
     (lrCertificateOmegaDeriv s e s' e' * v -
       lrCertificateOmega s e * v') / v ^ 2
 
-noncomputable def lrCertificatePW (point : CertificatePoint) : ℝ :=
-  lrCertificatePWValue point.s (lrCertificateY0 point)
-    (lrCertificateE point) (lrCertificateV point)
 
 def lrCertificateY0DerivS (point : CertificatePoint) : ℝ :=
   point.chi * point.k

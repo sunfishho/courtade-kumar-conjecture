@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRCertificateQAD
 import InformationTheory.CourtadeKumar.LRHighShapeCertificateCoordinates
 
@@ -14,12 +15,7 @@ open Set
 
 namespace CourtadeKumar
 
-def lrCertificateB (s y : ℝ) : ℝ :=
-  s + (1 - s) * y
 
-noncomputable def lrCertificateOmega (s y : ℝ) : ℝ :=
-  lrCertificateQ (lrCertificateB s y) - lrCertificateQ y -
-    s * (1 - y) * lrCertificateQPrime (lrCertificateB s y)
 
 def lrCertificateBDeriv (s y s' y' : ℝ) : ℝ :=
   s' + (-s') * y + (1 - s) * y'

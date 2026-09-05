@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRHighShapeRelevantKLower
 import InformationTheory.CourtadeKumar.LRAbelElementaryBounds
 
@@ -17,12 +18,7 @@ open Set
 
 namespace CourtadeKumar
 
-noncomputable def lrDeterminantY (point : CertificatePoint) : ℝ :=
-  lrCertificateB point.s (lrCertificateE point) / lrCertificateE point
 
-noncomputable def lrDeterminantD1 (point : CertificatePoint) : ℝ :=
-  let Y := lrDeterminantY point
-  (1 / 2 : ℝ) * Real.log ((1 + Y) / 2) + (Y - 1) / (3 * Y + 1)
 
 theorem lrDeterminantY_one_le {point : CertificatePoint}
     (hinterior : LRHighShapeInterior point) :

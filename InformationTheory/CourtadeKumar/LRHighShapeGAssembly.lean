@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRHighShapeKernelAssembly
 import InformationTheory.CourtadeKumar.LRCertificateG0
 
@@ -13,17 +14,12 @@ open Set
 
 namespace CourtadeKumar
 
-noncomputable def lrCertificateGShapeValue (y0 e v : ℝ) : ℝ :=
-  lrCertificateG0 v + lrCertificateQ y0 + lrCertificateQ e / v
 
 noncomputable def lrCertificateGShapeValueDeriv
     (y0 e v y0' e' v' : ℝ) : ℝ :=
   lrCertificateG0Prime v * v' + lrCertificateQPrime y0 * y0' +
     (lrCertificateQPrime e * e' * v - lrCertificateQ e * v') / v ^ 2
 
-noncomputable def lrCertificateGShape (point : CertificatePoint) : ℝ :=
-  lrCertificateGShapeValue (lrCertificateY0 point)
-    (lrCertificateE point) (lrCertificateV point)
 
 noncomputable def lrCertificateGShapeDeriv
     (point : CertificatePoint) (y0' e' v' : ℝ) : ℝ :=

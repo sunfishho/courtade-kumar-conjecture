@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
+import InformationTheory.CourtadeKumar.LRHighShapeCertificateCoordinatesCore
 import InformationTheory.CourtadeKumar.LRPositiveChartAssembly
 
 /-!
@@ -13,21 +13,6 @@ parallel surrogate expression.
 open Set
 
 namespace CourtadeKumar
-
-def lrCertificateE (point : CertificatePoint) : ℝ :=
-  point.s * point.k
-
-def lrCertificateX (point : CertificatePoint) : ℝ :=
-  1 - point.chi * lrCertificateE point
-
-def lrCertificateR (point : CertificatePoint) : ℝ :=
-  1 - point.s
-
-noncomputable def lrCertificateT (point : CertificatePoint) : ℝ :=
-  Real.sqrt (lrCertificateX point)
-
-noncomputable def lrCertificateV (point : CertificatePoint) : ℝ :=
-  Real.sqrt ((1 - lrCertificateE point) / lrCertificateX point)
 
 /-- The midpoint target in the exact normalization used by the replay. -/
 noncomputable def lrHighShapeUCertificateTarget

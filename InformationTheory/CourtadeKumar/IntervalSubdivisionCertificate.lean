@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificateCore
 import Mathlib.Data.Rat.Cast.Order
 import Mathlib.Data.Real.Basic
 
@@ -24,29 +25,9 @@ structure CertificatePoint where
   k : ℝ
   chi : ℝ
 
-/-- A rational closed box in the three cancellation coordinates. -/
-structure CertificateBox where
-  sLo : ℚ
-  sHi : ℚ
-  kLo : ℚ
-  kHi : ℚ
-  chiLo : ℚ
-  chiHi : ℚ
-
-/-- An exact rational enclosure of a real quantity.  Arithmetic-specific
-modules will construct these enclosures; this structural module only uses
-their semantic containment property. -/
-structure RationalEnclosure where
-  lower : ℚ
-  upper : ℚ
-
 /-- A real number lies in a rational enclosure. -/
 def RationalEnclosure.Contains (interval : RationalEnclosure) (x : ℝ) : Prop :=
   (interval.lower : ℝ) ≤ x ∧ x ≤ (interval.upper : ℝ)
-
-/-- A decidable leaf test for a nonnegative lower endpoint. -/
-def RationalEnclosure.provesNonnegative (interval : RationalEnclosure) : Bool :=
-  decide (0 ≤ interval.lower)
 
 theorem RationalEnclosure.nonnegative_of_provesNonnegative
     {interval : RationalEnclosure} {x : ℝ}
@@ -63,30 +44,6 @@ def CertificateBox.Contains (box : CertificateBox)
   (box.sLo : ℝ) ≤ point.s ∧ point.s ≤ (box.sHi : ℝ) ∧
   (box.kLo : ℝ) ≤ point.k ∧ point.k ≤ (box.kHi : ℝ) ∧
   (box.chiLo : ℝ) ≤ point.chi ∧ point.chi ≤ (box.chiHi : ℝ)
-
-/-- The coordinate along which a certificate node bisects its box. -/
-inductive CertificateAxis where
-  | s
-  | k
-  | chi
-  deriving DecidableEq, Repr
-
-/-- The closed child below a rational cut. -/
-def CertificateBox.lower (box : CertificateBox)
-    (axis : CertificateAxis) (cut : ℚ) : CertificateBox :=
-  match axis with
-  | .s => { box with sHi := cut }
-  | .k => { box with kHi := cut }
-  | .chi => { box with chiHi := cut }
-
-/-- The closed child above a rational cut.  The children deliberately
-overlap at the cut face. -/
-def CertificateBox.upper (box : CertificateBox)
-    (axis : CertificateAxis) (cut : ℚ) : CertificateBox :=
-  match axis with
-  | .s => { box with sLo := cut }
-  | .k => { box with kLo := cut }
-  | .chi => { box with chiLo := cut }
 
 theorem CertificateBox.contains_lower_or_upper
     {box : CertificateBox} {point : CertificatePoint}
@@ -108,26 +65,14 @@ theorem CertificateBox.contains_lower_or_upper
       · exact Or.inl ⟨hsLo, hsHi, hkLo, hkHi, hchiLo, hchi⟩
       · exact Or.inr ⟨hsLo, hsHi, hkLo, hkHi, hchi, hchiHi⟩
 
-/-- A finite subdivision proof.  Leaves contain no claimed arithmetic fact:
-the trusted checker recomputes either the analytic acceptance test or the
-one-sided physical discard test from the current box. -/
-inductive SubdivisionCertificate (AcceptData DiscardData : Type) where
-  | accept (data : AcceptData)
-  | discard (data : DiscardData)
-  | split (axis : CertificateAxis) (cut : ℚ)
-      (lower upper : SubdivisionCertificate AcceptData DiscardData)
-
-/-- Boolean traversal of a subdivision certificate. -/
-def SubdivisionCertificate.check
+theorem SubdivisionCertificate.check_eq_coreCheck
     {AcceptData DiscardData : Type}
     (acceptBox : CertificateBox → AcceptData → Bool)
-    (discardBox : CertificateBox → DiscardData → Bool) :
-    CertificateBox → SubdivisionCertificate AcceptData DiscardData → Bool
-  | box, .accept data => acceptBox box data
-  | box, .discard data => discardBox box data
-  | box, .split axis cut lower upper =>
-      check acceptBox discardBox (box.lower axis cut) lower &&
-        check acceptBox discardBox (box.upper axis cut) upper
+    (discardBox : CertificateBox → DiscardData → Bool)
+    (box : CertificateBox)
+    (certificate : SubdivisionCertificate AcceptData DiscardData) :
+    certificate.check acceptBox discardBox box =
+      certificate.coreCheck acceptBox discardBox box := rfl
 
 /-- Soundness of the generic subdivision checker.  The external generator
 is absent from the theorem's assumptions: only the two verified leaf
@@ -164,13 +109,23 @@ theorem subdivisionCertificate_sound
       · exact lower_ih hchildren.1 point hLower hRelevant
       · exact upper_ih hchildren.2 point hUpper hRelevant
 
-/-- Turn a verified interval extension into the analytic acceptance Boolean
-used at certificate leaves. -/
-def enclosureAccepts
-    {AcceptData : Type}
-    (enclose : CertificateBox → AcceptData → RationalEnclosure)
-    (box : CertificateBox) (data : AcceptData) : Bool :=
-  (enclose box data).provesNonnegative
+/-- The proof-free core check can be passed directly to the established
+semantic checker theorem. -/
+theorem subdivisionCertificate_sound_of_coreCheck
+    {Relevant Property : CertificatePoint → Prop}
+    {AcceptData DiscardData : Type}
+    {acceptBox : CertificateBox → AcceptData → Bool}
+    {discardBox : CertificateBox → DiscardData → Bool}
+    (accept_sound : ∀ box data, acceptBox box data = true →
+      ∀ point, box.Contains point → Property point)
+    (discard_sound : ∀ box data, discardBox box data = true →
+      ∀ point, box.Contains point → ¬ Relevant point)
+    {box : CertificateBox}
+    {certificate : SubdivisionCertificate AcceptData DiscardData}
+    (hcheck : certificate.coreCheck acceptBox discardBox box = true) :
+    ∀ point, box.Contains point → Relevant point → Property point := by
+  apply subdivisionCertificate_sound accept_sound discard_sound
+  simpa only [SubdivisionCertificate.check_eq_coreCheck] using hcheck
 
 /-- End-to-end structural soundness for nonnegativity certificates.  What
 remains for a concrete target is to prove that `enclose` contains the target

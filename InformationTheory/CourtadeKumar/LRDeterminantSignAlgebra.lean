@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRPositiveChartAssembly
 
 /-!
@@ -22,10 +23,6 @@ noncomputable def lrDeterminantClearedSingular
   B * (psi - G + 4 * delta * W + c0 * x * T) +
     D1 * (psi - c0 * T)
 
-/-- The cheaper first-bracket target used in (D5). -/
-noncomputable def lrDeterminantFirstBracket
-    (B D1 G psi delta W : ℝ) : ℝ :=
-  B * (psi - G + 4 * delta * W) + D1 * psi
 
 /-- The reduced cleared numerator (A1), obtained by removing the favorable
 atom `4 * delta * B * W` from the fully cleared determinant. -/

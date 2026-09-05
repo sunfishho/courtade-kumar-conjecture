@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.ExactIntervalArithmeticCore
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
@@ -14,15 +15,8 @@ they contain the intended real value.
 namespace CourtadeKumar
 namespace RationalEnclosure
 
-/-- The degenerate interval at an exact rational point. -/
-def point (q : ℚ) : RationalEnclosure := ⟨q, q⟩
-
 theorem contains_point (q : ℚ) : (point q).Contains (q : ℝ) := by
   exact ⟨le_rfl, le_rfl⟩
-
-/-- Exact Minkowski addition of rational intervals. -/
-def add (a b : RationalEnclosure) : RationalEnclosure :=
-  ⟨a.lower + b.lower, a.upper + b.upper⟩
 
 theorem contains_add {a b : RationalEnclosure} {x y : ℝ}
     (hx : a.Contains x) (hy : b.Contains y) :
@@ -31,10 +25,6 @@ theorem contains_add {a b : RationalEnclosure} {x y : ℝ}
   · simpa [add, Contains] using add_le_add hx.1 hy.1
   · simpa [add, Contains] using add_le_add hx.2 hy.2
 
-/-- Reflection of an interval through zero. -/
-def neg (a : RationalEnclosure) : RationalEnclosure :=
-  ⟨-a.upper, -a.lower⟩
-
 theorem contains_neg {a : RationalEnclosure} {x : ℝ}
     (hx : a.Contains x) :
     (neg a).Contains (-x) := by
@@ -42,22 +32,10 @@ theorem contains_neg {a : RationalEnclosure} {x : ℝ}
   · simpa [neg, Contains] using neg_le_neg hx.2
   · simpa [neg, Contains] using neg_le_neg hx.1
 
-/-- Exact Minkowski subtraction of rational intervals. -/
-def sub (a b : RationalEnclosure) : RationalEnclosure :=
-  add a (neg b)
-
 theorem contains_sub {a b : RationalEnclosure} {x y : ℝ}
     (hx : a.Contains x) (hy : b.Contains y) :
     (sub a b).Contains (x - y) := by
   simpa [sub_eq_add_neg] using contains_add hx (contains_neg hy)
-
-/-- Rational midpoint of an enclosure. -/
-def center (a : RationalEnclosure) : ℚ :=
-  (a.lower + a.upper) / 2
-
-/-- Rational half-width of an enclosure. -/
-def radius (a : RationalEnclosure) : ℚ :=
-  (a.upper - a.lower) / 2
 
 theorem radius_nonnegative {a : RationalEnclosure} {x : ℝ}
     (hx : a.Contains x) :
@@ -73,15 +51,6 @@ theorem abs_sub_center_le_radius
   rw [abs_le]
   rcases hx with ⟨hxLo, hxHi⟩
   constructor <;> norm_num [center, radius] at * <;> linarith
-
-/-- A signed product enclosure in midpoint-radius form.  It is slightly
-wider than the four-corner hull, but its proof is compact and its rational
-computation is fully executable. -/
-def mul (a b : RationalEnclosure) : RationalEnclosure :=
-  let c := center a * center b
-  let r := |center a| * radius b + |center b| * radius a +
-    radius a * radius b
-  ⟨c - r, c + r⟩
 
 theorem contains_mul {a b : RationalEnclosure} {x y : ℝ}
     (hx : a.Contains x) (hy : b.Contains y) :
@@ -135,29 +104,15 @@ theorem contains_mul {a b : RationalEnclosure} {x y : ℝ}
   norm_num at hbounds ⊢
   constructor <;> linarith
 
-/-- Multiplication by an exact rational scalar, implemented through the
-general signed product so there is only one trusted multiplication rule. -/
-def scale (q : ℚ) (a : RationalEnclosure) : RationalEnclosure :=
-  mul (point q) a
-
 theorem contains_scale (q : ℚ) {a : RationalEnclosure} {x : ℝ}
     (hx : a.Contains x) :
     (scale q a).Contains ((q : ℝ) * x) := by
   exact contains_mul (contains_point q) hx
 
-/-- A square enclosure. -/
-def square (a : RationalEnclosure) : RationalEnclosure :=
-  mul a a
-
 theorem contains_square {a : RationalEnclosure} {x : ℝ}
     (hx : a.Contains x) :
     (square a).Contains (x ^ 2) := by
   simpa [square, pow_two] using contains_mul hx hx
-
-/-- Executable natural powers of an enclosure. -/
-def pow : RationalEnclosure → ℕ → RationalEnclosure
-  | _, 0 => point 1
-  | a, n + 1 => mul (pow a n) a
 
 theorem contains_pow {a : RationalEnclosure} {x : ℝ}
     (hx : a.Contains x) :
@@ -165,10 +120,6 @@ theorem contains_pow {a : RationalEnclosure} {x : ℝ}
   | 0 => by simpa [pow] using contains_point 1
   | n + 1 => by
       simpa [pow, pow_succ] using contains_mul (contains_pow hx n) hx
-
-/-- Product enclosure for intervals known to be nonnegative. -/
-def mulNonnegative (a b : RationalEnclosure) : RationalEnclosure :=
-  ⟨a.lower * b.lower, a.upper * b.upper⟩
 
 theorem contains_mulNonnegative
     {a b : RationalEnclosure} {x y : ℝ}
@@ -187,10 +138,6 @@ theorem contains_mulNonnegative
   · simpa [mulNonnegative, Contains] using
       mul_le_mul hx.2 hy.2 hy0 haUpper0
 
-/-- Reciprocal enclosure for an interval bounded strictly away from zero. -/
-def invPositive (a : RationalEnclosure) : RationalEnclosure :=
-  ⟨a.upper⁻¹, a.lower⁻¹⟩
-
 theorem contains_invPositive
     {a : RationalEnclosure} {x : ℝ}
     (ha : (0 : ℚ) < a.lower) (hx : a.Contains x) :
@@ -203,11 +150,6 @@ theorem contains_invPositive
       (inv_le_inv₀ haUpper0 hx0).2 hx.2
   · simpa [invPositive, Contains] using
       (inv_le_inv₀ hx0 ha0).2 hx.1
-
-/-- Quotient enclosure when numerator and denominator intervals are
-nonnegative and the denominator is strictly positive. -/
-def divNonnegative (a b : RationalEnclosure) : RationalEnclosure :=
-  mulNonnegative a (invPositive b)
 
 theorem contains_divNonnegative
     {a b : RationalEnclosure} {x y : ℝ}
@@ -223,10 +165,6 @@ theorem contains_divNonnegative
     simp [invPositive, hbUpper.le]
   simpa [divNonnegative, div_eq_mul_inv] using
     contains_mulNonnegative ha hinvLower hx (contains_invPositive hb hy)
-
-/-- General signed quotient enclosure with a positive denominator. -/
-def div (a b : RationalEnclosure) : RationalEnclosure :=
-  mul a (invPositive b)
 
 theorem contains_div {a b : RationalEnclosure} {x y : ℝ}
     (hb : (0 : ℚ) < b.lower)

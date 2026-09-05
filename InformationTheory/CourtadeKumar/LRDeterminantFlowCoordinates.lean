@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRDeterminantD1
 import InformationTheory.CourtadeKumar.LRDeterminantSignAlgebra
 
@@ -28,15 +29,7 @@ noncomputable def lrDeterminantMuPrime (point : CertificatePoint) : ℝ :=
 noncomputable def lrDeterminantF (point : CertificatePoint) : ℝ :=
   lrCertificateGap point / point.s
 
-/-- The unnormalized derivative `Psi = s² F'`. -/
-noncomputable def lrDeterminantPsi (point : CertificatePoint) : ℝ :=
-  lrCertificateGShape point + lrCertificatePW point -
-    4 * lrCertificateW point / (1 + lrCertificateV point)
 
-/-- The coefficient `delta = (1 - v x) / (1 + v)`. -/
-noncomputable def lrDeterminantDelta (point : CertificatePoint) : ℝ :=
-  (1 - lrCertificateV point * lrCertificateX point) /
-    (1 + lrCertificateV point)
 
 /-- The scaled gap `T = sF/R = S/R`. -/
 noncomputable def lrDeterminantT (point : CertificatePoint) : ℝ :=

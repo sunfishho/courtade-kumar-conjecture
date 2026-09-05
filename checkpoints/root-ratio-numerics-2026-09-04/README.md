@@ -146,3 +146,29 @@ route deliberately uses wider Cbase bounds with sharper D1 instead.
 
 Next: integrate the explicit formulas with production definitions, then
 apply the cheaper mechanism to the rest of the required box cover.
+
+## Production integration completed for the pilot
+
+The authoritative proof is now in
+InformationTheory/CourtadeKumar/NaturalPilot/Certificate.lean.
+Its certificate_sound theorem proves the ACTUAL
+LRDeterminantFirstBracketAt predicate from membership in the explicit
+nonempty pilot box. No formula-identification or numerical premises remain
+for this one box.
+
+All fourteen promoted proof modules and twelve changed numerical/core
+prerequisites compiled serially. The final production leaf theorem passed
+in7.0s with minimum observed memory availability48%; its axiom audit is
+exactly propext, Classical.choice, Quot.sound.
+
+Twenty production definitions were moved unchanged to
+LRDeterminantScalarTargetCore.lean. Their old modules import the core.
+The read-only relocation regression check compares all twenty declarations
+byte-for-byte against checkpoint80e1961 and passes.
+
+The large analytic consumers were not rebuilt as a group; their caches
+can be stale after the relocation. The canonical pilot has no scratch
+imports. See its README for scope and targeted-build guidance.
+The full parent cover, remaining certificate regions, fixed16 and CK
+remain unfinished. The earlier bridge-draft caveats above are historical
+for this pilot, not claims that the full theorem is now proved.

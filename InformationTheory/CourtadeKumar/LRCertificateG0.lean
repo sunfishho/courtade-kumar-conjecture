@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRHighShapeCoordinateAD
 
 /-!
@@ -10,8 +11,6 @@ logarithms in `g₀` and proves its exact derivative.
 
 namespace CourtadeKumar
 
-noncomputable def lrCertificateG0 (v : ℝ) : ℝ :=
-  (1 + 1 / v) * (Real.log (1 + v) - Real.log 2) - Real.log v
 
 noncomputable def lrCertificateG0Prime (v : ℝ) : ℝ :=
   (Real.log 2 - Real.log (1 + v)) / v ^ 2

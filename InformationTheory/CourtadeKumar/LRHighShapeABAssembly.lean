@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRHighShapeGAssembly
 import InformationTheory.CourtadeKumar.LRCertificateOmega
 
@@ -15,8 +16,6 @@ namespace CourtadeKumar
 noncomputable def lrCertificateAValue (e v : ℝ) : ℝ :=
   Real.log (1 + v) - (1 / 2 : ℝ) * Real.log e
 
-noncomputable def lrCertificateBFlowValue (s e v : ℝ) : ℝ :=
-  Real.log (1 + v) - (1 / 2 : ℝ) * Real.log (lrCertificateB s e)
 
 noncomputable def lrCertificateAValueDeriv
     (e v e' v' : ℝ) : ℝ :=
@@ -30,9 +29,6 @@ noncomputable def lrCertificateBFlowValueDeriv
 noncomputable def lrCertificateA (point : CertificatePoint) : ℝ :=
   lrCertificateAValue (lrCertificateE point) (lrCertificateV point)
 
-noncomputable def lrCertificateBFlow (point : CertificatePoint) : ℝ :=
-  lrCertificateBFlowValue point.s (lrCertificateE point)
-    (lrCertificateV point)
 
 noncomputable def lrCertificateD (point : CertificatePoint) : ℝ :=
   lrCertificateA point - lrCertificateBFlow point

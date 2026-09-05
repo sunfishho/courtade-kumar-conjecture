@@ -1,4 +1,5 @@
-import InformationTheory.CourtadeKumar.ExactIntervalArithmetic
+import InformationTheory.CourtadeKumar.ExactSqrtEnclosureCore
+import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
 import Mathlib.Data.Real.Sqrt
 
 /-!
@@ -11,23 +12,6 @@ integer-square-root implementation outside the trusted base.
 
 namespace CourtadeKumar
 namespace RationalEnclosure
-
-/-- Claimed rational endpoints for a square-root enclosure. -/
-structure SqrtCertificate where
-  lower : ℚ
-  upper : ℚ
-
-/-- The checker verifies only rational comparisons and squaring. -/
-def SqrtCertificate.check (input : RationalEnclosure)
-    (certificate : SqrtCertificate) : Bool :=
-  decide (
-    0 ≤ input.lower ∧ input.lower ≤ input.upper ∧
-    0 ≤ certificate.lower ∧ certificate.lower ^ 2 ≤ input.lower ∧
-    0 ≤ certificate.upper ∧ input.upper ≤ certificate.upper ^ 2)
-
-def SqrtCertificate.enclosure (certificate : SqrtCertificate) :
-    RationalEnclosure :=
-  ⟨certificate.lower, certificate.upper⟩
 
 theorem SqrtCertificate.sound
     {input : RationalEnclosure} {certificate : SqrtCertificate}

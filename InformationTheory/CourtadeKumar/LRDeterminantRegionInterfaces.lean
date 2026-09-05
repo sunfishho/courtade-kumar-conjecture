@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRDeterminantRegionCover
 import InformationTheory.CourtadeKumar.LRDeterminantFlowCoordinates
 
@@ -11,12 +12,6 @@ module keeps that shared interface below the heavy assembly boundary.
 
 namespace CourtadeKumar
 
-/-- The cheaper (D5) scalar inequality at a certificate point. -/
-def LRDeterminantFirstBracketAt (point : CertificatePoint) : Prop :=
-  0 ≤ lrDeterminantFirstBracket
-    (lrCertificateBFlow point) (lrDeterminantD1 point)
-    (lrCertificateGShape point) (lrDeterminantPsi point)
-    (lrDeterminantDelta point) (lrCertificateW point)
 
 /-- The fully cleared singular determinant (D4) at a certificate point. -/
 def LRDeterminantClearedSingularAt (point : CertificatePoint) : Prop :=

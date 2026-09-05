@@ -1,5 +1,5 @@
-import InformationTheory.CourtadeKumar.ExactLogEnclosure
-import InformationTheory.CourtadeKumar.ExactSqrtEnclosure
+import InformationTheory.CourtadeKumar.ExactLogEnclosureCore
+import InformationTheory.CourtadeKumar.ExactSqrtEnclosureCore
 
 /-!
 # Executable point-enclosure core for the LR entropy scalar
