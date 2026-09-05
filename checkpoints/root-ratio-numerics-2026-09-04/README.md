@@ -90,3 +90,59 @@ checkpoint. The Cbase/Psi bounds and production identification remain open.
 Replay the small files after the original DominanceArithmetic module,
 in the three-module order above. Stop rather than retry large production
 imports while memory is constrained.
+
+## Direct natural-interval pilot: numerical hypotheses closed
+
+The latest continuation supersedes the earlier missing Cbase/Psi numerical
+bounds for this ONE pilot. A new small-import path proves a strictly positive
+first bracket on the SAME depth-eight box, without extra subdivision and
+without corner-monotonicity premises:
+
+`CourtadeKumar.RootRatioNaturalPilotAssembly.pilot_positive`.
+
+Its only hypotheses are the displayed k/chi interval membership conditions;
+s is exactly 1/16. It concerns the explicit scalar formulas defined in the
+new small modules. The production-name integration is STILL outstanding,
+and this is NOT the full base-face region, fixed16, or CK.
+
+The successful change was algebraic: evaluate D1 using
+Y = 1 + 1/k - s instead of evaluating (1+k-sk)/k with repeated occurrences
+of the interval k. The tighter D1 bound makes direct natural interval Cbase
+and Psi bounds sufficient. This eliminates the need for the former heavy
+corner-payload path for this pilot.
+
+All ten new Lean modules compiled serially with the unchanged memory guard:
+
+| Module suffix (AgentRootRatio prefix) | Seconds | Minimum availability |
+| --- | ---: | ---: |
+| NaturalQSound | 12.5 | 45% |
+| NaturalQS | 7.1 | 46% |
+| NaturalQE | 7.0 | 50% |
+| NaturalQY | 3.3 | 50% |
+| NaturalQBe | 8.7 | 55% |
+| NaturalQBy | 11.9 | 47% |
+| NaturalGeometry | 5.7 | 48% |
+| BaseFaceD1Sharp | 4.3 | 45% |
+| NaturalComponents | 6.1 | 43% |
+| NaturalPilotAssembly | 2.7 | 49% |
+
+The soundness theorem checks Q and Q' over entire input intervals, not just
+their midpoints. Five independent literal square-root/log receipts give
+24-bit rounded primitive intervals. Geometry and the two final component
+covers are checked separately, keeping intermediate rational expressions
+short. The final assembly audit is exactly propext, Classical.choice,
+Quot.sound. No sorry, extra axiom, native evaluator, or VM proof shortcut.
+
+The final rigorous rational lower margin is
+21550625417/70368744177664 > 0. The older D1 bound would instead give
+-3033779765/140737488355328 on these same natural Cbase/Psi bounds.
+
+AgentRootRatioNaturalBasePrecheck.py test verifies the exact literal bounds
+and both margin signs with Fractions before Lean. The script depends on
+the local historical arithmetic mirror; it is not itself a proof or a
+standalone fresh-clone utility. Its default diagnostic mode compares against
+the OLD narrow Cbase bounds and therefore reports some failures; the new
+route deliberately uses wider Cbase bounds with sharper D1 instead.
+
+Next: integrate the explicit formulas with production definitions, then
+apply the cheaper mechanism to the rest of the required box cover.
