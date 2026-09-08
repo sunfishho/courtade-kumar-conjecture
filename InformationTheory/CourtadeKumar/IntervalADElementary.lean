@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.IntervalADElementaryCore
 import InformationTheory.CourtadeKumar.IntervalADArithmetic
 import InformationTheory.CourtadeKumar.ExactLogEnclosure
 import InformationTheory.CourtadeKumar.ExactSqrtEnclosure
@@ -11,11 +12,6 @@ certificate checkers and the generic unary AD chain rule.
 
 namespace CourtadeKumar
 namespace IntervalAD
-
-def log (terms : ℕ) (certificate : RationalEnclosure.LogIntervalCertificate)
-    (a : IntervalAD) : IntervalAD :=
-  unary (certificate.enclosure terms)
-    (RationalEnclosure.invPositive a.value) a
 
 theorem contains_log
     (terms : ℕ) {certificate : RationalEnclosure.LogIntervalCertificate}
@@ -33,18 +29,6 @@ theorem contains_log
   have hslope := RationalEnclosure.contains_invPositive hparts.1 ha.1
   have h := contains_unary hout hslope ha
   simpa [log, div_eq_mul_inv, mul_comm] using h
-
-/-- The square-root AD checker additionally requires a strictly positive
-lower root bound so the derivative `1/(2√x)` is finite. -/
-def sqrtCheck (input : RationalEnclosure)
-    (certificate : RationalEnclosure.SqrtCertificate) : Bool :=
-  certificate.check input && decide (0 < certificate.lower)
-
-def sqrt (certificate : RationalEnclosure.SqrtCertificate)
-    (a : IntervalAD) : IntervalAD :=
-  let output := certificate.enclosure
-  let twiceOutput := RationalEnclosure.scale 2 output
-  unary output (RationalEnclosure.invPositive twiceOutput) a
 
 theorem contains_sqrt
     {certificate : RationalEnclosure.SqrtCertificate}

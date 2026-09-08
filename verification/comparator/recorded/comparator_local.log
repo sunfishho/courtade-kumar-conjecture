@@ -1,0 +1,44 @@
+Loading the independently compiled challenge objects
+Collected 10000 declarations; at ContinuousInv₀.of_nhds_one
+Collected 20000 declarations; at map_nsmul
+Challenge graph: 24795 declarations
+Collected 10000 declarations; at Set.instDistribLattice._proof_7
+Collected 20000 declarations; at ChainClosure.rec
+Collected 30000 declarations; at Set.Ioo_subset_Ioc_union_Ico
+Collected 40000 declarations; at CourtadeKumar.LRCompactReducedCertificate.Batch032.Chunk259.box
+Collected 50000 declarations; at CourtadeKumar.LRCompactReducedCertificate.Batch024.Chunk277.certificate
+Collected 60000 declarations; at CourtadeKumar.LRCompactReducedCertificate.Batch019.Chunk140.certificate
+Collected 70000 declarations; at CourtadeKumar.LRCompactReducedCertificate.Batch012.Chunk023.box
+Collected 80000 declarations; at CourtadeKumar.LRDeterminantReducedCertificate.Batch027.leaf706
+Collected 90000 declarations; at CourtadeKumar.LRLowKIdealMeanValue.CheckedTree.checked
+Collected 100000 declarations; at _private.Mathlib.Data.Nat.Bits.0.Nat.bodd_succ.match_1_5
+Collected 110000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component143.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf7058InnerLogValid
+Collected 120000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component131.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf6529CertificateValid
+Collected 130000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component120.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf5975CoverageChecked
+Collected 140000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component109.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf5411RoundedFacts
+Collected 150000 declarations; at CourtadeKumar.LRSmallSWideLogRoundedScalarV2.innerPair304RoundedFacts
+Collected 160000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component087.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf4262InputLogOnePlusV_eq
+Collected 170000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component075.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf3685CoverageChecked
+Collected 180000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component065.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf3118InputLogOnePlusV
+Collected 190000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component054.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf2532CertificateValid
+Collected 200000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component043.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf1944InputLogOnePlusV_eq
+Collected 210000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component031.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf1373InputLogOnePlusV_eq
+Collected 220000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component019.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.leaf776Certificate
+Collected 230000 declarations; at _private.«.lake».scratch.«GeneratedLRSmallSWideLogRoundedScalarV2.building».InformationTheory.CourtadeKumar.LRSmallSWideLogRoundedScalarV2Component005.0.CourtadeKumar.LRSmallSWideLogRoundedScalarV2.component5Node3_sound
+Collected 240000 declarations; at CourtadeKumar.lrLowVL7BernsteinRow32._proof_22
+Collected 250000 declarations; at CourtadeKumar.lrLowVH1BernsteinRow41._proof_21
+Collected 260000 declarations; at CourtadeKumar.lrLowVH3VPowerEvalCol19._proof_30
+Collected 270000 declarations; at CourtadeKumar.lrLowVH4ZPowerEvalRow51._proof_18
+Collected 280000 declarations; at CourtadeKumar.lrLowW1BernsteinRow52._proof_13
+Collected 290000 declarations; at CourtadeKumar.lrLowW2ZPowerEvalRow27._proof_42
+Collected 300000 declarations; at CourtadeKumar.lrLowW3ZPowerEvalRow43._proof_22
+Collected 310000 declarations; at CourtadeKumar.lrLowW4ZPowerEvalRow41._proof_6
+Collected 320000 declarations; at CourtadeKumar.lrLowUTailALowerPowerEval._proof_258
+Solution graph: 328920 declarations
+CK graph includes all 42 batches and 9457 kernel chunks
+Comparator statement and primitive comparison passed
+Comparator permitted-axiom check passed
+Running Lean default kernel on solution.
+Replay starts with zero imported declarations
+Lean default kernel accepts the solution
+Your solution is okay!

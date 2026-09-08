@@ -1,6 +1,7 @@
-import InformationTheory.CourtadeKumar.LRHighShapeCertificateCoordinates
+import InformationTheory.CourtadeKumar.LRHighShapeCertificateCoordinatesCore
 import InformationTheory.CourtadeKumar.IntervalADElementary
-import InformationTheory.CourtadeKumar.IntervalMidpointCertificate
+import InformationTheory.CourtadeKumar.IntervalMidpointCertificateCore
+import Mathlib.Analysis.SpecialFunctions.Sqrt
 
 /-!
 # Verified interval AD for the high-shape coordinate map

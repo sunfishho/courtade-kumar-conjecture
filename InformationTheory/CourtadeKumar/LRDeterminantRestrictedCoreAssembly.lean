@@ -227,7 +227,7 @@ theorem nearEndpointCoreTangentCoordinateTheorem_of_restrictedAuditedParts
 restricted determinant inputs prove the exact flow numerator.  No full
 determinant ledger or determinant theorem above `k = 4` is used. -/
 theorem lrFlowNumeratorP_nonneg_target_of_restrictedDeterminantCore
-    (compactV : LRCompactVR910ReplayLedger)
+    (compactV : LRCompactVSoundLedger)
     (midpoint :
       LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (finiteV : LRDeterminantLowRatioFiniteVTargetTheorem)

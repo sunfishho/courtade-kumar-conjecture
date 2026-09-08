@@ -1,4 +1,9 @@
-import InformationTheory.CourtadeKumar.LRLowerFaceAssembly
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Tactic.FieldSimp
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.Ring
 
 /-!
 # Positive logarithmic coefficient in the small-`s` bridge

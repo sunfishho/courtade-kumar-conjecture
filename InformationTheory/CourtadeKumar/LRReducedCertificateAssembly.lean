@@ -17,7 +17,7 @@ namespace CourtadeKumar
 open LRSmallSBridgeCoreCertificate
 
 theorem lrFlowNumeratorP_nonneg_target_of_reduced_certificates
-    (ledger : LRCompactVR910ReplayLedger)
+    (ledger : LRCompactVSoundLedger)
     (hmidpoint :
       LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (htangent : LRHighShapeNearEndpointTangentCoordinateTheorem)
@@ -32,7 +32,7 @@ theorem lrFlowNumeratorP_nonneg_target_of_reduced_certificates
     hR hp hv ht htarget
 
 theorem hasDerivAt_lrReserve_exactFlow_of_reduced_certificates
-    (ledger : LRCompactVR910ReplayLedger)
+    (ledger : LRCompactVSoundLedger)
     (hmidpoint :
       LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (htangent : LRHighShapeNearEndpointTangentCoordinateTheorem)

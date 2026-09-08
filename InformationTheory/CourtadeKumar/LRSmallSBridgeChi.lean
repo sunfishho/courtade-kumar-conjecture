@@ -1,4 +1,6 @@
-import InformationTheory.CourtadeKumar.LRSmallSBridgeCoefficient
+import InformationTheory.CourtadeKumar.LRLogTwoMillionthBounds
+import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
+import Mathlib.Tactic.NormNum.NatFactorial
 
 /-!
 # The `chi log chi` endpoint range in the small-`s` bridge

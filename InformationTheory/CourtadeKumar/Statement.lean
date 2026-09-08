@@ -38,8 +38,4 @@ theorem courtadeKumar_of_orderedEqualMultiplier
   exact booleanBellmanStep_of_orderedEqualMultiplier alpha
     (hordered alpha halpha) (bellmanEnvelopeSortingDominance alpha halpha)
 
-/-- Proof target. This theorem is the single intentional placeholder at the statement milestone. -/
-theorem courtadeKumar : Statement := by
-  sorry
-
 end CourtadeKumar

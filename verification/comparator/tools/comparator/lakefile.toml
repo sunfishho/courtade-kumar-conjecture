@@ -1,0 +1,18 @@
+# Local offline build of the retrieved upstream checker on pinned Lean 4.28.
+name = "Comparator"
+version = "0.1.0"
+defaultTargets = ["comparator"]
+
+[[lean_lib]]
+name = "Comparator"
+
+[[lean_lib]]
+name = "Lean4Checker"
+
+[[lean_exe]]
+name = "comparator"
+root = "Main"
+
+[[require]]
+name = "lean4export"
+path = "../lean4export"

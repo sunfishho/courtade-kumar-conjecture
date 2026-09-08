@@ -1,4 +1,5 @@
-import InformationTheory.CourtadeKumar.LRSmallSBridgeChi
+import InformationTheory.CourtadeKumar.LRSmallSBridgeCoefficient
+import InformationTheory.CourtadeKumar.LRSmallSBridgeFrozenCore
 
 /-!
 # Affine reduction for the frozen small-`s` bridge
@@ -13,39 +14,19 @@ open Set
 
 namespace CourtadeKumar
 
-noncomputable def lrSmallSBridgeAR (s k chi : ℝ) : ℝ :=
-  (chi * Real.log (1 + (1 - s) * k * chi) +
-    Real.log (1 + (1 - s) * k)) / (1 + chi)
-
-noncomputable def lrSmallSBridgeP (s k chi L : ℝ) : ℝ :=
-  L + 2 * Real.log 2 + 1 - s - lrSmallSBridgeAR s k chi
-
-noncomputable def lrSmallSBridgeG (k chi L : ℝ) : ℝ :=
-  L - Real.log k + 2 * Real.log 2 + 1 - lrSmallSBridgeQChi chi
-
-noncomputable def lrSmallSBridgeS (s k chi L : ℝ) : ℝ :=
-  lrSmallSBridgeP s k chi L - lrSmallSBridgeG k chi L
-
-noncomputable def lrSmallSBridgeD (s k : ℝ) : ℝ :=
-  Real.log ((1 + (1 - s) * k) / k) / 2
-
-/-- The frozen normalized reserve.  `b` denotes the `L`-independent part
-of the exact outer coefficient `B = L/2+b`; its precise formula is irrelevant
-for the affine reduction. -/
-noncomputable def lrSmallSBridgeFrozen
-    (s k chi L b : ℝ) : ℝ :=
-  k * (1 + chi) / 4 *
-      (lrSmallSBridgeD s k * lrSmallSBridgeP s k chi L +
-        (L / 2 + b) * lrSmallSBridgeS s k chi L) +
-    ((L / 2 + b) - lrSmallSBridgeD s k) / 4
-
-lemma lrSmallSBridgeS_eq
-    (s k chi L : ℝ) :
-    lrSmallSBridgeS s k chi L =
-      Real.log k - s - lrSmallSBridgeAR s k chi +
-        lrSmallSBridgeQChi chi := by
-  unfold lrSmallSBridgeS lrSmallSBridgeP lrSmallSBridgeG
-  ring
+/-- The logarithmic endpoint bound used by both the frozen-core transport and
+the later remainder estimate. -/
+lemma lrSmallSBridge_log_lower
+    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 16384)) :
+    14 * Real.log 2 ≤ Real.log (1 / s) := by
+  have harg : (16384 : ℝ) ≤ 1 / s := by
+    rw [le_div_iff₀ hs.1]
+    nlinarith [hs.2]
+  have hlog := Real.log_le_log (by norm_num : (0 : ℝ) < 16384) harg
+  have hpow : Real.log (16384 : ℝ) = 14 * Real.log 2 := by
+    rw [show (16384 : ℝ) = 2 ^ 14 by norm_num, Real.log_pow]
+    norm_num
+  rwa [hpow] at hlog
 
 lemma lrSmallSBridge_log_identity
     {s k chi : ℝ}

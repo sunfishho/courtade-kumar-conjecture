@@ -1,0 +1,11 @@
+name = "CKComparatorChallenge"
+
+[[require]]
+name = "InformationTheory"
+path = "../../.."
+
+[[lean_lib]]
+name = "CKChallenge"
+
+[[lean_lib]]
+name = "CKSolution"

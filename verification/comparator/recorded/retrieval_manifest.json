@@ -1,0 +1,74 @@
+[
+  {
+    "repo": "comparator",
+    "path": "Comparator.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/Comparator.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "comparator",
+    "path": "Main.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/Main.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "comparator",
+    "path": "Comparator/Axioms.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/Comparator/Axioms.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "comparator",
+    "path": "Comparator/Compare.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/Comparator/Compare.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "comparator",
+    "path": "Comparator/Util.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/Comparator/Util.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "comparator",
+    "path": "LICENSE",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/LICENSE",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "comparator",
+    "path": "scripts/fake-landrun.sh",
+    "url": "https://raw.githubusercontent.com/leanprover/comparator/master/scripts/fake-landrun.sh",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "lean4export",
+    "path": "Export.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/lean4export/master/Export.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "lean4export",
+    "path": "Export/Parse.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/lean4export/master/Export/Parse.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "lean4export",
+    "path": "Main.lean",
+    "url": "https://raw.githubusercontent.com/leanprover/lean4export/master/Main.lean",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "lean4export",
+    "path": "lakefile.toml",
+    "url": "https://raw.githubusercontent.com/leanprover/lean4export/master/lakefile.toml",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  },
+  {
+    "repo": "lean4export",
+    "path": "LICENSE",
+    "url": "https://raw.githubusercontent.com/leanprover/lean4export/master/LICENSE",
+    "retrieval": "Complete sequential numbered lines from official raw source via web tool; not a git clone"
+  }
+]

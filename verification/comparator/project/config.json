@@ -1,0 +1,11 @@
+{
+  "challenge_module": "CKChallenge",
+  "solution_module": "CKSolution",
+  "theorem_names": [
+    "CourtadeKumar.courtadeKumar_via_completed_certificates",
+    "CourtadeKumar.mutual_information_le_capacity_via_completed_certificates"
+  ],
+  "definition_names": [],
+  "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"],
+  "enable_nanoda": false
+}

@@ -33,7 +33,7 @@ theorem lrDeterminantLowKRegion_certificate_finalRefined_proved :
 /-- Four finite certificate families now imply the target-flow numerator
 theorem; no ideal or analytic restoration hypothesis remains. -/
 theorem lrTargetFlowNumeratorTheorem_of_remainingRestrictedCertificates
-    (compactV : LRCompactVR910ReplayLedger)
+    (compactV : LRCompactVSoundLedger)
     (midpoint :
       LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (finiteV : LRDeterminantLowRatioFiniteVTargetTheorem)
@@ -49,7 +49,7 @@ theorem lrTargetFlowNumeratorTheorem_of_remainingRestrictedCertificates
 /-- The remaining four finite certificate families imply the full
 Courtade--Kumar statement through the proved canonical target trajectory. -/
 theorem courtadeKumar_of_remainingRestrictedCertificates
-    (compactV : LRCompactVR910ReplayLedger)
+    (compactV : LRCompactVSoundLedger)
     (midpoint :
       LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (finiteV : LRDeterminantLowRatioFiniteVTargetTheorem)

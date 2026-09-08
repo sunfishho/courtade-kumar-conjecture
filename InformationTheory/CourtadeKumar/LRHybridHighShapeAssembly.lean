@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.LRCompactVCorrelatedReplayLedger
+import InformationTheory.CourtadeKumar.LRCompactVReplayLedgerSoundAdapter
 import InformationTheory.CourtadeKumar.LRSmallVComplete
 import InformationTheory.CourtadeKumar.LRFullFlowClosure
 
@@ -41,7 +41,7 @@ def LRHighShapeNearEndpointTangentTheorem : Prop :=
 /-- The compact direct-`V` ledger and the two near-endpoint certificates
 exhaust the high-shape positive-flow chart. -/
 theorem lrFlowNumeratorP_nonneg_target_of_compactV_and_nearEndpoint
-    (ledger : LRCompactVR910ReplayLedger)
+    (ledger : LRCompactVSoundLedger)
     (hmidpoint : LRHighShapeNearEndpointHalfMidpointTheorem)
     (htangent : LRHighShapeNearEndpointTangentTheorem)
     {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
@@ -76,7 +76,7 @@ theorem lrFlowNumeratorP_nonneg_target_of_compactV_and_nearEndpoint
 /-- Differential form of the hybrid high-shape assembly, ready for
 integration along a regular target-root trajectory. -/
 theorem hasDerivAt_lrReserve_exactFlow_of_compactV_and_nearEndpoint
-    (ledger : LRCompactVR910ReplayLedger)
+    (ledger : LRCompactVSoundLedger)
     (hmidpoint : LRHighShapeNearEndpointHalfMidpointTheorem)
     (htangent : LRHighShapeNearEndpointTangentTheorem)
     {R p v v' t : ℝ} {vfun : ℝ → ℝ}

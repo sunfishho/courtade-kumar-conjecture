@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.ExactIntervalArithmetic
+import InformationTheory.CourtadeKumar.IntervalMidpointCertificateCore
 
 /-!
 # Midpoint-form interval certificates
@@ -10,15 +11,6 @@ Lipschitz hypotheses by verified interval automatic differentiation.
 -/
 
 namespace CourtadeKumar
-
-def CertificateBox.sInterval (box : CertificateBox) : RationalEnclosure :=
-  ⟨box.sLo, box.sHi⟩
-
-def CertificateBox.kInterval (box : CertificateBox) : RationalEnclosure :=
-  ⟨box.kLo, box.kHi⟩
-
-def CertificateBox.chiInterval (box : CertificateBox) : RationalEnclosure :=
-  ⟨box.chiLo, box.chiHi⟩
 
 /-- Exact rational midpoint of a certificate box, interpreted in `ℝ³`. -/
 def CertificateBox.midpoint (box : CertificateBox) : CertificatePoint where
@@ -50,10 +42,6 @@ theorem CertificateBox.midpoint_mem
       norm_num [CertificateBox.midpoint, RationalEnclosure.center,
         CertificateBox.chiInterval] <;> linarith
   exact ⟨hsMid.1, hsMid.2, hkMid.1, hkMid.2, hchiMid.1, hchiMid.2⟩
-
-/-- The absolute-value bound represented by a derivative enclosure. -/
-def RationalEnclosure.maxAbs (interval : RationalEnclosure) : ℚ :=
-  max |interval.lower| |interval.upper|
 
 theorem RationalEnclosure.maxAbs_nonnegative (interval : RationalEnclosure) :
     (0 : ℚ) ≤ interval.maxAbs := by
@@ -94,25 +82,9 @@ structure BoxCoordinateLipschitz
     p.s = q.s → p.k = q.k →
     |target p - target q| ≤ chiBound * |p.chi - q.chi|
 
-/-- The data recomputed at a midpoint-form accepted leaf. -/
-structure MidpointCertificate where
-  value : RationalEnclosure
-  derivS : RationalEnclosure
-  derivK : RationalEnclosure
-  derivChi : RationalEnclosure
-
-/-- Rational lower bound obtained from the midpoint value minus the three
-derivative-radius losses. -/
-def MidpointCertificate.lowerBound
-    (box : CertificateBox) (certificate : MidpointCertificate) : ℚ :=
-  certificate.value.lower -
-    certificate.derivS.maxAbs * RationalEnclosure.radius box.sInterval -
-    certificate.derivK.maxAbs * RationalEnclosure.radius box.kInterval -
-    certificate.derivChi.maxAbs * RationalEnclosure.radius box.chiInterval
-
-def MidpointCertificate.check
-    (box : CertificateBox) (certificate : MidpointCertificate) : Bool :=
-  decide (0 < certificate.lowerBound box)
+theorem MidpointCertificate.check_eq_coreCheck
+    (box : CertificateBox) (certificate : MidpointCertificate) :
+    certificate.check box = certificate.coreCheck box := rfl
 
 theorem MidpointCertificate.sound
     {target : CertificatePoint → ℝ}
@@ -205,5 +177,20 @@ theorem MidpointCertificate.sound
   norm_num [MidpointCertificate.lowerBound] at hpositiveReal
   norm_num at htotal
   linarith
+
+/-- A successful proof-free midpoint check can be passed directly to the
+semantic midpoint theorem. -/
+theorem MidpointCertificate.sound_of_coreCheck
+    {target : CertificatePoint → ℝ}
+    {box : CertificateBox} {certificate : MidpointCertificate}
+    (hvalue : certificate.value.Contains (target box.midpoint))
+    (hlipschitz : BoxCoordinateLipschitz target box
+      certificate.derivS.maxAbs certificate.derivK.maxAbs
+      certificate.derivChi.maxAbs)
+    (hcheck : certificate.coreCheck box = true)
+    {point : CertificatePoint} (hpoint : box.Contains point) :
+    0 < target point := by
+  exact certificate.sound hvalue hlipschitz
+    (by simpa only [MidpointCertificate.check_eq_coreCheck] using hcheck) hpoint
 
 end CourtadeKumar

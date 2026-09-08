@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRHighShapeMidpointAutoTree
+import InformationTheory.CourtadeKumar.LRHighShapeTangentComputation
 
 /-!
 # Deterministic trees for the high-shape tangent certificate
@@ -10,28 +11,6 @@ tree together with `buildTree_check_of_eq` yields a theorem.
 -/
 
 namespace CourtadeKumar
-
-namespace LRHighShapeTangentCertificate
-
-/-- Generate every square-root and logarithm proposal used by one tangent
-leaf. -/
-def auto (sqrtFuel logFuel : ℕ) (box : CertificateBox) :
-    LRHighShapeTangentCertificate :=
-  let base := LRHighShapeVCertificate.auto sqrtFuel logFuel box
-  let s := lrCertificateSAD box
-  let e := lrCertificateEAD box
-  let y0 := lrCertificateY0AD box
-  let v := base.kernel.coordinate.vAD box
-  { base := base
-    qBY0 := LRQADCertificate.auto sqrtFuel logFuel
-      (lrCertificateBAD s y0).value
-    qBE := LRQADCertificate.auto sqrtFuel logFuel
-      (lrCertificateBAD s e).value
-    qS := LRQADCertificate.auto sqrtFuel logFuel s.value
-    logTwoPlusV := RationalEnclosure.autoLogIntervalCertificate logFuel
-      (IntervalAD.add (IntervalAD.const 2) v).value }
-
-end LRHighShapeTangentCertificate
 
 namespace LRHighShapeTangentAutoTree
 

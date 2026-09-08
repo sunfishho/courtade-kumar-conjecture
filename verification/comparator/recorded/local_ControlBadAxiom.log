@@ -1,0 +1,5 @@
+Loading the independently compiled challenge objects
+Challenge graph: 512 declarations
+Solution graph: 512 declarations
+Comparator statement and primitive comparison passed
+uncaught exception: Illegal axiom detected: 'forbiddenControl'

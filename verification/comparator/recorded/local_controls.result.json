@@ -1,0 +1,60 @@
+[
+  {
+    "name": "local_ControlGood",
+    "command": [
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/tools/comparator/.lake/build/bin/comparator",
+      "--local-objects",
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/controls/ControlGood.json"
+    ],
+    "exit_code": 0,
+    "seconds": 1.2939105840050615,
+    "peak_child_rss_bytes": 693665792,
+    "log": "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/local_ControlGood.log",
+    "checker_sha256": "6af3ef48e18fac91b2e65e9dde655beaad4850ead7e11e1d8c3e285dcc9cd16e",
+    "passed": true
+  },
+  {
+    "name": "local_ControlBadAxiom",
+    "command": [
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/tools/comparator/.lake/build/bin/comparator",
+      "--local-objects",
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/controls/ControlBadAxiom.json"
+    ],
+    "exit_code": 1,
+    "seconds": 0.2705869589699432,
+    "peak_child_rss_bytes": 693665792,
+    "log": "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/local_ControlBadAxiom.log",
+    "checker_sha256": "6af3ef48e18fac91b2e65e9dde655beaad4850ead7e11e1d8c3e285dcc9cd16e",
+    "passed": true
+  },
+  {
+    "name": "local_ControlBadStatement",
+    "command": [
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/tools/comparator/.lake/build/bin/comparator",
+      "--local-objects",
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/controls/ControlBadStatement.json"
+    ],
+    "exit_code": 1,
+    "seconds": 0.261842583946418,
+    "peak_child_rss_bytes": 693665792,
+    "log": "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/local_ControlBadStatement.log",
+    "checker_sha256": "6af3ef48e18fac91b2e65e9dde655beaad4850ead7e11e1d8c3e285dcc9cd16e",
+    "passed": true
+  },
+  {
+    "name": "local_backend_bad_term",
+    "command": [
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/tools/comparator/.lake/build/bin/comparator",
+      "--exports",
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/controls/ControlGood.json",
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/controls/ControlChallenge.ndjson",
+      "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/controls/ControlBadTerm.ndjson"
+    ],
+    "exit_code": 1,
+    "seconds": 0.15046241704840213,
+    "peak_child_rss_bytes": 693665792,
+    "log": "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/local_backend_bad_term.log",
+    "checker_sha256": "6af3ef48e18fac91b2e65e9dde655beaad4850ead7e11e1d8c3e285dcc9cd16e",
+    "passed": true
+  }
+]

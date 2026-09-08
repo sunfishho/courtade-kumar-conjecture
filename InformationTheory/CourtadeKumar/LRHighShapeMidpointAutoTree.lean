@@ -25,15 +25,12 @@ abbrev Tree := SubdivisionCertificate LRHighShapeMidpointCertificate
 def autoDiscard (terms : ℕ) (box : CertificateBox)
     (payload : LRHighShapeMidpointCertificate) :
     Option LRHighShapeVDiscardData :=
-  if lrPhysicalDiscardCheck box .eAtLeastOne then
-    some (.physical .eAtLeastOne)
-  else if lrPhysicalDiscardCheck box .xBelowHighShape then
-    some (.physical .xBelowHighShape)
-  else if lrPhysicalDiscardCheck box .vBelowThird then
-    some (.physical .vBelowThird)
-  else if lrHighShapeVDiscardCheck terms box (.jNonpositive payload) then
-    some (.jNonpositive payload)
-  else none
+  match lrPhysicalDiscardFirst box with
+  | some reason => some (.physical reason)
+  | none =>
+      if lrHighShapeVDiscardCheck terms box (.jNonpositive payload) then
+        some (.jNonpositive payload)
+      else none
 
 theorem autoDiscard_check_of_eq
     (terms : ℕ) (box : CertificateBox)
@@ -42,18 +39,19 @@ theorem autoDiscard_check_of_eq
     (hdiscard : autoDiscard terms box payload = some data) :
     lrHighShapeVDiscardCheck terms box data = true := by
   unfold autoDiscard at hdiscard
-  split at hdiscard <;> rename_i h₁
-  · cases hdiscard
-    simpa [lrHighShapeVDiscardCheck] using h₁
-  split at hdiscard <;> rename_i h₂
-  · cases hdiscard
-    simpa [lrHighShapeVDiscardCheck] using h₂
-  split at hdiscard <;> rename_i h₃
-  · cases hdiscard
-    simpa [lrHighShapeVDiscardCheck] using h₃
-  split at hdiscard <;> rename_i hJ
-  · simp_all
-  · simp at hdiscard
+  generalize hphysical : lrPhysicalDiscardFirst box = physicalOption at hdiscard
+  cases physicalOption with
+  | some reason =>
+      cases hdiscard
+      simpa [lrHighShapeVDiscardCheck] using
+        lrPhysicalDiscardFirst_check_of_eq box reason hphysical
+  | none =>
+      by_cases hJ :
+          lrHighShapeVDiscardCheck terms box (.jNonpositive payload) = true
+      · simp [hJ] at hdiscard
+        cases hdiscard
+        exact hJ
+      · simp [hJ] at hdiscard
 
 def splitScoreS (terms : ℕ) (box : CertificateBox)
     (payload : LRHighShapeMidpointCertificate) : ℚ :=

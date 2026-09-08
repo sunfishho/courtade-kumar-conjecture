@@ -1,7 +1,7 @@
 import InformationTheory.CourtadeKumar.LRDeterminantRegionAssembly
 import InformationTheory.CourtadeKumar.LRDeterminantThickReserve
 import InformationTheory.CourtadeKumar.LRHighShapeVEvaluator
-import InformationTheory.CourtadeKumar.LRCompactVCorrelatedReplayLedger
+import InformationTheory.CourtadeKumar.LRCompactVReplayLedgerSoundAdapter
 
 /-!
 # Direct closure of the determinant low-ratio strip from the audited `V` reserve
@@ -195,7 +195,7 @@ the far-channel input above when instantiated.  This is the coordinate
 transport of (M51), not a claim that the concrete replay booleans already
 evaluate to true. -/
 theorem lrDeterminantFarChannelLowRatioTangentTheorem_of_compactVReplayLedger
-    (ledger : LRCompactVR910ReplayLedger) :
+    (ledger : LRCompactVSoundLedger) :
     LRDeterminantFarChannelLowRatioTangentTheorem := by
   intro point hinterior hrelevant hsFar _hregion
   let R := lrCertificateR point

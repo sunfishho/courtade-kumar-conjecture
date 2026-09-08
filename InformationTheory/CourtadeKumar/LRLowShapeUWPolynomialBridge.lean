@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRLowShapeUW1Power
+import InformationTheory.CourtadeKumar.NativePolynomialNormalization
 import InformationTheory.CourtadeKumar.LRLowShapeUW2Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW3Power
 import InformationTheory.CourtadeKumar.LRLowShapeUW4Power

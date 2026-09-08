@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRSmallSBridgeCoreAutoTree
+import InformationTheory.CourtadeKumar.LRSmallSBridgeFrozen
 
 /-! Assembly of the four dyadic roots in the compact M30 replay. -/
 

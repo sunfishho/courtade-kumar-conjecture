@@ -56,18 +56,6 @@ lemma hasDerivAt_lrSmallSBridgeLogEnvelope
     field_simp [hs.ne']
     ring
 
-lemma lrSmallSBridge_log_lower
-    {s : ℝ} (hs : s ∈ Ioc (0 : ℝ) (1 / 16384)) :
-    14 * Real.log 2 ≤ Real.log (1 / s) := by
-  have harg : (16384 : ℝ) ≤ 1 / s := by
-    rw [le_div_iff₀ hs.1]
-    nlinarith [hs.2]
-  have hlog := Real.log_le_log (by norm_num : (0 : ℝ) < 16384) harg
-  have hpow : Real.log (16384 : ℝ) = 14 * Real.log 2 := by
-    rw [show (16384 : ℝ) = 2 ^ 14 by norm_num, Real.log_pow]
-    norm_num
-  rwa [hpow] at hlog
-
 lemma lrSmallSBridgeLogEnvelope_monotoneOn :
     MonotoneOn lrSmallSBridgeLogEnvelope (Ioc (0 : ℝ) (1 / 16384)) := by
   apply monotoneOn_of_deriv_nonneg (convex_Ioc (0 : ℝ) (1 / 16384))
