@@ -1,7 +1,7 @@
 # Courtade–Kumar in Lean
 
 This branch contains the completed-certificate Courtade–Kumar formalization for
-Lean 4.28.0 and its pinned Mathlib dependency. The public entry point is
+Lean 4.28.0 and its pinned Mathlib dependency. The proof is in the process of being digested. The public entry point is
 `InformationTheory.lean`, which imports the completed theorem:
 
 ```lean
