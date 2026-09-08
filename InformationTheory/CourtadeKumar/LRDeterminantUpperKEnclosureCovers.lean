@@ -1,3 +1,4 @@
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKEnclosureCoversCore
 import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
 
 /-!
@@ -10,10 +11,6 @@ proofs do not import the historical interval-AD evaluator stack.
 
 namespace CourtadeKumar
 namespace LRUpperKMidpointCoarsening
-
-/-- `outer` contains every real number contained by `inner`. -/
-def Covers (outer inner : RationalEnclosure) : Prop :=
-  outer.lower ≤ inner.lower ∧ inner.upper ≤ outer.upper
 
 theorem contains_of_covers {outer inner : RationalEnclosure} {x : ℝ}
     (hcovers : Covers outer inner) (hinner : inner.Contains x) :

@@ -79,7 +79,7 @@ theorem nearEndpointTangentTheorem_of_coreTangent_and_gapBudgetTail
 near-endpoint inputs: the post-small-`s` midpoint strip and the tangent core
 `k <= 4`. -/
 theorem lrFlowNumeratorP_nonneg_target_of_compact_core_certificates
-    (ledger : LRCompactVR910ReplayLedger)
+    (ledger : LRCompactVSoundLedger)
     (hmidpoint : LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (htangent : LRHighShapeNearEndpointCoreTangentCoordinateTheorem)
     {R p v t : ℝ} (hR : R ∈ Ioo (0 : ℝ) 1)
@@ -96,7 +96,7 @@ theorem lrFlowNumeratorP_nonneg_target_of_compact_core_certificates
 /-- Differential form of the compact-core reduction, ready for the final
 single-ray monotonicity argument. -/
 theorem hasDerivAt_lrReserve_exactFlow_of_compact_core_certificates
-    (ledger : LRCompactVR910ReplayLedger)
+    (ledger : LRCompactVSoundLedger)
     (hmidpoint : LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (htangent : LRHighShapeNearEndpointCoreTangentCoordinateTheorem)
     {R p v v' t : ℝ} {vfun : ℝ → ℝ}

@@ -1,0 +1,4 @@
+Loading the independently compiled challenge objects
+Challenge graph: 512 declarations
+Solution graph: 511 declarations
+uncaught exception: Challenge and solution theorem statement do not match: 'comparatorControl'

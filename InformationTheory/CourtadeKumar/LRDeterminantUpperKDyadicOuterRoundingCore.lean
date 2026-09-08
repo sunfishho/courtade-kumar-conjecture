@@ -1,6 +1,5 @@
-import InformationTheory.CourtadeKumar.IntervalSubdivisionCertificate
-import InformationTheory.CourtadeKumar.LRDeterminantUpperKEnclosureCovers
-import Mathlib.Data.Rat.Floor
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKDyadicOuterRoundingEvalCore
+import InformationTheory.CourtadeKumar.LRDeterminantUpperKEnclosureCoversCore
 
 /-!
 # Lightweight verified dyadic outward rounding
@@ -13,17 +12,9 @@ interval-AD and midpoint-evaluator adapters live in
 namespace CourtadeKumar
 namespace LRUpperKDyadicOuterRounding
 
-def scale (bits : ℕ) : ℚ := (2 : ℚ) ^ bits
-
 theorem scale_pos (bits : ℕ) : 0 < scale bits := by
   unfold scale
   exact pow_pos (by norm_num) bits
-
-def roundDown (bits : ℕ) (value : ℚ) : ℚ :=
-  (Int.floor (value * scale bits) : ℚ) / scale bits
-
-def roundUp (bits : ℕ) (value : ℚ) : ℚ :=
-  (Int.ceil (value * scale bits) : ℚ) / scale bits
 
 theorem roundDown_le (bits : ℕ) (value : ℚ) :
     roundDown bits value ≤ value := by
@@ -34,11 +25,6 @@ theorem le_roundUp (bits : ℕ) (value : ℚ) :
     value ≤ roundUp bits value := by
   apply (le_div_iff₀ (scale_pos bits)).2
   simpa [roundUp] using (Int.le_ceil (value * scale bits))
-
-def outerEnclosure (bits : ℕ)
-    (value : RationalEnclosure) : RationalEnclosure :=
-  { lower := roundDown bits value.lower
-    upper := roundUp bits value.upper }
 
 theorem outerEnclosure_lower_le (bits : ℕ) (value : RationalEnclosure) :
     (outerEnclosure bits value).lower ≤ value.lower :=

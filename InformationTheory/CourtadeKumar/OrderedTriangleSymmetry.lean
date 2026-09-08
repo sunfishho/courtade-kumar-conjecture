@@ -1,4 +1,4 @@
-import InformationTheory.CourtadeKumar.PerspectiveWeakDual
+import InformationTheory.CourtadeKumar.PerspectiveWeakDualCore
 
 /-! Complement symmetry reduction for the ordered-triangle problem. -/
 

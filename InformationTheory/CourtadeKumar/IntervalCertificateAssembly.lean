@@ -1,4 +1,5 @@
-import InformationTheory.CourtadeKumar.IntervalADElementary
+import InformationTheory.CourtadeKumar.IntervalCertificateAssemblyCore
+import InformationTheory.CourtadeKumar.IntervalDerivativeCertificate
 
 /-!
 # Assembly of subdivision and midpoint certificates
@@ -12,27 +13,25 @@ of the root box.
 
 namespace CourtadeKumar
 
-def midpointLeafAccepts {AcceptData : Type}
+theorem midpointLeafAccepts_eq_coreCheck {AcceptData : Type}
     (evaluate : CertificateBox → AcceptData → MidpointCertificate)
-    (box : CertificateBox) (data : AcceptData) : Bool :=
-  (evaluate box data).check box
+    (box : CertificateBox) (data : AcceptData) :
+    midpointLeafAccepts evaluate box data =
+      (evaluate box data).coreCheck box := rfl
 
-/-- A checked midpoint leaf first validates its target-specific arithmetic
-payload, then tests the generic midpoint lower bound. -/
-def checkedMidpointLeafAccepts {AcceptData : Type}
+theorem checkedMidpointLeafAccepts_eq_coreCheck {AcceptData : Type}
     (payloadCheck : CertificateBox → AcceptData → Bool)
     (evaluate : CertificateBox → AcceptData → MidpointCertificate)
-    (box : CertificateBox) (data : AcceptData) : Bool :=
-  payloadCheck box data && (evaluate box data).check box
+    (box : CertificateBox) (data : AcceptData) :
+    checkedMidpointLeafAccepts payloadCheck evaluate box data =
+      (payloadCheck box data && (evaluate box data).coreCheck box) := rfl
 
-/-- A direct interval leaf with a separately checked transcendental payload.
-This is useful when the interval extension over the whole leaf is already
-sharp enough and no midpoint/derivative correction is needed. -/
-def checkedEnclosureLeafAccepts {AcceptData : Type}
+theorem checkedEnclosureLeafAccepts_eq_core {AcceptData : Type}
     (payloadCheck : CertificateBox → AcceptData → Bool)
     (enclose : CertificateBox → AcceptData → RationalEnclosure)
-    (box : CertificateBox) (data : AcceptData) : Bool :=
-  payloadCheck box data && (enclose box data).provesNonnegative
+    (box : CertificateBox) (data : AcceptData) :
+    checkedEnclosureLeafAccepts payloadCheck enclose box data =
+      (payloadCheck box data && (enclose box data).provesNonnegative) := rfl
 
 /-- Soundness contract for a target-specific executable midpoint evaluator. -/
 structure MidpointLeafEvaluatorSound

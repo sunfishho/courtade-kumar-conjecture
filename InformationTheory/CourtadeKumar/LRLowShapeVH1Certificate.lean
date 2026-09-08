@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.LRLowShapeVH1Power
+import InformationTheory.CourtadeKumar.NativePolynomialNormalization
 import InformationTheory.CourtadeKumar.LRLowShapeVHeadPolynomialBridge
 
 /-! Exact semantic certificate for the first finite low-shape `V` head. -/

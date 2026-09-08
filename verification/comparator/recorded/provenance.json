@@ -1,0 +1,8 @@
+{
+  "comparator": "https://github.com/leanprover/comparator",
+  "comparator_source": "Current upstream master retrieved from complete official raw-source web views; see per-file hashes",
+  "replay_commit": "b7398199245524275543dec6113229c9bb4902e5",
+  "replay_source": "https://raw.githubusercontent.com/leanprover/lean4checker/b7398199245524275543dec6113229c9bb4902e5/Lean4Checker/Replay.lean",
+  "lean_version": "4.28.0",
+  "stock_linux_cli_isolation": false
+}

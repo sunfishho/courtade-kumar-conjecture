@@ -1251,12 +1251,4 @@ def topCertificatePowerCoeffRatNat (i j : ℕ) : ℚ :=
     else 0
   else 0
 
-set_option maxHeartbeats 10000000 in
-theorem topBernsteinPowerCoeff_eq_certificate :
-    ∀ i : Fin 48, ∀ j : Fin 61,
-      tensorBernsteinPowerCoeff
-          (p := fun a b ↦ topElevatedBernsteinCoeff a b) i.val j.val =
-        topCertificatePowerCoeffRat i j := by
-  native_decide
-
 end CourtadeKumar

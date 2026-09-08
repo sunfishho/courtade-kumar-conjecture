@@ -174,10 +174,13 @@ lemma lowerRay_entropyArgs
           mul_lt_mul_of_pos_right (by linarith [hrho.2]) hm.1
         _ < 1 := by linarith [hm.2]
 
-theorem lowerRayGapDeriv2_nonpos
+/-- Quantitative concavity using the elementary rational lower bound
+`rho² * N / (m * (1-m) * D) ≥ 4*rho²`.  This avoids the manuscript's
+false claim that the rational term decreases toward `m = 1/2`. -/
+theorem lowerRayGapDeriv2_le_neg_two_mul_sq
     {rho m : ℝ} (hrho : rho ∈ Ioo (0 : ℝ) 1)
     (hm : m ∈ Ioo (0 : ℝ) (1 / 2)) :
-    lowerRayGapDeriv2 rho m ≤ 0 := by
+    lowerRayGapDeriv2 rho m ≤ -2 * rho ^ 2 := by
   let S : ℝ := topS rho
   let D : ℝ := 1 - 2 * m + S * m ^ 2
   let N : ℝ := 1 - m + S * m ^ 2
@@ -236,21 +239,18 @@ theorem lowerRayGapDeriv2_nonpos
     dsimp [N, D, S]
     unfold topS topR
     ring
-  have hcoef : 0 ≤ 2 * m * (1 - m) ∧ 2 * m * (1 - m) ≤ 1 := by
-    constructor
-    · exact mul_nonneg (mul_nonneg (by norm_num) hm.1.le)
-        (by linarith [hm.2] : 0 ≤ 1 - m)
-    · nlinarith [hm.1, hm.2, sq_nonneg (m - 1 / 2)]
+  have hcoef : 4 * m * (1 - m) ≤ 1 := by
+    nlinarith [sq_nonneg (m - 1 / 2)]
   have hDN : D ≤ N := by
     dsimp [D, N]
     linarith [hm.1]
-  have hcore : 2 * m * (1 - m) * D ≤ N := by
+  have hcore : 4 * m * (1 - m) * D ≤ N := by
     calc
-      2 * m * (1 - m) * D ≤ 1 * D :=
-        mul_le_mul_of_nonneg_right hcoef.2 hD.le
+      4 * m * (1 - m) * D ≤ 1 * D :=
+        mul_le_mul_of_nonneg_right hcoef hD.le
       _ = D := one_mul D
       _ ≤ N := hDN
-  have hfraction : 2 * rho ^ 2 ≤
+  have hfraction : 4 * rho ^ 2 ≤
       rho ^ 2 * N / (m * (1 - m) * D) := by
     rw [le_div_iff₀ hden]
     nlinarith [mul_le_mul_of_nonneg_left hcore (sq_nonneg rho)]
@@ -258,6 +258,14 @@ theorem lowerRayGapDeriv2_nonpos
     nlinarith [topEll_le_rho_sq_div_four hrho]
   rw [hformula]
   linarith
+
+/-- The established concavity interface follows from the stronger margin. -/
+theorem lowerRayGapDeriv2_nonpos
+    {rho m : ℝ} (hrho : rho ∈ Ioo (0 : ℝ) 1)
+    (hm : m ∈ Ioo (0 : ℝ) (1 / 2)) :
+    lowerRayGapDeriv2 rho m ≤ 0 := by
+  have h := lowerRayGapDeriv2_le_neg_two_mul_sq hrho hm
+  nlinarith [sq_nonneg rho]
 
 @[simp] theorem lowerRayGap_zero (rho : ℝ) : lowerRayGap rho 0 = 0 := by
   simp [lowerRayGap, lowerRayNatEnvelope, radialNatEntropy,

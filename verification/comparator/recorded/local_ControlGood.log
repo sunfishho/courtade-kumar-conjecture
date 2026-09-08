@@ -1,0 +1,9 @@
+Loading the independently compiled challenge objects
+Challenge graph: 512 declarations
+Solution graph: 511 declarations
+Comparator statement and primitive comparison passed
+Comparator permitted-axiom check passed
+Running Lean default kernel on solution.
+Replay starts with zero imported declarations
+Lean default kernel accepts the solution
+Your solution is okay!

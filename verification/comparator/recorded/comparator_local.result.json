@@ -1,0 +1,23 @@
+{
+  "name": "comparator_local",
+  "command": [
+    "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/tools/comparator/.lake/build/bin/comparator",
+    "--local-objects",
+    "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/project/config.json"
+  ],
+  "exit_code": 0,
+  "seconds": 18693.674908459012,
+  "peak_child_rss_bytes": 6057754624,
+  "log": "/Users/matthewho/.codex/.chatgpt-projects/g-p-6a5ad858ad18819189c51db74c9c12e9/lean-formalization/.lake/scratch/comparator_2026_09_07/comparator_local.log",
+  "checker_sha256": "6af3ef48e18fac91b2e65e9dde655beaad4850ead7e11e1d8c3e285dcc9cd16e",
+  "inputs_unchanged": true,
+  "proof_sources_unchanged": true,
+  "accepted": true,
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ],
+  "mode": "Upstream Comparator comparison/axiom checks with local-object input and full fresh-kernel replay using pinned upstream Lean4Checker on Lean 4.28.0",
+  "stock_linux_cli_isolation": false
+}

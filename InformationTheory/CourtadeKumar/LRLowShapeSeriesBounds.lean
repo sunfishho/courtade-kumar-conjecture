@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRLowShapeRationalBounds
 import InformationTheory.CourtadeKumar.LRAbelBaseSeries
+import InformationTheory.CourtadeKumar.LRLogTwoMillionthBounds
 
 /-! Kernel-checked geometric envelopes for the finite series retained in the
 low-shape certificates. -/
@@ -8,18 +9,6 @@ open Set
 open scoped BigOperators
 
 namespace CourtadeKumar
-
-/-- The exact rational enclosure for `log 2` used in the certificate data. -/
-theorem lr_log_two_millionth_bounds :
-    (693147 : ℝ) / 1000000 < Real.log 2 ∧
-      Real.log 2 < (693148 : ℝ) / 1000000 := by
-  constructor
-  · have h := Real.log_two_gt_d9
-    norm_num at h ⊢
-    linarith
-  · have h := Real.log_two_lt_d9
-    norm_num at h ⊢
-    linarith
 
 private lemma lr_phi_coefficient_le_thirteen (n : ℕ) :
     (1 : ℝ) /

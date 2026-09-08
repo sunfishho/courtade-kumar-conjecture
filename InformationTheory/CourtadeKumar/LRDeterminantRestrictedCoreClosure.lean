@@ -14,7 +14,7 @@ namespace CourtadeKumar
 /-- The restricted determinant inputs prove the complete pointwise target-flow
 numerator theorem. -/
 theorem lrTargetFlowNumeratorTheorem_of_restrictedDeterminantCore
-    (compactV : LRCompactVR910ReplayLedger)
+    (compactV : LRCompactVSoundLedger)
     (midpoint :
       LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (finiteV : LRDeterminantLowRatioFiniteVTargetTheorem)
@@ -31,7 +31,7 @@ theorem lrTargetFlowNumeratorTheorem_of_restrictedDeterminantCore
 /-- Once the restricted compact certificates are supplied, the proved
 canonical target-root trajectory closes the full Courtade--Kumar statement. -/
 theorem courtadeKumar_of_restrictedDeterminantCore
-    (compactV : LRCompactVR910ReplayLedger)
+    (compactV : LRCompactVSoundLedger)
     (midpoint :
       LRSmallSBridgeCoreCertificate.LRHighShapeNearEndpointPostSmallSBridgeMidpointCoordinateTheorem)
     (finiteV : LRDeterminantLowRatioFiniteVTargetTheorem)

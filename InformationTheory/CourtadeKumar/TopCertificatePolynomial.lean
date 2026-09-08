@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.TopCertificateExpanded
+import InformationTheory.CourtadeKumar.TopBernsteinTransformBridge
 
 /-! The exact polynomial numerator in the full-cap TOP certificate. -/
 

@@ -1,4 +1,5 @@
 import InformationTheory.CourtadeKumar.RadialProfileSupport
+import InformationTheory.CourtadeKumar.PerspectiveWeakDual
 
 /-! Exact algebraic wiring of the single-ray and centered-endpoint phases. -/
 

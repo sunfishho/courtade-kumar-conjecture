@@ -1,5 +1,6 @@
 import InformationTheory.CourtadeKumar.LRDeterminantScalarTargetCore
 import InformationTheory.CourtadeKumar.LRHighShapeCoordinateAD
+import InformationTheory.CourtadeKumar.LROdds
 
 /-!
 # Verified interval AD for the scalar `g₀(v)`

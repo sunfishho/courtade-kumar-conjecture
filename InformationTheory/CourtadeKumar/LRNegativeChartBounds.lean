@@ -119,10 +119,11 @@ theorem four_delta_le_lrFlowQ₀
   have hscaled := mul_le_mul_of_nonneg_left hfactor (sub_nonneg.mpr hR.2.le)
   nlinarith
 
-/-! The manuscript bounds the endpoint kernel by estimating every series
-coefficient.  That coefficient estimate is stronger than necessary.  The
-following endpoint-coordinate argument proves the required aggregate bound
-directly. -/
+/-! The manuscript's termwise endpoint-kernel estimate is false: at
+`R = 1/2`, its fourth coefficient is `11/896`, exceeding the asserted `8/896`.
+Only the aggregate bound `4*W ≤ 1-R` is needed.  The following existing
+endpoint-coordinate argument proves that bound directly, without the false
+coefficient estimate. -/
 
 lemma lrScalarEndpointUpper_le_quarter_aux
     {z : ℝ} (hz : z ∈ Icc (0 : ℝ) 1) :

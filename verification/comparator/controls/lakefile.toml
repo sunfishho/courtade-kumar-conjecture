@@ -1,0 +1,14 @@
+name = "ComparatorControls"
+
+[[lean_lib]]
+name = "ControlChallenge"
+
+[[lean_lib]]
+name = "ControlGood"
+
+[[lean_lib]]
+name = "ControlBadAxiom"
+
+[[lean_lib]]
+name = "ControlBadStatement"
+
